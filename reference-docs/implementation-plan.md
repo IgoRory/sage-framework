@@ -62,7 +62,19 @@ Copy all files from the handoff repository `.cursor/` directory:
 - `.cursor/rules/sage-session.mdc` and `phase-context.mdc`
 - `.cursor/templates/session-manifest-template.md`
 
-### 1.3 Update .gitignore
+### 1.3 Add AGENTS.md to the repository root
+
+Copy `AGENTS.md` from `profitability-repo-files/AGENTS.md` in the handoff package to the root of the Profitability codebase repository:
+
+```powershell
+Copy-Item "[path-to-handoff]\profitability-repo-files\AGENTS.md" -Destination "."
+```
+
+`AGENTS.md` is a Cursor convention — Cursor reads this file automatically before any agent takes action in the repository. It provides every agent with orientation context, domain knowledge, coding conventions, and workflow rules specific to the Profitability codebase. It must be at the repository root to be picked up automatically.
+
+> **Verify before committing:** Open `AGENTS.md` and confirm the codebase paths in Sections 2 and 5 match the actual directory structure of the Profitability repo on your machine. Adjust any paths that differ.
+
+### 1.4 Update .gitignore
 
 ```powershell
 Add-Content .gitignore "`n# SAGE workflow runtime files"
@@ -72,10 +84,10 @@ Add-Content .gitignore "manifest.lock"
 Add-Content .gitignore ".skill-update-triggers/"
 ```
 
-### 1.4 Commit
+### 1.5 Commit
 
 ```powershell
-git add .sage/ .cursor/ .skill-update-triggers/ .skill-update-staging/ .gitignore
+git add .sage/ .cursor/ .skill-update-triggers/ .skill-update-staging/ .gitignore AGENTS.md
 git commit -m "init: SAGE framework structure
 
 - .sage/ with workflow-config.json and sessions structure
@@ -84,12 +96,13 @@ git commit -m "init: SAGE framework structure
 - .cursor/agents/ with all 14 agent definitions
 - .cursor/rules/ with sage-session.mdc and phase-context.mdc
 - .cursor/templates/ with session manifest template
-- .skill-update-triggers/ and .skill-update-staging/ directories"
+- .skill-update-triggers/ and .skill-update-staging/ directories
+- AGENTS.md — Cursor codebase context file at repo root"
 
 git push origin main
 ```
 
-### 1.5 Configure branch protection
+### 1.6 Configure branch protection
 
 In GitHub repository settings → Branches → Branch protection rules, confirm or add a rule for `main`:
 
