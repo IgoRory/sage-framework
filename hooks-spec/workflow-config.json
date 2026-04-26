@@ -1,0 +1,412 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────
+  // WORKFLOW CONFIGURATION
+  // Location: [REPO_ROOT]/.sage/workflow-config.json
+  //
+  // Owns workflow policy: gate configuration per mode, tool name mappings,
+  // calibration thresholds, and feature flags. Read by all hook scripts
+  // and agent skills. Never session-specific — applies to the whole repo.
+  //
+  // Update protocol:
+  //   - Threshold changes may be proposed by skill-effectiveness-evaluator
+  //     via Linear diff proposal (same approval process as SKILL.md updates)
+  //   - Feature flag changes (e.g. qaGateRequired) are made manually by
+  //     the Lead Dev or Product Manager via a direct commit — no approval workflow required
+  //   - Tool name mappings are updated manually when Cursor tool names change
+  //   - All changes committed with message:
+  //     "config: [description of change] — [reason]"
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "version": "1.0.0",
+  "lastUpdatedAt": "ISO 8601 datetime",
+  "lastUpdatedBy": "string — name of person who made the change",
+  "changeReason": "string — brief reason for last change",
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // GATE CONFIGURATION PER MODE
+  //
+  // Defines which enforcement gates are active for each workflow mode.
+  // Hook scripts read this section to determine whether to apply their
+  // check for the current session's mode.
+  //
+  // A gate set to false is completely skipped — the hook script reads
+  // the mode from active-session manifest and permits immediately if
+  // the gate is disabled for that mode.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "gateConfig": {
+
+    "sprint": {
+      "phaseApprovalGate":          true,   // S1 blocked until Linear Approved
+      "planModeEnforcer":           true,   // S1 file-writes blocked
+      "manifestStepGate":           true,   // S1→S8 sequential enforcement
+      "requiredReferencesGate":     true,   // S5 reference files must be read
+      "validationConfirmedGate":    true,   // S5 blocked until human confirms
+      "tddResultsGate":             true,   // S6 blocked until TDD STATUS:PASS
+      "codeReviewGate":             true,   // S7 blocked until zero Criticals
+      "completionReportStopGate":   true,   // S8 blocked until test STATUS:PASS
+      "qaApprovalGate":             false,  // Human QA not a required gate yet
+      "parallelLaneIsolation":      true    // Git worktree isolation enforced
+    },
+
+    "pair": {
+      "phaseApprovalGate":          true,   // Still requires async approval
+      "planModeEnforcer":           true,
+      "manifestStepGate":           true,
+      "requiredReferencesGate":     true,
+      "validationConfirmedGate":    true,
+      "tddResultsGate":             true,
+      "codeReviewGate":             true,
+      "completionReportStopGate":   true,
+      "qaApprovalGate":             false,
+      "parallelLaneIsolation":      false   // Pair is sequential, no isolation needed
+    },
+
+    "solo": {
+      "phaseApprovalGate":          false,  // No kick-off, no Linear approval step
+      "planModeEnforcer":           false,  // No formal dev interview in solo
+      "manifestStepGate":           true,   // Still enforce step progression
+      "requiredReferencesGate":     true,   // Still must read required references
+      "validationConfirmedGate":    true,   // Still requires human validation
+      "tddResultsGate":             true,   // TDD always required
+      "codeReviewGate":             true,   // Code review always required
+      "completionReportStopGate":   true,   // Stop hook always active
+      "qaApprovalGate":             false,
+      "parallelLaneIsolation":      false
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TOOL NAME MAPPINGS
+  //
+  // Maps workflow step actions to the Cursor tool names that trigger
+  // the relevant hook checks. Hook scripts look up the tool name here
+  // rather than having tool names hardcoded in each script.
+  //
+  // If a Cursor tool is renamed in a future release, update here only.
+  // All hook scripts pick up the change automatically on next run.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "toolMappings": {
+
+    "fileWriteTools": [
+      "str_replace_editor",
+      "write_file",
+      "create_file",
+      "apply_diff",
+      "edit_file",
+      "insert_content",
+      "delete_file",
+      "rename_file"
+    ],
+
+    "stepTools": {
+      "dev-interview":       ["start_dev_interview", "run_dev_interview"],
+      "implementation-plan": ["generate_implementation_plan", "create_implementation_plan"],
+      "traceability-review": ["run_traceability_review", "start_traceability_review"],
+      "plan-validation":     ["generate_validation_mockup", "create_validation_mockup"],
+      "build":               ["run_build", "start_build", "execute_build"],
+      "code-review":         ["run_code_review", "start_code_review", "code_review"],
+      "agent-testing":       ["run_test_suite", "run_tests", "start_testing", "test_runner"],
+      "completion-report":   ["generate_completion_report", "create_completion_report"]
+    },
+
+    "writeCommandPatterns": [
+      "\\s>\\s",
+      "tee\\s",
+      "Set-Content",
+      "Out-File",
+      "new-item.*-value"
+    ],
+
+    "sourceFileExtensions": [
+      ".cs", ".ts", ".js", ".tsx", ".jsx",
+      ".py", ".sql", ".html", ".css", ".scss",
+      ".json", ".yaml", ".yml", ".csproj", ".sln", ".config"
+    ],
+
+    "readOnlyCommands": [
+      "git status",
+      "git log",
+      "git diff",
+      "cat ",
+      "ls ",
+      "dir ",
+      "dotnet test",
+      "npm test",
+      "npx jest",
+      "python -m pytest"
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CALIBRATION THRESHOLDS
+  //
+  // Numeric values used by skills and hooks. May be updated by the
+  // skill-effectiveness-evaluator via the standard Linear diff proposal
+  // and approval process. Changes take effect on the next session start.
+  //
+  // Constraints enforced by skill-effectiveness-evaluator:
+  //   - No single change of more than 5 points per evaluation cycle
+  //   - Changes must be backed by evidence from ≥3 sessions
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "thresholds": {
+
+    "prdCompleteness": {
+      "passThreshold": 80,            // Minimum score for Linear Ready status
+      "d1RequirementCoverage": 15,    // Max points for D1
+      "d2AcSpecificity": 15,          // Max points for D2
+      "d3EdgeErrorCoverage": 15,      // Max points for D3
+      "d4MockupCompleteness": 15,     // Max points for D4
+      "d5ComponentSpec": 25,          // Max points for D5 (highest weight)
+      "d6OutOfScopeClarity": 15       // Max points for D6
+    },
+
+    "phaseBreakdown": {
+      "independenceScoreMinimum": 60, // Phases below this are flagged for team review
+      "effortMinHours": 2,            // Phases below this are candidates for merging
+      "effortMaxHours": 6,            // Phases above this are candidates for splitting
+      "sizeSignalNormalRequirements": 40,  // PRD requirement count: normal ceiling
+      "sizeSignalNormalScreens": 8,        // PRD screen count: normal ceiling
+      "sizeSignalNormalComponents": 12     // PRD component count: normal ceiling
+    },
+
+    "sessionPerformance": {
+      "effortVarianceFlagPercent": 30,    // Step duration delta beyond this is flagged
+      "effortVarianceAlertPercent": 50,   // Step duration delta beyond this is alerted
+      "tddGreenFirstPassMinPercent": 70,  // Below this: TDD cycle quality is ⚠️
+      "tddGreenFirstPassFailPercent": 50, // Below this: TDD cycle quality is ❌
+      "tddRefactorMinPercent": 80,        // Below this: refactor completion is ⚠️
+      "tddRefactorFailPercent": 60,       // Below this: refactor completion is ❌
+      "systematicViolationThreshold": 3  // Same hook type rejected this many times = systematic
+    },
+
+    "skillEffectiveness": {
+      "evaluationCycleSize": 5,           // Sessions per evaluation cycle
+      "minimumInvocationsToQualify": 3,   // Skill must be invoked in this many of N sessions
+      "highConfidenceSessionCount": 4,    // Pattern in this many sessions = High confidence
+      "mediumConfidenceSessionCount": 3,  // Pattern in this many sessions = Medium confidence
+      "maxChangesPerSkillPerCycle": 3,    // Proposal change count ceiling per cycle
+      "maxThresholdDeltaPerCycle": 5,     // Max points any threshold can move per cycle
+      "rejectionSuppressionCycles": 2     // Rejected changes suppressed for this many cycles
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FEATURE FLAGS
+  //
+  // Boolean toggles for capabilities that may be switched on or off
+  // without architectural changes. Changed manually by the Lead Dev or Product Manager
+  // via direct commit — no approval workflow required.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // BUILD MODE CONFIGURATION
+  //
+  // Controls whether the S5 build step runs autonomously end-to-end or
+  // pauses for developer review after each logical batch of tasks.
+  //
+  // "autonomous"  — agent builds all tasks start to finish; developer
+  //                 reviews completed code at S6 code review
+  // "checkpoint"  — agent builds one batch, runs batch tests, writes a
+  //                 review summary, and pauses until the developer sets
+  //                 batches[N].confirmed = true in the session manifest
+  //
+  // Developers choose their preferred mode at S1 dev interview.
+  // The defaultBuildMode is used if no preference is stated.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FOUNDATION / DEPENDENT PHASE CONFIGURATION
+  //
+  // Foundation phases have no upstream dependencies — they start immediately
+  // after async approvals (Phase 03). Dependent phases wait for Foundation
+  // phases to merge and pass regression before their S5 build can start.
+  //
+  // Dependent phases CAN complete S1–S4 (planning steps) before Foundation
+  // is verified. Only S5 build is blocked by foundation_verified_gate.py.
+  //
+  // foundationVerified is set automatically by the orchestrator after all
+  // Foundation phase PRs merge to main and the regression suite passes.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "foundationDependentConfig": {
+    "regressionRunCommand": {
+      "dotnet": "dotnet test --no-build",
+      "typescript": "npx jest --passWithNoTests"
+    },
+    "regressionRunOn": "main",
+    "regressionTrigger": "all-foundation-and-independent-phases-merged",
+    "phaseTypes": {
+      "foundation": "No upstream dependencies, has downstream consumers. Starts immediately. Regression runs after it merges. Dependent phases wait for it.",
+      "independent": "No upstream dependencies, no downstream consumers. Starts immediately. Regression still runs after it merges. Nothing specifically waits for it, but it participates in triggering the regression run.",
+      "dependent": "Has upstream dependencies. Waits for all Foundation and Independent phases to merge and pass regression before S5 build can start. May complete S1-S4 while waiting."
+    },
+    "onRegressionPass": [
+      "set manifest.sessionState.foundationVerified = true",
+      "set manifest.sessionState.foundationVerifiedAt = [ISO datetime]",
+      "set manifest.sessionState.foundationRegressionResult = pass",
+      "update Dependent phase Linear issues to Foundation Verified status"
+    ],
+    "onRegressionFail": [
+      "set manifest.sessionState.foundationRegressionResult = fail",
+      "create Linear issue for the Lead Dev with label workflow-violation",
+      "Dependent phases remain blocked at S4 — do not unblock manually"
+    ],
+    "allowS1toS4BeforeVerified": true
+  },
+
+  "buildMode": {
+    "defaultBuildMode": "autonomous",
+    "availableModes": ["autonomous", "checkpoint"],
+    "checkpointBatchTestCommand": {
+      "typescript": "npx jest --testPathPattern=phase-{phaseId}-batch-{batchId} --passWithNoTests",
+      "dotnet": "dotnet test --filter \"Phase{phaseId}Batch{batchId}\" --no-build"
+    },
+    "batchBoundaryRules": {
+      "database": ["schema-and-migrations", "core-crud-procedures", "edge-case-procedures-and-functions"],
+      "api": ["data-models-and-dal", "service-layer", "controllers-and-endpoints"],
+      "ui": ["component-structure-and-data-binding", "state-transitions-and-interactions", "error-states-and-edge-cases"],
+      "data-library": ["models-and-interfaces", "dal-methods", "helpers-and-utilities"],
+      "full-stack": ["database-layer", "api-layer", "ui-layer"]
+    }
+  },
+
+  "featureFlags": {
+
+    "qaApprovalGate": {
+      "enabled": false,
+      "description": "Require human QA approval before completion report can be generated. Disabled because QA team is spread across multiple product teams and would create a bottleneck. Enable when QA capacity allows.",
+      "enabledNote": "When enabled: add qaApprovalGate: true to all mode gateConfigs above and create Linear issue type for QA review."
+    },
+
+    "capacityPlanningIntegration": {
+      "enabled": false,
+      "description": "Connect capacity planning agents to Linear cycle data for effort forecasting. Not yet implemented.",
+      "enabledNote": "When enabled: set linearCycleId in session header and activate SAGE Intel skill invocations."
+    },
+
+    "playwrightE2ETesting": {
+      "enabled": false,
+      "description": "Playwright MCP-based E2E testing as part of S7 agent testing. Not yet configured.",
+      "enabledNote": "When enabled: configure Playwright MCP in .cursor/mcp.json and add e2e test scenarios to TDD spec generation."
+    },
+
+    "skillAutoUpdate": {
+      "enabled": true,
+      "description": "Allow skill-effectiveness-evaluator to propose and apply SKILL.md updates via Linear webhook. Disable to pause the self-improvement loop without removing any other functionality."
+    },
+
+    "telemetryAggregation": {
+      "enabled": true,
+      "description": "Mob-coordinator aggregates per-lane telemetry.jsonl files into a session-level view after each phase completes. Disable if performance impact is observed on large sessions."
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PATH CONFIGURATION
+  //
+  // Canonical paths for all workflow artifacts relative to REPO_ROOT.
+  // Hook scripts and skills resolve absolute paths by combining
+  // REPO_ROOT (from find_repo_root()) with these relative paths.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "paths": {
+    "hiveRoot":                ".sage",
+    "sessionsRoot":           ".sage/sessions",
+    "activeSessionFile":      ".sage/sessions/active-session.txt",
+    "currentPhaseFile":       ".sage/current-phase.txt",
+    "skillUpdateHistory":     ".sage/skill-update-history.jsonl",
+    "skillUpdateTriggers":    ".skill-update-triggers",
+    "skillUpdateStaging":     ".skill-update-staging",
+    "hooksRoot":              ".cursor/hooks",
+    "hooksConfig":            ".cursor/hooks/hooks.json",
+    "hookScripts":            ".cursor/hooks/scripts",
+    "skillsRoot":             ".cursor/skills",
+    "agentsRoot":             ".cursor/agents",
+    "mcpConfig":              ".cursor/mcp.json",
+    "workflowConfig":         ".sage/workflow-config.json"
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // ARTIFACT FILE NAME PATTERNS
+  //
+  // Defines the expected file names for all phase artifacts.
+  // The {phaseId} token is replaced with the actual phase number at runtime.
+  // Hook scripts use these patterns to locate artifacts when checking gates.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "artifactPatterns": {
+    "devInterviewSummary":    "phase-{phaseId}-dev-interview-summary.md",
+    "implementationPlan":     "phase-{phaseId}-implementation-plan.md",
+    "traceabilityReview":     "phase-{phaseId}-traceability-review.md",
+    "tddResults":             "phase-{phaseId}-tdd-results.md",
+    "codeReview":             "phase-{phaseId}-code-review.md",
+    "testResults":            "phase-{phaseId}-test-results.md",
+    "completionReport":       "phase-{phaseId}-completion-report.md",
+    "handoffDoc":             "phase-{phaseId}-handoff.md",
+    "phaseTelemetry":         "telemetry.jsonl",
+    "sessionManifest":        "session-manifest.md",
+    "phaseBreakdown":         "phase-breakdown.md",
+    "devReviewLog":           "kickoff-dev-review-log.md",
+    "manifestLock":           "manifest.lock",
+    "prdCompletenessReport":  "prd-completeness-report.md",
+    "integrationTestResults": "integration-test-results.md"
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LINEAR CONFIGURATION
+  //
+  // Linear-specific settings used by hook scripts and skills when
+  // making MCP calls. Issue type IDs and label names must match the
+  // actual Linear workspace configuration.
+  // ─────────────────────────────────────────────────────────────────────────
+
+  "linear": {
+    "teamId": "string — Profitability team ID in Linear",
+    "labels": {
+      "skillUpdate":          "skill-update",
+      "workflowViolation":    "workflow-violation"
+    },
+    "issueStatuses": {
+      "feature": {
+        "backlog":            "Backlog",
+        "prdInProgress":      "PRD In Progress",
+        "prdUnderReview":     "PRD Under Review",
+        "ready":              "Ready",
+        "planned":            "Planned"
+      },
+      "phase": {
+        "pendingApproval":    "Pending Approval",
+        "approved":           "Approved",
+        "foundationVerified": "Foundation Verified",
+        "inProgress":         "In Progress",
+        "buildComplete":      "Build Complete",
+        "done":               "Done"
+      },
+      "skillUpdate": {
+        "pendingApproval":    "Pending Approval",
+        "approved":           "Approved",
+        "applied":            "Applied",
+        "rejectedRecorded":   "Rejected — recorded",
+        "applyFailed":        "Apply Failed",
+        "partiallyApplied":   "Partially Applied"
+      },
+      "violation": {
+        "needsReview":        "Needs Review",
+        "closed":             "Closed"
+      }
+    },
+    "customFields": {
+      "mode":                 "mode",
+      "worktreePath":         "worktree_path",
+      "diffPath":             "diff_path",
+      "evaluationCycle":      "evaluation_cycle"
+    },
+    "priorities": {
+      "violationIssue":       "high",
+      "skillUpdateProposal":  "medium"
+    }
+  }
+}
