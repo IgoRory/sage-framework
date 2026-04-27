@@ -12,13 +12,13 @@
 | Phase | Steps Complete | Steps Total | Status |
 |---|---|---|---|
 | Phase 1 — Repository setup | 0 | 6 | Not started |
-| Phase 2 — Developer machine setup | 2 | 3 | Partial |
-| Phase 3 — Linear configuration | 0 | 7 | Not started |
-| Phase 4 — Hook script validation | 0 | 2 | Not started |
+| Phase 2 — Developer machine setup | 2 | 6 | Partial |
+| Phase 3 — Linear configuration | 5 | 8 | Partial — blocked |
+| Phase 4 — Hook script validation | 0 | 13 | Not started |
 | Phase 5 — SAGE Intel + Hone setup | 0 | 4 | Not started |
 | Phase 6 — PRD authoring setup | 0 | 3 | Not started |
 | Phase 7 — First live session | 0 | 3 | Not started |
-| **Total** | **2** | **28** | **7% complete** |
+| **Total** | **7** | **43** | **16% complete** |
 
 ---
 
@@ -72,18 +72,16 @@
 
 **Owner:** Product Manager (with Lead Dev for phase states) · **Effort:** ~3 hours · **Dependency:** None (parallel with Phase 2)
 
-All steps in this phase are manual-only.
-
 | Step | Description | Status | Verified by Agent | Notes |
 |---|---|---|---|---|
-| 3.1 | Create Feature issue workflow states in Linear: `Backlog → PRD In Progress → PRD Under Review → Ready → Planned` | `[-]` | MANUAL | Linear admin UI required |
-| 3.2 | Create Sprint phase workflow states: `Pending Approval → Approved → Foundation Verified → In Progress → Build Complete → Done` | `[-]` | MANUAL | Linear admin UI required |
-| 3.2b | Create Mob/Pair/Solo phase workflow states: `Pending Approval → Approved → In Progress → Build Complete → Done` | `[-]` | MANUAL | Linear admin UI required |
-| 3.3 | Create Skill Update issue workflow states: `Pending Approval → Approved → Applied → Rejected—recorded → Apply Failed` | `[-]` | MANUAL | Linear admin UI required |
-| 3.4 | Create Violation issue workflow states: `Needs Review → Closed` | `[-]` | MANUAL | Linear admin UI required |
-| 3.5 | Create `SAGE Workflow Mode` label group with labels: `mode:mob`, `mode:sprint`, `mode:pair`, `mode:solo` | `[-]` | MANUAL | Linear admin UI required |
-| 3.6 | Configure Linear ↔ GitHub integration (auto-link commits via `LIN-[id]`, auto-link PRs, update status on merge) | `[-]` | MANUAL | Linear + GitHub admin UI required |
-| 3.7 | Deploy Linear webhook receiver (`webhook/webhook_receiver.py`) as a Windows Scheduled Task using `webhook/setup_webhook_receiver.ps1` | `[ ]` | FAIL | Webhook receiver not deployed — see [`webhook/README.md`](webhook/README.md) for setup guide |
+| 3.1 | Create Feature issue workflow states: `Backlog → PRD In Progress → PRD Under Review → Ready → Planned` | `[x]` | MANUAL | Complete — confirmed by user |
+| 3.2 | Create Sprint phase workflow states: `Pending Approval → Approved → Foundation Verified → In Progress → Build Complete → Done` | `[x]` | MANUAL | Complete — confirmed by user |
+| 3.2b | Create Mob/Pair/Solo phase workflow states: `Pending Approval → Approved → In Progress → Build Complete → Done` | `[x]` | MANUAL | Complete — confirmed by user |
+| 3.3 | Create Skill Update issue workflow states: `Pending Approval → Approved → Applied → Rejected—recorded → Apply Failed` | `[x]` | MANUAL | Complete — confirmed by user |
+| 3.4 | Create Violation issue workflow states: `Needs Review → Closed` | `[x]` | MANUAL | Complete — confirmed by user |
+| 3.5 | Create `SAGE Workflow Mode` label group with labels: `mode:mob`, `mode:sprint`, `mode:pair`, `mode:solo` | `[x]` | MANUAL | Complete — confirmed by user |
+| 3.6 | Configure Linear ↔ GitHub integration (auto-link commits via `LIN-[id]`, auto-link PRs, update status on merge) | `[!]` | MANUAL | Blocked — PM and Lead Dev awaiting Workspace Admin access in Linear. Access request already submitted |
+| 3.7 | Deploy Linear webhook receiver (`webhook/webhook_receiver.py`) as a Windows Scheduled Task using `webhook/setup_webhook_receiver.ps1` | `[!]` | MANUAL | Blocked — same dependency on Workspace Admin access in Linear. See [`webhook/README.md`](webhook/README.md) |
 
 ---
 
@@ -117,7 +115,7 @@ All steps in this phase are manual-only.
 |---|---|---|---|---|
 | 5.1 | Create SAGE Intel metrics dashboard in Notion using [`sage-intel/intel-recorder/references/notion-metrics-template.md`](sage-intel/intel-recorder/) as template; add URL to `workflow-config.json` under `notionMetricsPageUrl` | `[ ]` | FAIL | `workflow-config.json` not present (Phase 1.1 incomplete) |
 | 5.2 | Create Release Calendar page in Notion; add URL to `workflow-config.json` under `releaseCalendarUrl` | `[ ]` | FAIL | `workflow-config.json` not present |
-| 5.3 | Verify SAGE Hone pipeline: `session-performance-evaluator` runs after test cycle, `skill-effectiveness-evaluator` configured with correct cycle counter, webhook receiver running and receiving Linear approval events | `[ ]` | FAIL | Depends on Phase 3.7 (webhook) and Phase 1.2 (skills) |
+| 5.3 | Verify SAGE Hone pipeline: `session-performance-evaluator` runs after test cycle, `skill-effectiveness-evaluator` configured with correct cycle counter, webhook receiver running and receiving Linear approval events | `[ ]` | FAIL | Depends on Phase 3.7 (webhook, blocked) and Phase 1.2 (skills) |
 | 5.4 | Configure Playwright MCP per [`playwright-spec/playwright-mcp-spec.md`](playwright-spec/); set `playwrightE2ETesting: true` in `workflow-config.json` | `[-]` | MANUAL | Playwright MCP configuration requires Cursor UI + `workflow-config.json` present |
 
 ---
@@ -161,7 +159,8 @@ The steps that are blocking everything else — in order:
   └─► 2.1  pip install filelock
   └─► 2.2  Set LINEAR_API_KEY, NOTION_API_KEY, M365_ACCESS_TOKEN
   └─► 2.3c Create C:\Sage\worktrees\
-       └─► 3.7  Deploy webhook receiver
+       └─► 3.6  Linear ↔ GitHub integration  [BLOCKED — awaiting Linear admin access]
+       └─► 3.7  Deploy webhook receiver       [BLOCKED — awaiting Linear admin access]
             └─► 4.1a–4.1l  Validate each of the 12 hook scripts
                  └─► 4.2  Full S1–S8 dry run
                       └─► 5.1–5.3  SAGE Intel + Hone setup
