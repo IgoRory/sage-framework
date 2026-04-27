@@ -772,6 +772,12 @@ via MCP. This is the gate enforced by async approvals in Phase 03.
 After S1 is marked complete in the manifest, this gate does not
 re-check Linear status.
 
+**Note on mode:** The workflow mode (mob, sprint, pair, solo) is applied
+to the Linear phase issue as a label from the `SAGE Workflow Mode` label
+group (e.g. `mode:sprint`). This is set automatically by the
+`phase-splitter` skill at kick-off. Hook scripts read mode from the
+session manifest `mode` field — not from Linear.
+
 ```python
 # .cursor/hooks/scripts/phase_approval_gate.py
 
@@ -1550,6 +1556,38 @@ until this field is set.
 .skill-update-triggers/                       ← webhook trigger files land here
 └── LIN-[id].json
 ```
+
+---
+
+## Linear issue metadata block
+
+Linear does not support arbitrary custom properties. The following
+fields are written as a structured YAML block at the top of the
+issue description when the issue is created. Agents and skills
+read these values via the Linear MCP description field.
+
+**Format:**
+
+```
+---
+sage_metadata:
+  worktree_path: C:\Sage\worktrees\LIN-4821\phase-1\
+  diff_path: .sage/skill-update-staging/LIN-512-diff.md
+  evaluation_cycle: 3
+---
+```
+
+**Field usage:**
+
+| Field | Written by | Read by | Applies to |
+|---|---|---|---|
+| `worktree_path` | `phase-splitter` skill | orchestrator, sprint-coordinator | Sprint and Pair phase issues |
+| `diff_path` | `skill-effectiveness-evaluator` | `skill-update-trigger-watcher` hook | Skill update issues only |
+| `evaluation_cycle` | `skill-effectiveness-evaluator` | `skill-effectiveness-evaluator` (apply step) | Skill update issues only |
+
+Fields that do not apply to a given issue type are omitted from the
+block entirely. A Solo phase issue, for example, carries no
+`sage_metadata` block at all.
 
 ---
 
