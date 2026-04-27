@@ -398,11 +398,23 @@
         "closed":             "Closed"
       }
     },
-    "customFields": {
-      "mode":                 "mode",
-      "worktreePath":         "worktree_path",
-      "diffPath":             "diff_path",
-      "evaluationCycle":      "evaluation_cycle"
+    "modeLabels": {
+      "mob":                  "mode:mob",
+      "sprint":               "mode:sprint",
+      "pair":                 "mode:pair",
+      "solo":                 "mode:solo",
+      "labelGroup":           "SAGE Workflow Mode"
+    },
+    "metadataBlock": {
+      "delimiter":            "sage_metadata",
+      "fields": {
+        "worktreePath":       "worktree_path",
+        "diffPath":           "diff_path",
+        "evaluationCycle":    "evaluation_cycle"
+      },
+      "format": "yaml",
+      "location":             "description_top",
+      "note": "Written by phase-splitter and skill-effectiveness-evaluator at issue creation. Parsed by agents via Linear MCP description read. Format: ---\\nsage_metadata:\\n  worktree_path: [value]\\n  diff_path: [value]\\n  evaluation_cycle: [value]\\n---"
     },
     "priorities": {
       "violationIssue":       "high",
