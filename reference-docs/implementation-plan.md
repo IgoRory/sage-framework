@@ -200,16 +200,30 @@ Create two sets:
 
 `Needs Review` → `Closed`
 
-### 3.5 Custom fields
+### 3.5 Mode labels
 
-Add to phase issue type:
+Linear does not support arbitrary custom properties on issues. The `mode` field and three metadata fields are handled using two alternative mechanisms instead.
 
-| Field | Type | Options |
-|---|---|---|
-| `mode` | Select | mob, sprint, pair, solo |
-| `worktree_path` | Text | — |
-| `diff_path` | Text | (skill update issues only) |
-| `evaluation_cycle` | Number | (skill update issues only) |
+**Create four mode labels** in Linear Settings → Labels, grouped under a label group named `SAGE Workflow Mode`:
+
+| Label | Description |
+|---|---|
+| `mode:mob` | Co-located or screenshare session. Single terminal, sequential phases, Driver/Navigator roles. Mob Kick-off (~2 hrs) required. Feature Walkthrough mandatory the day before. |
+| `mode:sprint` | Distributed parallel session. Each developer owns one phase in their own worktree. Sprint Kick-off (~75 min) required. Phases run simultaneously after kick-off. Feature Walkthrough optional. |
+| `mode:pair` | Two developers, sequential phases, no synchronous kick-off. PRD required at Ready status. Async phase breakdown only. No Feature Walkthrough. |
+| `mode:solo` | Single developer, no kick-off, no PRD required. Issue tracker item sufficient. All S1–S8 gates still active. |
+
+The `phase-splitter` skill applies the correct label automatically at kick-off — no manual labelling needed.
+
+**Metadata fields** (`worktree_path`, `diff_path`, `evaluation_cycle`) are written as a structured YAML block at the top of the issue description by the agent that creates the issue:
+
+```
+---
+sage_metadata:
+  worktree_path: C:\Sage\worktrees\LIN-4821\phase-1---
+```
+
+Agents and skills read these values via the Linear MCP description field. Fields that do not apply to a given issue type are omitted entirely. Full format specification is in `hooks-spec/hook-scripts-spec.md` under "Linear issue metadata block".
 
 ### 3.6 Linear ↔ GitHub integration
 
