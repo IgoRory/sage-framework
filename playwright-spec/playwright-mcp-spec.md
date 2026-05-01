@@ -256,29 +256,30 @@ configured and working.
 
 ## Part 8 — The featureFlag connection
 
-Playwright MCP is behind the `playwrightE2ETesting` feature flag
+Playwright operations in S7 are gated by `featureFlags.playwrightE2E`
 in `workflow-config.json`:
 
 ```json
-"playwrightE2ETesting": {
-  "enabled": false,
-  "description": "Playwright MCP-based E2E testing as part of S7 agent testing. Not yet configured.",
-  "enabledNote": "When enabled: configure Playwright MCP in .cursor/mcp.json and add e2e test scenarios to TDD spec generation."
-}
-```
-
-**After completing this setup, flip the flag to `true`:**
-
-```json
-"playwrightE2ETesting": {
-  "enabled": true,
-  "description": "Playwright MCP configured. Gap-analyzer uses MCP for exploratory testing in S7. Test-runner uses shell commands for existing test suite."
+"featureFlags": {
+  "playwrightE2E": false
 }
 ```
 
 The test-runner and gap-analyzer agents check this flag before
-attempting Playwright operations. If the flag is `false`, S7
-runs unit tests only and skips all Playwright steps.
+attempting any Playwright operation. If `featureFlags.playwrightE2E`
+is `false`, S7 runs unit tests only and skips all Playwright steps.
+
+**After completing this setup, flip the flag to `true`:**
+
+```json
+"featureFlags": {
+  "playwrightE2E": true
+}
+```
+
+> Note: `workflow-config.json` already has `"playwrightE2E": true`
+> set after the initial SAGE setup. Confirm this is correct before
+> the first S7 session.
 
 ---
 
@@ -314,6 +315,6 @@ stored procedure tests only.
 | File | Change |
 |---|---|
 | `.cursor/mcp.json` | Add `playwright` server entry |
-| `workflow-config.json` | Set `playwrightE2ETesting.enabled = true` after setup |
+| `workflow-config.json` | Set `featureFlags.playwrightE2E = true` after setup |
 | Agent definitions | `test-runner.md` and `gap-analyzer.md` already reference Playwright — no changes needed |
 | Developer machine setup checklist | Add `npx playwright install chromium` and `PROFITABILITY_BASE_URL` |
