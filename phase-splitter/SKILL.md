@@ -236,7 +236,7 @@ Once the team confirms the breakdown:
 3. Create Linear issues — one per phase:
    - Title: `[Feature title] — Phase N: [objective]`
    - Status: `Pending Approval` (awaiting the Product Manager and Lead Dev async approval)
-   - Custom field: `worktree_path` = `phase-N/[kebab-objective]`
+   - Metadata block: write `worktree_path: C:\\Sage\\worktrees\\[LIN-feature-id]\\phase-N\\` to the `sage_metadata` block at the top of the issue description
    - Dependencies linked to upstream phase issues
 4. Create git worktrees — one per phase:
    - Branch naming: `LIN-[issue-id]-phase-N-[kebab-objective]`

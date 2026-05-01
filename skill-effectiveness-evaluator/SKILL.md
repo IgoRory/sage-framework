@@ -174,7 +174,7 @@ issue:
 - **Label:** `skill-update`
 - **Priority:** Medium
 - **Linked sessions:** Link all 5 session issues evaluated in this cycle
-- **Custom field `diff_path`:** Path to the staged diff file
+- **Metadata block `diff_path`:** Path to the staged diff file — written to the `sage_metadata` block in the issue description
 
 Write the Linear issue ID back to the staged diff file header
 (`linear_issue_id` field) and to the trigger file template for the
@@ -258,7 +258,7 @@ status via webhook. It is a separate execution path from Steps 1–7.
 {
   "linear_issue_id": "LIN-XXX",
   "skill_name": "prd-completeness-check",
-  "approved_by": "rory@empyrean.com",
+  "approved_by": "approver@organisation.com",
   "approved_at": "[ISO datetime]",
   "diff_path": "[WORKFLOW_ROOT]/.skill-update-staging/LIN-XXX-diff.md",
   "confidence": "High",
@@ -295,7 +295,7 @@ status via webhook. It is a separate execution path from Steps 1–7.
      "skill_name": "prd-completeness-check",
      "evaluation_cycle": 3,
      "outcome": "applied",
-     "approved_by": "rory@empyrean.com",
+     "approved_by": "approver@organisation.com",
      "applied_at": "[ISO datetime]",
      "commit_hash": "[hash]",
      "changes_applied": 2,
