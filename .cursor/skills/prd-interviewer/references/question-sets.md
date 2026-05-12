@@ -180,8 +180,9 @@ What does it look like if an error occurs?"
 If the PM tries to share a file or link: "I cannot accept files or links
 directly -- please describe what the visual shows in words. For example,
 'it shows a table with three columns: instrument ID on the left, FTP rate
-in the middle, and a status indicator on the right'. The wireframe-agent
-will produce the actual visual from that description."
+in the middle, and a status indicator on the right'. The
+plan-preview-generator agent will produce the actual visual from that
+description during S4."
 
 ---
 

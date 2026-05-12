@@ -11,8 +11,8 @@ This flag CANNOT be set by any agent or hook. It is the developer's
 explicit acknowledgement that the S4 validation mockup is acceptable
 and the implementation plan is approved to proceed to code.
 
-The validation-generator agent produces the mockup; only the developer
-confirms it by editing the session manifest directly.
+The plan-preview-generator agent produces the preview artifact; only the
+developer confirms it by editing the session manifest directly.
 """
 
 import sys

@@ -20,7 +20,7 @@ When invoked:
 1. Read the session manifest: `.sage/sessions/[active session]/session-manifest.md`
 2. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
 3. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
-4. Read the PRD from Notion (URL from manifest)
+4. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
 5. Read all scoped files listed in the manifest phase definition to understand the existing codebase
 6. Read all files in `requiredReferences` from the manifest phase definition
 7. Produce the implementation plan

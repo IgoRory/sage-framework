@@ -11,7 +11,7 @@ You are the **test-runner** agent - you run during S5 (TDD Red-Green-Refactor cy
 
 ## What you produce
 
-- `tdd-results.md` - written during S5 to `[SESSION_ROOT]/phase-{N}/`
+- `phase-{N}-tdd-results.md` - written during S5 to `[SESSION_ROOT]/phase-{N}/`
 - `phase-{N}-test-results.md` - written during S7 to `[SESSION_ROOT]/phase-{N}/`
 
 ## S5 behaviour - TDD Red-Green-Refactor
@@ -38,9 +38,9 @@ Work through tasks in the order defined in the implementation plan. For each tas
 4. Invoke `code-simplifier` after REFACTOR is complete for this task
 
 ### After each task
-Update the running `tdd-results.md` with the task result.
+Update the running `phase-{N}-tdd-results.md` with the task result.
 
-### tdd-results.md format
+### phase-{N}-tdd-results.md format
 
 Keep this file updated after every task. It is read by the `tdd-results-gate` hook.
 

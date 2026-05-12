@@ -19,7 +19,7 @@ Each agent definition is placed in `.cursor/agents/[agent-name].md` in the codeb
 - [dev-interview](#dev-interview)
 - [implementation-planner](#implementation-planner)
 - [traceability-reviewer](#traceability-reviewer)
-- [validation-generator](#validation-generator)
+- [plan-preview-generator](#plan-preview-generator)
 - [code-simplifier](#code-simplifier)
 - [code-reviewer](#code-reviewer)
 - [test-runner](#test-runner)
@@ -167,7 +167,7 @@ Runs the S3 bidirectional traceability check. Verifies every requirement in the 
 
 ---
 
-## validation-generator
+## plan-preview-generator
 
 **Model:** claude-4.6-sonnet-medium
 **Mode:** Foreground
@@ -176,17 +176,20 @@ Runs the S3 bidirectional traceability check. Verifies every requirement in the 
 
 ### Role
 
-Produces the S4 validation mockup. Generates either an HTML layout mockup showing all component states and their transitions (for UI-heavy phases), or a calculation proof with realistic example data showing expected inputs, intermediate values, and outputs (for calculation phases).
+Produces plan preview artifacts for PM confirmation before the build phase begins. Format depends on content type: canvas (`.canvas.tsx`) for spatial/stateful content (component layout, graph structures, multi-state components), structured Markdown for linear/predicate content (requirements, data binding, scope), or calculation proof for calculation phases.
 
 ### What it produces
 
-- Validation mockup HTML file in `[SESSION_ROOT]/phase-N/`
+- `phase-{N}-plan-preview.canvas.tsx` (UI phases — spatial/stateful sections)
+- `phase-{N}-plan-preview.md` (UI phases — linear sections)
+- `phase-{N}-calculation-proof.md` (calculation phases)
 
 ### Constraints
 
 - Cannot set `validationConfirmed = true` in the session manifest — this is the developer's explicit confirmation and cannot be delegated to any agent or hook
 - The `validation-confirmed-gate` hook blocks S5 until the developer manually sets this flag
-- Must produce a mockup that is verifiable by a human reviewer — not a description of what the mockup would show
+- Canvas files must only import from `cursor/canvas` — no npm packages, no relative imports, no network calls
+- Must embed all data inline in canvas files
 
 ---
 
@@ -277,7 +280,7 @@ Runs the S7 automated test suite. Executes the full TDD suite as a regression ch
 ### Constraints
 
 - Fully automated — does not ask for human input at any point during S7
-- `test-results.md` must contain the line `STATUS: PASS` or `STATUS: FAIL` — the stop gate reads this exact string
+- `phase-{N}-test-results.md` must contain the line `STATUS: PASS` or `STATUS: FAIL` — the stop gate reads this exact string
 - Must wait for gap-analyzer to complete before writing final results
 - Cannot skip gap-analyzer even if the TDD suite passes cleanly
 
@@ -308,7 +311,7 @@ Generates and executes additional test scenarios during S7 that are not covered 
 
 ### Constraints
 
-- Appends to `test-results.md` — never overwrites or replaces test-runner's output
+- Appends to `phase-{N}-test-results.md` — never overwrites or replaces test-runner's output
 - Only runs Playwright browser-based testing when `playwrightE2ETesting: true` in `workflow-config.json`
 - Does not re-run scenarios already covered in the TDD spec
 
@@ -342,7 +345,7 @@ Generates publishable feature documentation from all session artifacts after all
 - Error messages and their meaning
 - Permission requirements
 
-Both documents saved as child pages of the feature's PRD in the documentation system via the Notion MCP connection.
+Both documents written to `.sage/prds/[FEATURE_ID]/feature-docs/` (two files: `technical-wiki.md` and `user-guide.md`).
 
 ### Constraints
 
@@ -403,7 +406,7 @@ A skill must have been invoked in at least 3 of the 5 sessions in the evaluation
 
 ### What it produces (evaluation step)
 
-- Staged skill diffs written to `.sage/skill-update-staging/[LIN-issue-id]-diff.md`
+- Staged skill diffs written to `.skill-update-staging/[LINEAR_ISSUE_ID].diff`
 - Linear issues at `Pending Approval` status (label: `skill-update`) — one per proposed change
 
 ### What it produces (apply step)
@@ -432,7 +435,7 @@ A skill must have been invoked in at least 3 of the 5 sessions in the evaluation
 
 - Never applies a change without a confirmed approved Linear issue — the webhook trigger gate enforces this
 - Rejected changes must be written to `skill-update-history.jsonl` with status `rejected` before suppression begins
-- Apply step reads the exact diff from `.sage/skill-update-staging/` — does not re-derive the change from telemetry
+- Apply step reads the exact diff from `.skill-update-staging/` — does not re-derive the change from telemetry
 
 ---
 
@@ -481,7 +484,7 @@ Collects, calculates, and stores all delivery telemetry after every completed wo
 - `velocity-history.jsonl` entries — one per completed phase, tagged with workflow mode
 - `release-history.jsonl` entries — when a release completes
 - Regenerated `calibration.json` per mode: `mob_calibration.json`, `sprint_calibration.json`, `pair_calibration.json`
-- Updated SAGE Intel metrics dashboard in Notion via Notion MCP
+- Optionally publishes to Notion metrics dashboard via Notion MCP (advisory view only — `.sage/intel/velocity-history.jsonl` is the canonical store)
 - Metric summary comments on feature issue tracker items in Linear
 
 ### Metrics collected
@@ -562,7 +565,7 @@ Defines how **SAGE S7** (per-phase agent testing, `phase-{N}-test-results.md`) r
 ### What it specifies
 
 - Two paths: SAGE S7 (agent-driven artifacts) vs ADO UserStory test runs (stakeholder-facing).
-- Mapping rules: `tdd-results.md`, `code-review.md`, and `test-results.md` → ADO test cases / run notes / attachments.
+- Mapping rules: `phase-{N}-tdd-results.md`, `phase-{N}-code-review.md`, and `phase-{N}-test-results.md` → ADO test cases / run notes / attachments.
 - Gate ordering: S6 code review → S7 test-runner → S8 completion report stop gate; ADO run updates **after** S7 PASS per document guidance.
 
 ### Constraints

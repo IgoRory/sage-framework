@@ -11,7 +11,7 @@ and worktree setup.
 # Phase Breakdown
 # [Feature title]
 
-**PRD:** [Notion link]
+**PRD:** `.sage/prds/[FEATURE_ID]/prd.md`
 **Linear feature issue:** [issue ID and link]
 **Generated:** [ISO datetime]
 **Status:** [Draft — awaiting team confirmation / Confirmed]

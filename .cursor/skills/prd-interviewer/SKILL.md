@@ -2,31 +2,33 @@
 name: prd-interviewer
 description: >
   Conducts a structured interview with a Product Owner (Rory or Philip) to
-  produce a complete PRD draft and companion Component Specification child
-  page, both structured to pass prd-completeness-check. Always starts from
-  a Linear feature issue or ADO work item reference. Enforces Step 0 repo
-  preflight (correct branch and up-to-date with remote per .sage/workflow-config.json)
-  on the open workspace, appends PRD lifecycle telemetry to .sage/prd-interview-telemetry.jsonl,
-  and maps interview progress to phase IDs P1–P9. Has read access to the
-  Profitability codebase to ask informed questions about existing components,
-  stored procedures, and data structures. Use this skill whenever a PM says
-  "lets write a PRD", "help me spec this feature", "start a PRD for [feature]",
-  or provides a Linear or ADO reference and asks to begin feature documentation.
-  Do not begin writing a PRD without running this interview first.
+  produce a complete PRD and companion Component Specification, both saved to
+  .sage/prds/[FEATURE_ID]/ and structured to pass prd-completeness-check.
+  Always starts from a Linear feature issue or ADO work item reference.
+  Enforces Step 0 repo preflight (correct branch and up-to-date with remote
+  per .sage/workflow-config.json) on the open workspace, appends PRD lifecycle
+  telemetry to .sage/prd-interview-telemetry.jsonl, and maps interview progress
+  to phase IDs P1–P9. Has read access to the Profitability codebase to ask
+  informed questions about existing components, stored procedures, and data
+  structures. Use this skill whenever a PM says "lets write a PRD", "help me
+  spec this feature", "start a PRD for [feature]", or provides a Linear or ADO
+  reference and asks to begin feature documentation. Do not begin writing a PRD
+  without running this interview first.
 ---
 
 # PRD Interviewer
 
 Conducts a structured interview to produce two output artifacts:
 
-1. PRD draft -- saved as a Notion page under the AI-Assisted Development
-   Workflow space, structured to pass prd-completeness-check
-2. Component specification draft -- saved as a Notion child page of the PRD,
+1. PRD -- saved to `.sage/prds/[FEATURE_ID]/prd.md`, structured to pass
+   prd-completeness-check
+2. Component specification -- saved to `.sage/prds/[FEATURE_ID]/component-spec.md`,
    linked explicitly from the PRD
 
-Both artifacts are drafts. They are not submitted to prd-completeness-check
-automatically -- the PM reviews and refines them first, then runs the check
-manually when they believe the PRD is ready.
+Both artifacts are drafts until the PM runs prd-completeness-check. They are
+not submitted to prd-completeness-check automatically -- the PM reviews and
+refines them first, then runs the check manually when they believe the PRD
+is ready.
 
 The handoff to prd-writer (if used) requires human approval in the format:
 APPROVE / REJECT: [reason] / REDIRECT: [direction]
@@ -58,7 +60,7 @@ These IDs map interview sections to **`phaseId`** in PRD telemetry and to downst
 | **P6** | Section 5b — UI and UX (conditional) |
 | **P7** | Section 6 — Edge cases and constraints |
 | **P8** | After the interview — parked review, verbatim answer record, APPROVE gate |
-| **P9** | PRD / component-spec draft generation and handoff (Notion + local copies) |
+| **P9** | PRD / component-spec generation and handoff |
 
 Sections skipped because conditions are false still omit P2/P3/P6 — do not emit phase events for skipped sections.
 
@@ -76,11 +78,11 @@ Sections skipped because conditions are false still omit P2/P3/P6 — do not emi
 
 **Preflight optional fields:** `branch`, `headSha`, `originSha`, `commitsBehind`, `commitsAhead`, `workingTreeClean` (boolean), `preflightOutcome` (`pass` \| `fail`).
 
-**MCP optional fields (same as hook telemetry):** `mcpServer`, `mcpTool` when calling Notion or Linear MCP.
+**MCP optional fields (same as hook telemetry):** `mcpServer`, `mcpTool` when calling Linear MCP.
 
 **Minimal `event` vocabulary:** `prd_preflight`, `prd_phase_started`, `prd_phase_completed`, `prd_parked`, `prd_mcp`, `prd_interview_completed`.
 
-**Implementation:** Prefer appending lines via the repo script **`prd_telemetry_append.py`** (`.cursor/hooks/scripts/`): pass a single JSON object as the first argument (shell-escaped). If the script is unavailable, append one minified JSON object per line using file tools.
+**Implementation:** If the repo script **`prd_telemetry_append.py`** exists at `.cursor/hooks/scripts/`, use it: pass a single JSON object as the first argument (shell-escaped). Otherwise, append one minified JSON object per line to the telemetry file using file tools.
 
 **At each phase boundary:** Emit `prd_phase_started` before the first question of that phase and `prd_phase_completed` after the last question of that phase (or when parking ends that phase). For **P8**, start after Section 6 ends; for **P9**, start when generating drafts.
 
@@ -390,8 +392,9 @@ Q5b.10 -- Are there any user interactions beyond the standard ones?
 
 Q5b.11 -- Do you have any existing sketches, mockups, or visual references
 for how this should look? If yes, describe what each one shows in words.
-Do not share files or links -- describe it verbally. The wireframe-agent
-will produce all visual assets from the completed PRD.
+Do not share files or links -- describe it verbally. The
+plan-preview-generator agent will produce visual confirmation artifacts
+from the completed PRD during S4.
 
 ---
 
@@ -472,10 +475,10 @@ stored procedure call, API request, or data write.
 
 ### Edge-case phase conclusion gate
 
-Before concluding the edge-case phase, execute the post-interview
-verification protocol (see "After the interview" section). All seven
-categories must have been addressed. The PM must explicitly confirm before
-proceeding.
+Before concluding the edge-case phase, verify that all seven edge-case
+categories have been addressed (at least one question asked and answered
+per applicable category). Present the coverage summary to the PM. The PM
+must explicitly confirm coverage is sufficient before proceeding to P8.
 
 ---
 
@@ -514,11 +517,12 @@ Before reviewing parked questions, execute this protocol:
 ### Step 2 -- Write the answer record
 
 Write a structured JSON answer record to:
-[FEATURE_ID]-interview-answers.json
+`.sage/prds/[FEATURE_ID]/interview-answers.json`
 
-in the current working directory. The record must use question IDs as
-keys (Q1.1, Q2.3, etc.) with verbatim answers as values. Parked questions
-are recorded as null with a "parked": true flag.
+Create the `.sage/prds/[FEATURE_ID]/` directory if it does not exist.
+The record must use question IDs as keys (Q1.1, Q2.3, etc.) with verbatim
+answers as values. Parked questions are recorded as null with a "parked": true
+flag.
 
 Do not summarize or interpret answers -- record verbatim.
 
@@ -546,30 +550,25 @@ Do not proceed to PRD generation without an explicit APPROVE.
 
 ### Step 4 -- Generate the PRD draft (on APPROVE)
 
-Emit **`prd_phase_started`** with `phaseId: P9` before draft generation. After Notion and local files are written, emit **`prd_phase_completed`** with `phaseId: P9`, then **`prd_interview_completed`** with summary fields (e.g. `parkedCount`, `linearIssueId`, `prdRunId`).
+Emit **`prd_phase_started`** with `phaseId: P9` before draft generation. After files are written, emit **`prd_phase_completed`** with `phaseId: P9`, then **`prd_interview_completed`** with summary fields (e.g. `parkedCount`, `linearIssueId`, `prdRunId`).
 
 Generate the PRD draft from the answer record using the PRD template
 in references/prd-template.md.
 
-Write the PRD draft to Notion via Notion MCP as a new page under the
-AI-Assisted Development Workflow space.
-
-Write a local markdown copy to: [FEATURE_ID]-prd-draft.md
+Write the PRD to: `.sage/prds/[FEATURE_ID]/prd.md`
 
 For every UI component identified in Section 5b: create a Component
-Specification entry. Write all component specifications to a Notion
-child page linked from the PRD, titled "[Feature title] -- Component
-Specification".
+Specification entry. Write the component specification to:
+`.sage/prds/[FEATURE_ID]/component-spec.md`
 
-Write a local markdown copy of the component specification to:
-[FEATURE_ID]-component-spec-draft.md
+Link the component spec from the PRD with a relative path reference.
 
 ### Step 5 -- Confirm and hand off
 
 Tell the PM:
-"PRD draft and component specification have been written to Notion.
-Local copies are saved as [FEATURE_ID]-prd-draft.md and
-[FEATURE_ID]-component-spec-draft.md.
+"PRD and component specification have been written to:
+- `.sage/prds/[FEATURE_ID]/prd.md`
+- `.sage/prds/[FEATURE_ID]/component-spec.md`
 
 Review both documents. When you are satisfied, run prd-completeness-check
 against the PRD to assess readiness for the planning cycle."
@@ -585,7 +584,7 @@ against the PRD to assess readiness for the planning cycle."
 - Ask questions one at a time -- never present a list
 - Record answers verbatim -- never summarize or interpret during interview
 - Never generate the PRD without an explicit APPROVE from the PM
-- Never accept file attachments or external links for wireframes (Q5b.11)
+- Never accept file attachments or external links for visual references (Q5b.11)
 - Never skip Section 6 -- edge cases are always asked regardless of feature type
 - Parked questions must appear as explicit TODO items in the PRD draft,
   not be silently omitted

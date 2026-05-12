@@ -22,7 +22,7 @@
 │   │   ├── sprint-coordinator.md
 │   │   ├── test-runner.md
 │   │   ├── traceability-reviewer.md
-│   │   └── validation-generator.md
+│   │   └── plan-preview-generator.md
 │   ├── hooks/
 │   │   ├── hooks.json                         ← valid JSON; parity with handoff hooks-spec/hooks.json
 │   │   └── scripts/                           ← Python modules (including shared utils + PRD telemetry helper)
@@ -91,26 +91,51 @@
 │   └── mcp.json                               ← MCP server URLs (e.g. Linear, Notion, Microsoft 365)
 │
 ├── .sage/
-│   ├── workflow-config.json                   ← policy: modes, linear, telemetry filename, phases, featureFlags
+│   ├── workflow-config.json                   ← policy: modes, linear, telemetry, phases, featureFlags, intel
 │   ├── current-phase.txt
 │   ├── skill-update-history.jsonl
+│   ├── prd-interview-telemetry.jsonl          ← append-only PRD interview telemetry
+│   ├── prds/                                  ← feature document store (one folder per feature)
+│   │   └── [FEATURE_ID]/                      ← e.g. PROF-7/
+│   │       ├── prd.md                         ← finalized PRD (canonical source of truth)
+│   │       ├── component-spec.md              ← companion component specification
+│   │       ├── interview-answers.json         ← verbatim interview record
+│   │       ├── completeness-assessment.md     ← prd-completeness-check output
+│   │       └── feature-docs/                  ← generated after feature completion
+│   │           ├── technical-wiki.md          ← technical documentation
+│   │           └── user-guide.md              ← end-user documentation
+│   ├── intel/                                 ← persistent cross-session metrics
+│   │   ├── velocity-history.jsonl             ← canonical velocity data (all sessions)
+│   │   ├── release-history.jsonl              ← one entry per completed release
+│   │   ├── mob-calibration.json               ← regenerated from full history each cycle
+│   │   ├── sprint-calibration.json
+│   │   └── pair-calibration.json
 │   └── sessions/
 │       ├── active-session.txt
-│       └── [LIN-feature-id]/                  ← SESSION_ROOT per work cycle
+│       └── [FEATURE_ID]/                      ← SESSION_ROOT per work cycle (e.g. PROF-7/)
 │           ├── session-manifest.md
 │           ├── workflow-telemetry.jsonl       ← session-scoped (see workflow-config telemetry.scope)
 │           ├── phase-breakdown.md
 │           ├── kickoff-dev-review-log.md
+│           ├── phase-splitter-briefing.md
+│           ├── regression-report.md
+│           ├── performance-report-cycle-[N].md
+│           ├── gap-analysis.md
 │           ├── manifest.lock
 │           ├── phase-1/
+│           │   ├── phase-1-tdd-spec.md
 │           │   ├── phase-1-dev-interview-summary.md
 │           │   ├── phase-1-implementation-plan.md
 │           │   ├── phase-1-traceability-review.md
-│           │   ├── phase-1-validation-mockup.html
+│           │   ├── phase-1-plan-preview.canvas.tsx
+│           │   ├── phase-1-plan-preview.md
+│           │   ├── phase-1-calculation-proof.md
 │           │   ├── phase-1-tdd-results.md
 │           │   ├── phase-1-code-review.md
 │           │   ├── phase-1-test-results.md
-│           │   └── phase-1-completion-report.md
+│           │   ├── phase-1-completion-report.md
+│           │   ├── phase-1-handoff.md
+│           │   └── telemetry.jsonl
 │           └── phase-N/
 │               └── ...
 │
@@ -118,7 +143,7 @@
 │   └── LIN-[id].json                          ← written by webhook receiver
 │
 ├── .skill-update-staging/
-│   └── LIN-[id]-diff.md                       ← staged by skill-effectiveness-evaluator
+│   └── [LINEAR_ISSUE_ID].diff                 ← staged by skill-effectiveness-evaluator
 │
 ├── docs/
 │   ├── agents-profitability.md                ← product/context guide (optional in product repo)
@@ -185,7 +210,7 @@ Quality of the pipeline depends on quality of your outputs.
 Before taking any action in a session, read:
 1. The session manifest: `.sage/sessions/active-session.txt` to find
    SESSION_ROOT, then `[SESSION_ROOT]/session-manifest.md`
-2. The PRD: URL is in `manifest.header.featureNotionUrl`
+2. The PRD: path is in `manifest.header.featurePrdPath` (e.g. `.sage/prds/PROF-7/prd.md`)
 3. The workflow config: `.sage/workflow-config.json`
 
 ## Your responsibilities by session phase
@@ -444,7 +469,7 @@ You are producing the S2 Implementation Plan for a phase lane.
 2. TDD spec: `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-tdd-spec.md`
 3. Session manifest — specifically `phases[PHASE_ID].definition.scopedFiles`
    and `phases[PHASE_ID].definition.requiredReferences`
-4. PRD and component specification from Notion
+4. PRD and component specification (from `.sage/prds/[FEATURE_ID]/prd.md` and `component-spec.md`)
 5. Scan the actual files listed in `scopedFiles` to understand
    existing code patterns
 
@@ -543,7 +568,7 @@ You are read-only. You never modify files.
 
 1. Implementation plan:
    `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-implementation-plan.md`
-2. PRD and component specification from Notion (URL from manifest)
+2. PRD and component specification (from `.sage/prds/[FEATURE_ID]/prd.md` and `component-spec.md`)
 3. TDD spec for this phase
 
 ## What you check
@@ -594,17 +619,19 @@ Use that exact format on its own line.
 
 ---
 
-### validation-generator.md
+### plan-preview-generator.md
 
 ```markdown
 ---
-name: Validation Generator
+name: Plan Preview Generator
 description: >
-  Generates the S4 plan validation mockup. Classifies the feature
-  type (UI / Calculation / Hybrid), generates the appropriate
-  validation artifact, and waits for human confirmation before
-  build can proceed. Invoke after traceability review has zero
-  Blocker findings.
+  Produces S4 plan preview artifacts for PM confirmation before
+  build begins. Classifies the feature type (UI / Calculation /
+  Hybrid), generates the appropriate preview artifact — canvas
+  for spatial/stateful content, structured Markdown for linear
+  content, calculation proof for calculation phases — and waits
+  for human confirmation before build can proceed. Invoke after
+  traceability review has zero Blocker findings.
 model: claude-4.6-sonnet-medium
 tools:
   - read_file
@@ -615,7 +642,7 @@ readonly: false
 is_background: false
 ---
 
-You are running the S4 Plan Validation for a phase lane.
+You are running S4 Plan Validation for a phase lane.
 
 ## Your inputs
 
@@ -634,25 +661,28 @@ Classify this phase as one of:
 
 ## What you generate per type
 
-**UI mockup:**
-An HTML file showing the layout, components, field labels,
-editable vs read-only fields, and all relevant component states.
-Match the component spec exactly — use the same field names,
-same state names, same interaction descriptions.
+**UI phases — canvas (.canvas.tsx)** for sections involving:
+- Spatial relationships (component layout, zone composition)
+- Graph/flow structures (tier chains, allocation DAGs)
+- Multi-state components (3+ states with non-trivial transitions)
+
+**UI phases — structured Markdown** for sections involving:
+- Linear requirements, acceptance criteria
+- Tabular mappings (data binding, naming maps)
+- Scope/boundary definitions
 
 **Calculation proof:**
-An HTML calculator page showing the formula, intermediate steps,
+A Markdown document showing the formula, intermediate steps,
 and expected outputs using realistic example numbers drawn from
-the Profitability domain (e.g. actual FTP rates, typical
-balance ranges, realistic cost pool percentages).
+the Profitability domain.
 
 **Hybrid:**
-Both files, cross-referenced.
+Both canvas/Markdown and calculation proof, cross-referenced.
 
 ## After generating
 
 Tell the developer:
-> "Validation mockup generated. Review the mockup in your browser.
+> "Plan preview generated. Review the artifacts.
 > Once confirmed, set `phases.{PHASE_ID}.runtime.validationConfirmed`
 > to `true` in the session manifest to unlock the build step.
 > This must be done manually — the build hook checks for this value."
@@ -1006,12 +1036,14 @@ name: Feature Doc Generator
 description: >
   Generates publishable feature documentation from all session
   artifacts after all phases complete. Produces a technical wiki
-  and user guide and saves both to Notion. Invoke during Phase 05
-  review and merge, after all completion reports are posted.
+  and user guide. Writes both to .sage/prds/[FEATURE_ID]/feature-docs/.
+  Invoke during Phase 05 review and merge, after all completion
+  reports are posted.
 model: claude-4.6-sonnet-medium
 tools:
   - read_file
-  - mcp_notion
+  - write_file
+  - create_file
 readonly: false
 is_background: false
 ---
@@ -1028,7 +1060,7 @@ For each completed phase:
 - TDD results
 
 Session-level:
-- PRD and component specification (from Notion)
+- PRD and component specification (from `.sage/prds/[FEATURE_ID]/`)
 - Phase breakdown
 
 ## What you produce
@@ -1054,13 +1086,11 @@ Step-by-step procedures for end users:
 - Error messages and what they mean
 - Permission requirements (who can do what)
 
-## Save to Notion
+## Save to local feature-docs
 
-Use the Notion MCP to create:
-- Technical Wiki as a child page of the feature PRD page
-- User Guide as a separate child page of the feature PRD page
-
-Link both pages from the PRD's Properties section.
+Write both documents to `.sage/prds/[FEATURE_ID]/feature-docs/`:
+- `technical-wiki.md`
+- `user-guide.md`
 ```
 
 ---
@@ -1073,13 +1103,14 @@ name: Session Performance Evaluator
 description: >
   Evaluates agent execution quality after every completed work cycle.
   Fires automatically when all phase issues reach Build Complete.
-  Reads telemetry and phase artifacts. Posts performance report to
-  Notion. Creates Linear issues for systematic violations. Background,
-  readonly except for Notion posts and Linear issue creation.
+  Reads telemetry and phase artifacts. Writes performance report to
+  the session directory. Creates Linear issues for systematic
+  violations. Background, readonly except for report writes and
+  Linear issue creation.
 model: claude-4.6-opus-max
 tools:
   - read_file
-  - mcp_notion
+  - write_file
   - mcp_linear
 readonly: true
 is_background: true
@@ -1087,8 +1118,8 @@ is_background: true
 
 You are the Session Performance Evaluator.
 You run after every completed work cycle. You are read-only with
-respect to the codebase and session artifacts. Your only writes
-are to Notion (performance report) and Linear (violation flags).
+respect to production code. Your writes are the performance report
+(to the session directory) and Linear issues (violation flags).
 
 ## Trigger
 
@@ -1121,7 +1152,7 @@ description: >
   Evaluates skill quality every 5 completed work cycles. Proposes
   targeted SKILL.md edits via Linear diff proposals. Applies approved
   changes via webhook trigger. Background, readonly except for
-  Notion posts, Linear issue creation, and approved SKILL.md writes.
+  Linear issue creation and approved SKILL.md writes.
   Never invoked manually — triggered by session counter.
 model: claude-4.6-opus-max
 tools:
@@ -1155,7 +1186,7 @@ evaluation specification:
 When a Linear skill-update issue moves to Approved and the
 webhook trigger file appears in `.skill-update-triggers/`,
 you run the apply step:
-1. Read the staged diff from `.skill-update-staging/LIN-[id]-diff.md`
+1. Read the staged diff from `.skill-update-staging/[LINEAR_ISSUE_ID].diff`
 2. Apply changes to the relevant SKILL.md file(s)
 3. Commit with message: `skill-update([skill]): [summary] — LIN-[id]`
 4. Update Linear issue status to Applied
@@ -1251,7 +1282,7 @@ Phases progress through 8 steps in strict order:
 | S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes) |
 | S2 | implementation-plan | Agent produces implementation plan with TDD mapping |
 | S3 | traceability-review | Agent checks PRD ↔ implementation plan bidirectionally |
-| S4 | plan-validation | Agent produces validation mockup; developer confirms |
+| S4 | plan-validation | Agent produces plan preview; developer confirms |
 | S5 | build | Agent builds implementation (autonomous or checkpoint) |
 | S6 | code-review | Agent reviews code quality |
 | S7 | agent-testing | Agent runs full test suite |
@@ -1270,7 +1301,7 @@ Examples:
 - `phase-1-dev-interview-summary.md`
 - `phase-1-implementation-plan.md`
 - `phase-1-traceability-review.md`
-- `phase-1-validation-mockup.html`
+- `phase-1-plan-preview.canvas.tsx`
 - `phase-1-code-review.md`
 - `phase-1-test-results.md`
 - `phase-1-completion-report.md`
@@ -1286,9 +1317,9 @@ Examples:
 | validation-confirmed-gate | validationConfirmed = true (set by developer) |
 | foundation-verified-gate | foundationVerified = true (Dependent phases only) |
 | batch-confirmation-gate | batches[N].confirmed = true (Checkpoint mode only) |
-| tdd-results-gate | tdd-results.md contains 'STATUS: PASS' |
-| code-review-gate | code-review.md contains 'Critical findings: 0' |
-| completion-report-stop-gate | test-results.md contains 'STATUS: PASS' |
+| tdd-results-gate | phase-{N}-tdd-results.md contains 'STATUS: PASS' |
+| code-review-gate | phase-{N}-code-review.md contains 'Critical findings: 0' |
+| completion-report-stop-gate | phase-{N}-test-results.md contains 'STATUS: PASS' |
 
 ## Profitability domain context
 

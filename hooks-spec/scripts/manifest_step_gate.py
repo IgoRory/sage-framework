@@ -12,8 +12,8 @@ Step → required prior artifact:
   implementation-plan → phase-{N}-dev-interview-summary.md
   traceability-review → phase-{N}-implementation-plan.md
   plan-validation     → phase-{N}-traceability-review.md  (Blocker findings: 0)
-  build               → phase-{N}-validation-mockup.html  (via validationConfirmed)
-  code-review         → tdd-results.md with STATUS: PASS   (handled by tdd-results-gate)
+  build               → phase-{N}-plan-preview.canvas.tsx  (via validationConfirmed)
+  code-review         → phase-{N}-tdd-results.md with STATUS: PASS (handled by tdd-results-gate)
   agent-testing       → phase-{N}-code-review.md           (handled by code-review-gate)
   completion-report   → phase-{N}-test-results.md          (handled by stop gate)
 

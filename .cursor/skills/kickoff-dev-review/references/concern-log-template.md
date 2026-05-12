@@ -28,7 +28,7 @@
 
 | # | Concern (paraphrase) | PRD section | Change applied |
 |---|---------------------|-------------|----------------|
-| 1 | [developer concern] | [section] | [what was changed in Notion] |
+| 1 | [developer concern] | [section] | [what was changed in the PRD] |
 
 ### Phase implications
 

@@ -73,7 +73,7 @@
     },
     {
       "id": "tdd-results-gate",
-      "description": "Blocks S6 code review from starting until the phase's tdd-results.md file exists and contains 'STATUS: PASS'.",
+      "description": "Blocks S6 code review from starting until the phase's phase-{N}-tdd-results.md file exists and contains 'STATUS: PASS'.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/tdd_results_gate.py",
       "blocking": true,

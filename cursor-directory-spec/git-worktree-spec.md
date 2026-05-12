@@ -62,7 +62,7 @@ Add-Content .gitignore ".skill-update-triggers/"
 # .sage/workflow-config.json         — workflow policy, reviewed by team
 # .sage/skill-update-history.jsonl   — audit trail
 # .skill-update-staging/            — proposed SKILL.md diffs for review
-# .sage/sessions/[LIN-id]/           — session artifacts (permanent record)
+# .sage/sessions/[FEATURE_ID]/       — session artifacts (permanent record)
 ```
 
 ### Step 2 — Add all .cursor/ files
@@ -166,7 +166,7 @@ C:\Users\[developer]\cursor-prof\Profitability\
 
 Phase worktrees (all developers use the same `C:\Sage\worktrees\` root):
 ```
-C:\Sage\worktrees\[LIN-feature-id]\phase-[N]\
+C:\Sage\worktrees\[FEATURE_ID]\phase-[N]\
 ```
 
 Example for feature LIN-4821 with three phases:
@@ -317,7 +317,7 @@ git push origin LIN-4822-phase-1-expense-allocation-database
 Open PR on GitHub:
 - **Base branch:** `main`
 - **Title:** `[LIN-4822] Phase 1: Expense allocation database`
-- **Description:** Link to Notion completion report + 2-sentence summary
+- **Description:** Link to phase completion report (`phase-{N}-completion-report.md`) + 2-sentence summary
 - **Reviewer:** Lead Dev (required)
 - **Labels:** `phase-complete`
 
@@ -472,7 +472,7 @@ Code, repo, CI/CD pipelines, and git workflows are unchanged.
 ### Legacy session artifacts
 
 Any prior session artifact directories in `docs/` are historical reference only. All new session
-artifacts go to `.sage/sessions/[LIN-id]/`.
+artifacts go to `.sage/sessions/[FEATURE_ID]/`.
 
 ---
 

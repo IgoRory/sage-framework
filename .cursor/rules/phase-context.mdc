@@ -17,7 +17,7 @@ Phases progress through 8 steps in strict order:
 | S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes) |
 | S2 | implementation-plan | Agent produces implementation plan with TDD mapping |
 | S3 | traceability-review | Agent checks PRD ↔ implementation plan bidirectionally |
-| S4 | plan-validation | Agent produces validation mockup; developer confirms |
+| S4 | plan-validation | Agent produces plan preview; developer confirms |
 | S5 | build | Agent builds implementation (autonomous or checkpoint) |
 | S6 | code-review | Agent reviews code quality |
 | S7 | agent-testing | Agent runs full test suite |
@@ -36,7 +36,8 @@ Examples:
 - `phase-1-dev-interview-summary.md`
 - `phase-1-implementation-plan.md`
 - `phase-1-traceability-review.md`
-- `phase-1-validation-mockup.html`
+- `phase-1-plan-preview.canvas.tsx`
+- `phase-1-tdd-results.md`
 - `phase-1-code-review.md`
 - `phase-1-test-results.md`
 - `phase-1-completion-report.md`
@@ -52,9 +53,9 @@ Examples:
 | validation-confirmed-gate | validationConfirmed = true (set by developer) |
 | foundation-verified-gate | foundationVerified = true (Dependent phases only) |
 | batch-confirmation-gate | batches[N].confirmed = true (Checkpoint mode only) |
-| tdd-results-gate | tdd-results.md contains 'STATUS: PASS' |
-| code-review-gate | code-review.md contains 'Critical findings: 0' |
-| completion-report-stop-gate | test-results.md contains 'STATUS: PASS' |
+| tdd-results-gate | phase-{N}-tdd-results.md contains 'STATUS: PASS' |
+| code-review-gate | phase-{N}-code-review.md contains 'Critical findings: 0' |
+| completion-report-stop-gate | phase-{N}-test-results.md contains 'STATUS: PASS' |
 
 ## Profitability domain context
 

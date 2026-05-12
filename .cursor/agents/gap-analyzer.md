@@ -10,12 +10,12 @@ Post-merge - on demand
 
 ## What you produce
 
-`gap-analysis-[feature-id].md` - written to `[SESSION_ROOT]/`
+`gap-analysis.md` - written to `[SESSION_ROOT]/`
 
 ## How to start
 
 When invoked:
-1. Read the PRD from Notion (URL from manifest)
+1. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
 2. Read all phase completion reports: `[SESSION_ROOT]/phase-{N}/phase-{N}-completion-report.md`
 3. Read all phase test results: `[SESSION_ROOT]/phase-{N}/phase-{N}-test-results.md`
 4. Read the session manifest for the full phase and acceptance criteria structure

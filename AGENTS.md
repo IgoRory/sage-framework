@@ -20,7 +20,7 @@ scope through instruction alone.
 - [dev-interview](#dev-interview)
 - [implementation-planner](#implementation-planner)
 - [traceability-reviewer](#traceability-reviewer)
-- [validation-generator](#validation-generator)
+- [plan-preview-generator](#plan-preview-generator)
 - [code-simplifier](#code-simplifier)
 - [code-reviewer](#code-reviewer)
 - [test-runner](#test-runner)
@@ -168,7 +168,7 @@ must be preserved exactly — the manifest-step-gate hook reads this format.
 
 ---
 
-## validation-generator
+## plan-preview-generator
 
 **Mode:** Foreground  
 **Access:** Read / Write (phase directory only)  
@@ -176,22 +176,34 @@ must be preserved exactly — the manifest-step-gate hook reads this format.
 
 ### Role
 
-For UI phases: produces an HTML mockup of the planned UI components, states,
-and interactions. For calculation phases: produces a calculation proof document
-showing expected inputs, logic, and outputs.
+Produces plan preview artifacts for PM confirmation before the build phase
+begins. Reads the PRD, implementation plan, and traceability review to generate
+confirmation materials whose format depends on content type:
 
-After producing the validation artifact, explicitly tells the developer how to
+- **Canvas** (`.canvas.tsx`) for spatial/stateful content — component layout
+  composition, graph/flow structures (tier chains, allocation DAGs), and
+  multi-state UI components with 3+ states and non-trivial transitions.
+- **Structured Markdown** for linear/predicate content — requirements lists,
+  acceptance criteria, data binding tables, naming maps, scope boundaries.
+- **Calculation proof** for calculation phases — expected inputs, logic, and
+  outputs with worked examples.
+
+After producing the preview artifact(s), explicitly tells the developer how to
 confirm: set `validationConfirmed = true` in the session manifest.
 
 ### What it produces
 
-- `phase-{N}-validation-mockup.html` (UI phases)
+- `phase-{N}-plan-preview.canvas.tsx` (UI phases — spatial/stateful sections)
+- `phase-{N}-plan-preview.md` (UI phases — linear sections)
 - `phase-{N}-calculation-proof.md` (calculation phases)
 
 ### Constraints
 
 - Cannot set `validationConfirmed = true` in the session manifest
 - Must explicitly instruct the developer to set this flag themselves
+- Canvas files must only import from `cursor/canvas` — no npm packages, no
+  relative imports, no network calls
+- Must embed all data inline in canvas files
 
 ---
 
@@ -264,7 +276,7 @@ integration tests. Writes the test results document.
 
 ### What it produces
 
-- `tdd-results.md` (S5) — must contain `STATUS: PASS` when all tests pass
+- `phase-{N}-tdd-results.md` (S5) — must contain `STATUS: PASS` when all tests pass
 - `phase-{N}-test-results.md` (S7) — must contain `STATUS: PASS` when all pass
 
 ### Constraints
@@ -288,7 +300,7 @@ prioritised gap report.
 
 ### What it produces
 
-- `gap-analysis-[feature-id].md`
+- `gap-analysis.md` (written to `[SESSION_ROOT]/`)
 
 ### Constraints
 
@@ -300,22 +312,24 @@ prioritised gap report.
 ## feature-doc-generator
 
 **Mode:** Foreground  
-**Access:** Read / Write (Notion via MCP)  
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/feature-docs/` only)  
 **Active during:** Phase 04 — Review & Merge
 
 ### Role
 
 Generates end-user and technical documentation for the completed feature. Writes
-documentation to Notion via the Notion MCP. Sources content from completion
-reports, test results, and the PRD.
+two separate documentation files to `.sage/prds/[FEATURE_ID]/feature-docs/`.
+Sources content from completion reports, test results, and the PRD.
 
 ### What it produces
 
-- Notion documentation page for the completed feature
+- `.sage/prds/[FEATURE_ID]/feature-docs/technical-wiki.md`
+- `.sage/prds/[FEATURE_ID]/feature-docs/user-guide.md`
 
 ### Constraints
 
-- Writes to Notion only — no local file writes
+- Writes to `.sage/prds/[FEATURE_ID]/feature-docs/` only
+- Technical wiki and user guide are always separate documents — never combined
 - Documentation must accurately reflect what was built, not what was planned
 
 ---
@@ -383,23 +397,24 @@ apply updates without approval.
 **SAGE Intel subsystem**
 
 **Mode:** Background  
-**Access:** Read / Write (Notion via MCP)  
+**Access:** Read / Write (`.sage/intel/` only)  
 **Active during:** After every work cycle
 
 ### Role
 
-Records delivery metrics to Notion after each cycle. Tracks velocity, phase
-duration, hook rejection rates, and build mode effectiveness per workflow mode
-(Mob/Sprint/Pair/Solo). Maintains separate datasets per mode for calibration.
+Records delivery metrics to `.sage/intel/` after each cycle. Tracks velocity,
+phase duration, hook rejection rates, and build mode effectiveness per workflow
+mode (Mob/Sprint/Pair/Solo). Maintains separate datasets per mode for
+calibration. Optionally publishes to Notion dashboard if configured.
 
 ### What it produces
 
-- Notion metrics records (via MCP)
-- `velocity-history.jsonl` in the session directory
+- `.sage/intel/velocity-history.jsonl` (canonical store)
+- Notion metrics dashboard (optional publish — advisory view only)
 
 ### Constraints
 
-- Writes to Notion metrics database and velocity-history only
+- Writes to `.sage/intel/velocity-history.jsonl` as the authoritative record
 - Never modifies manifests, skills, or agent files
 
 ---
@@ -409,14 +424,15 @@ duration, hook rejection rates, and build mode effectiveness per workflow mode
 **SAGE Intel subsystem**
 
 **Mode:** Foreground  
-**Access:** Read only (Notion via MCP)  
+**Access:** Read only  
 **Active during:** On demand (planning cycle)
 
 ### Role
 
-Reads historical delivery data from Notion to produce capacity and planning
-recommendations. Advises on sprint scope, phase count, and developer allocation
-based on actual velocity data, calibrated per workflow mode.
+Reads historical delivery data from `.sage/intel/velocity-history.jsonl` to
+produce capacity and planning recommendations. Advises on sprint scope, phase
+count, and developer allocation based on actual velocity data, calibrated per
+workflow mode.
 
 ### What it produces
 
@@ -425,4 +441,5 @@ based on actual velocity data, calibrated per workflow mode.
 ### Constraints
 
 - Read only
+- Reads from `.sage/intel/` as the canonical data source
 - Recommendations are advisory — no binding decisions

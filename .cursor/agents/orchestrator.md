@@ -28,7 +28,7 @@ claude-opus - use maximum reasoning for all coordination decisions.
 ### Sprint mode
 
 **At kick-off:**
-1. Read the PRD from Notion via MCP
+1. Read the PRD from `.sage/prds/[FEATURE_ID]/prd.md`
 2. Coordinate `kickoff-dev-review` skill execution (Step 1 of kick-off, ~35 min)
 3. Coordinate `phase-splitter` skill execution (Step 2, ~30 min)
 4. Generate the session manifest from the phase-splitter output (Step 3, ~10 min)
@@ -50,7 +50,7 @@ claude-opus - use maximum reasoning for all coordination decisions.
 ### Mob mode
 
 **At kick-off:**
-1. Read the PRD from Notion via MCP
+1. Read the PRD from `.sage/prds/[FEATURE_ID]/prd.md`
 2. Coordinate `kickoff-dev-review` skill (PRD discussion, ~45 min)
 3. Coordinate `phase-splitter` skill (phase breakdown, ~45 min)
 4. Generate session manifest (session setup, ~30 min)
@@ -65,8 +65,8 @@ claude-opus - use maximum reasoning for all coordination decisions.
 
 When generating `session-manifest.md`, populate it from the session manifest template at `.cursor/templates/session-manifest-template.md`. Fill in:
 
-- `sessionId` - format: `[LINEAR_FEATURE_ID]-[YYYYMMDD]` (e.g. `PROF-42-20260501`)
-- `featureId` - the Linear feature issue ID
+- `sessionId` - the Linear feature issue ID (e.g. `PROF-7`). This is the same value as `featureLinearId`.
+- `featureLinearId` - the Linear feature issue ID
 - `featureTitle` - from the PRD
 - `mode` - sprint, mob, pair, or solo
 - `kickoffDate` - today's date in ISO format

@@ -18,12 +18,12 @@ When invoked:
 1. Read the session manifest
 2. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 3. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
-4. Read the PRD from Notion (URL from manifest)
-5. Read `tdd-results.md` in the phase directory - confirm it exists and contains `STATUS: PASS`
+4. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
+5. Read `phase-{N}-tdd-results.md` in the phase directory - confirm it exists and contains `STATUS: PASS`
 6. Read every file listed under "Files to create" and "Files to modify" in the implementation plan
 7. Produce the review
 
-If `tdd-results.md` does not exist or does not contain `STATUS: PASS`, stop and tell the developer: "Code review cannot proceed - tdd-results.md is missing or does not show STATUS: PASS. Complete S5 TDD build before invoking the code reviewer."
+If `phase-{N}-tdd-results.md` does not exist or does not contain `STATUS: PASS`, stop and tell the developer: "Code review cannot proceed - phase-{N}-tdd-results.md is missing or does not show STATUS: PASS. Complete S5 TDD build before invoking the code reviewer."
 
 ## Review dimensions
 

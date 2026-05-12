@@ -350,7 +350,7 @@ tool can run, the prior step must be marked complete in the manifest.
 |---|---|
 | implementation-plan tool (S2) | S1 dev-interview = complete |
 | traceability-review tool (S3) | S2 implementation-plan = complete |
-| validation-mockup tool (S4) | S3 traceability-review = complete, zero Blockers |
+| plan-preview tool (S4) | S3 traceability-review = complete, zero Blockers |
 | code-review tool (S6) | S5 build = complete (tdd-results STATUS:PASS) |
 | test-runner tool (S7) | S6 code-review = complete, zero Critical findings |
 | completion-report tool (S8) | S7 agent-testing = complete (test-results STATUS:PASS) |
@@ -378,7 +378,7 @@ STEP_GATE_MAP = {
         "required_step": "implementation-plan",
         "required_artifact": "phase-{phase_id}-implementation-plan.md",
     },
-    "generate_validation_mockup": {
+    "generate_plan_preview": {
         "current_step": "plan-validation",
         "required_step": "traceability-review",
         "required_artifact": "phase-{phase_id}-traceability-review.md",
@@ -740,7 +740,7 @@ def main():
             f"BUILD BLOCKED — Plan validation not confirmed\n"
             f"manifest.phases.{phase_id}.validation_confirmed is not set to true.\n\n"
             f"To unblock:\n"
-            f"1. Review the validation mockup generated in S4\n"
+            f"1. Review the plan preview generated in S4\n"
             f"2. Confirm it accurately represents the implementation plan\n"
             f"3. Set validation_confirmed: true in the session manifest\n\n"
             f"This field must be set by the developer. "
@@ -1575,7 +1575,7 @@ read these values via the Linear MCP description field.
 ---
 sage_metadata:
   worktree_path: C:\Sage\worktrees\LIN-4821\phase-1\
-  diff_path: .sage/skill-update-staging/LIN-512-diff.md
+  diff_path: .skill-update-staging/LIN-512.diff
   evaluation_cycle: 3
 ---
 ```

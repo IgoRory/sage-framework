@@ -45,10 +45,11 @@ The file has two parts:
   // Written once at kick-off by phase-splitter. Never modified.
   // ─────────────────────────────────────────────────────────────────
   "header": {
-    "sessionId": "LIN-[feature-issue-id]",
+    "sessionId": "[FEATURE_ID]",
     "featureTitle": "string — matches Linear feature issue title exactly",
-    "featureLinearId": "string — Linear feature issue ID e.g. LIN-4821",
-    "featureNotionUrl": "string — Notion PRD page URL",
+    "featureLinearId": "string — Linear feature issue ID e.g. PROF-7",
+    "featurePrdPath": "string — repo-relative path to PRD e.g. .sage/prds/PROF-7/prd.md",
+    "featureComponentSpecPath": "string — repo-relative path to component spec e.g. .sage/prds/PROF-7/component-spec.md",
     "mode": "hive | pair | solo",
     "prdCompletenessScore": 87,
     "kickoffDate": "ISO 8601 date e.g. 2026-05-12",

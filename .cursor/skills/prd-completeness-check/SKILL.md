@@ -30,8 +30,8 @@ passing component specification check.
 
 | Input | Source | Required |
 |-------|--------|----------|
-| PRD content | Notion page URL | Yes |
-| Component specification | Notion child page linked from PRD | Yes (UI features) |
+| PRD content | `.sage/prds/[FEATURE_ID]/prd.md` | Yes |
+| Component specification | `.sage/prds/[FEATURE_ID]/component-spec.md` | Yes (UI features) |
 | Screen inventory | Embedded in PRD | Yes (UI features) |
 | Mockup file paths | Repo paths listed in PRD | Yes (UI features) |
 
@@ -54,14 +54,14 @@ skill-effectiveness-evaluator -- do not hardcode 80 in any downstream logic.
 
 ---
 
-## Step 1 -- Fetch and read all inputs
+## Step 1 -- Read all inputs
 
-Fetch the PRD from Notion using the provided URL.
-Fetch the component specification child page (linked from the PRD).
+Read the PRD from `.sage/prds/[FEATURE_ID]/prd.md`.
+Read the component specification from `.sage/prds/[FEATURE_ID]/component-spec.md`.
 Identify the screen inventory section in the PRD.
 Identify all mockup file paths listed in the PRD.
 
-If no component specification page is linked, record D5 = 0/25 immediately
+If no component specification file exists, record D5 = 0/25 immediately
 and continue scoring the remaining dimensions.
 
 ---
@@ -88,7 +88,8 @@ Record the count of each deduction type.
 Message text sourcing check:
 - User-facing message text (toast messages, error messages, tooltip text,
   dialog titles and body text, validation messages) that is not sourced
-  from the codebase with a file reference and is not marked as
+  from the codebase with a file reference and is not marked with one of:
+  `[Proposed — approved by PM]`, `[PM-provided]`, or
   `[TEXT TBD — requires PM decision]`: -2 per instance
 - This check applies to all message text in the PRD requirements section,
   acceptance criteria, edge cases section, and component specification
@@ -160,7 +161,7 @@ are not assessed here -- that is covered in D5.
 
 ### D5 -- UI component specification (25pts)
 
-Read the component specification Notion child page. For every new or
+Read the component specification file. For every new or
 affected UI component on every affected page:
 
 Each component must document all six elements:
@@ -190,10 +191,10 @@ For each component, score 0-6 elements present. Partial credit applies:
 each missing element reduces that component's share proportionally.
 
 Special cases:
-- If no component specification page exists: D5 = 0/25 automatically.
-  Record finding: "No component specification page linked from PRD."
-- If the page exists but contains no entries: D5 = 0/25.
-  Record finding: "Component specification page is empty."
+- If no component specification file exists: D5 = 0/25 automatically.
+  Record finding: "No component specification file at .sage/prds/[FEATURE_ID]/component-spec.md."
+- If the file exists but contains no entries: D5 = 0/25.
+  Record finding: "Component specification file is empty."
 - Reused components (not modified by this feature): skip D5 check.
   Only new or modified components are assessed.
 
@@ -229,7 +230,9 @@ if available -- fall back to 80 if not set.
 If score >= threshold:
   Update the Linear feature issue status to Ready via Linear MCP.
 
-Write the assessment report using this exact format:
+Write the assessment report to: `.sage/prds/[FEATURE_ID]/completeness-assessment.md`
+
+Use this exact format:
 
 ``````
 PRD COMPLETENESS ASSESSMENT

@@ -1065,7 +1065,7 @@
         <div class="step-num">S4</div>
         <div class="step-body">
           <div class="step-label">Validation Mockup</div>
-          <p class="step-desc">The <code>validation-generator</code> produces an HTML mockup or calculation proof. A human developer must manually set <code>validationConfirmed: true</code> in the session manifest — an agent cannot set this flag. Build cannot start until confirmed.</p>
+          <p class="step-desc">The <code>plan-preview-generator</code> produces a plan preview artifact (canvas or Markdown for UI phases, calculation proof for calculation phases). A human developer must manually set <code>validationConfirmed: true</code> in the session manifest — an agent cannot set this flag. Build cannot start until confirmed.</p>
           <span class="step-tag tag-human">Human confirmation required</span>
         </div>
       </div>
@@ -1338,8 +1338,8 @@
         <div class="agent-desc">S3 — validates implementation plan against PRD. Must reach zero blockers.</div>
       </div>
       <div class="agent-pill">
-        <div class="agent-name">validation-generator</div>
-        <div class="agent-desc">S4 — produces HTML mockup or calculation proof for human sign-off.</div>
+        <div class="agent-name">plan-preview-generator</div>
+        <div class="agent-desc">S4 — produces plan preview artifacts (canvas, Markdown, or calculation proof) for human sign-off.</div>
       </div>
       <div class="agent-pill">
         <div class="agent-name">code-simplifier</div>

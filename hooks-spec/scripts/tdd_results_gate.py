@@ -4,11 +4,12 @@ SAGE Framework — Hook: tdd-results-gate
 Event: preToolUse
 Blocking: True
 
-Blocks S6 (code review) from starting until the phase's tdd-results.md
-file exists in the phase directory AND contains the line 'STATUS: PASS'.
+Blocks S6 (code review) from starting until the phase's
+phase-{N}-tdd-results.md file exists in the phase directory AND contains
+the line 'STATUS: PASS'.
 
-The tdd-results.md is written by the test-runner agent after all TDD
-scenarios have been executed during S5 build.
+The file is written by the test-runner agent after all TDD scenarios have
+been executed during S5 build.
 """
 
 import sys
@@ -23,7 +24,8 @@ CODE_REVIEW_INITIATING_TOOLS = {
     "str_replace_editor"
 }
 
-TDD_RESULTS_FILENAME = "tdd-results.md"
+def tdd_results_filename(phase_id: str) -> str:
+    return f"phase-{phase_id}-tdd-results.md"
 PASS_MARKER = "STATUS: PASS"
 
 
@@ -61,22 +63,23 @@ def main():
         return
 
     phase_dir = get_phase_dir(session_root, phase_id)
-    tdd_results_path = phase_dir / TDD_RESULTS_FILENAME
+    filename = tdd_results_filename(phase_id)
+    tdd_results_path = phase_dir / filename
 
     if not tdd_results_path.exists():
         write_telemetry_event(session_root, {
             "event": "hook_rejection",
             "hook": "tdd-results-gate",
             "phaseId": phase_id,
-            "reason": "tdd-results.md not found"
+            "reason": f"{filename} not found"
         })
         block(
             message=(
                 f"TDD RESULTS GATE — Code review blocked for phase {phase_id}.\n\n"
-                f"tdd-results.md not found in the phase directory:\n"
+                f"{filename} not found in the phase directory:\n"
                 f"  {phase_dir}\n\n"
                 f"The test-runner agent must complete all TDD scenarios and write\n"
-                f"tdd-results.md with 'STATUS: PASS' before code review can begin."
+                f"{filename} with 'STATUS: PASS' before code review can begin."
             ),
             phase_id=phase_id
         )
@@ -87,12 +90,12 @@ def main():
             "event": "hook_rejection",
             "hook": "tdd-results-gate",
             "phaseId": phase_id,
-            "reason": "tdd-results.md does not contain STATUS: PASS"
+            "reason": f"{filename} does not contain STATUS: PASS"
         })
         block(
             message=(
                 f"TDD RESULTS GATE — Code review blocked for phase {phase_id}.\n\n"
-                f"tdd-results.md exists but does not contain 'STATUS: PASS'.\n"
+                f"{filename} exists but does not contain 'STATUS: PASS'.\n"
                 f"  {tdd_results_path}\n\n"
                 f"All TDD scenarios must pass before code review can proceed.\n"
                 f"Fix failing tests in S5 before advancing."

@@ -1,21 +1,21 @@
 ﻿---
 name: intel-advisor
 description: >
-  Reads historical delivery data from Notion and velocity-history.jsonl to
-  produce capacity and planning recommendations. Advises on sprint scope,
-  phase count, and developer allocation based on actual velocity data,
-  calibrated per workflow mode. Read-only and advisory -- recommendations
-  do not bind decisions. Use during the planning cycle before a new feature
-  begins, or when asked "how long will this take?" or "how many developers
-  do we need?". Never mix mode data in recommendations.
+  Reads historical delivery data from .sage/intel/ to produce capacity and
+  planning recommendations. Advises on sprint scope, phase count, and
+  developer allocation based on actual velocity data, calibrated per workflow
+  mode. Read-only and advisory -- recommendations do not bind decisions.
+  Use during the planning cycle before a new feature begins, or when asked
+  "how long will this take?" or "how many developers do we need?". Never mix
+  mode data in recommendations.
 ---
 
 # Intel Advisor
 
 Part of the SAGE Intel subsystem. Produces capacity and planning
-recommendations based on actual historical delivery data from the
-velocity-history dataset. All recommendations are advisory, with
-explicit confidence levels based on data availability.
+recommendations based on actual historical delivery data from
+`.sage/intel/velocity-history.jsonl`. All recommendations are advisory,
+with explicit confidence levels based on data availability.
 
 ---
 
@@ -23,21 +23,20 @@ explicit confidence levels based on data availability.
 
 | Input | Source | Required |
 |-------|--------|----------|
-| velocity-history.jsonl | [SESSION_ROOT]/ if in session, or .sage/ | Yes |
-| Notion metrics database | Via Notion MCP | Yes |
-| Feature description or PRD | Provided by invoker | For feature-specific advice |
+| velocity-history.jsonl | `.sage/intel/velocity-history.jsonl` | Yes |
+| Calibration data | `.sage/intel/[mode]-calibration.json` | If available |
+| Feature description or PRD | Provided by invoker or `.sage/prds/[FEATURE_ID]/prd.md` | For feature-specific advice |
 | Requested mode | Provided by invoker | Yes |
 
 ---
 
 ## Step 1 -- Read historical data
 
-Read velocity-history.jsonl from the session root (if in an active session)
-or from .sage/ (for planning outside a session).
+Read velocity-history.jsonl from `.sage/intel/velocity-history.jsonl`.
+This is the canonical source of all velocity data across sessions.
 
-Also read the Notion metrics database via Notion MCP for the same mode.
-The Notion database is the canonical source -- velocity-history.jsonl
-supplements with data from the current session if it is not yet in Notion.
+If a mode-specific calibration file exists (e.g. `.sage/intel/sprint-calibration.json`),
+read it for pre-computed baselines.
 
 Filter all data to the requested mode. Never use Sprint data to advise
 on a Mob session, or vice versa.

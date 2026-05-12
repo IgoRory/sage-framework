@@ -68,7 +68,7 @@ after Step 2 completes:
 ```json
 {
   "event": "prd_complexity_classified",
-  "phaseId": "preflight",
+  "phaseId": "P2",
   "complexityTier": "tier-3",
   "factors": {
     "scopedFiles": 11,

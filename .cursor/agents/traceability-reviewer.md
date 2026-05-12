@@ -16,7 +16,7 @@ S3 - Traceability Review
 
 When invoked:
 1. Read the session manifest
-2. Read the PRD from Notion (URL from manifest)
+2. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
 3. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 4. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
 5. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
@@ -104,7 +104,7 @@ Tell the developer:
 - The review is complete
 - The finding counts (Blockers, Majors, Minors)
 - If Blockers > 0: the implementation-planner must resolve them - invoke `implementation-planner` again, not this agent
-- If Blockers = 0: S3 is complete, invoke `validation-generator` to begin S4
+- If Blockers = 0: S3 is complete, invoke `plan-preview-generator` to begin S4
 
 ## Constraints
 

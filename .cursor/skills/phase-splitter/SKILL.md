@@ -31,8 +31,8 @@ mid-execution, it must be re-split.
 
 | Input | Source | Required |
 |-------|--------|----------|
-| PRD | Notion page (must be at Linear status Ready) | Yes |
-| Component specification | Notion child page | Yes (UI features) |
+| PRD | `.sage/prds/[FEATURE_ID]/prd.md` (must be at Linear status Ready) | Yes |
+| Component specification | `.sage/prds/[FEATURE_ID]/component-spec.md` | Yes (UI features) |
 | Phase-splitter briefing | [SESSION_ROOT]/phase-splitter-briefing.md | Yes (Sprint/Mob) |
 | Codebase | Read access via Cursor file system | Yes |
 | Session manifest template | .cursor/templates/session-manifest-template.md | Yes |
@@ -43,7 +43,8 @@ Do not run this skill against a PRD that has not passed prd-completeness-check.
 
 ## Step 1 -- Load all inputs
 
-Fetch the PRD and component specification from Notion.
+Read the PRD from `.sage/prds/[FEATURE_ID]/prd.md`.
+Read the component specification from `.sage/prds/[FEATURE_ID]/component-spec.md`.
 Read the phase-splitter briefing from the session root.
 Read the session manifest template.
 

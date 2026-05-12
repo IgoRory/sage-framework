@@ -18,7 +18,7 @@ When invoked, immediately:
 1. Read the session manifest: `.sage/sessions/[active session]/session-manifest.md`
 2. Identify your phase ID from `SAGE_PHASE_ID` environment variable
 3. Read the phase's TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
-4. Read the PRD for this phase from Notion (URL is in the phase definition in the manifest)
+4. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
 5. Read the phase definition from the manifest (scopedFiles, layer, phaseType, requiredReferences)
 6. Begin the interview
 

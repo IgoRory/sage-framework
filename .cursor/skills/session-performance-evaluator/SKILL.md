@@ -38,7 +38,7 @@ For each phase, read:
 - phase-N-dev-interview-summary.md
 - phase-N-implementation-plan.md
 - phase-N-traceability-review.md
-- tdd-results.md
+- phase-{N}-tdd-results.md
 - phase-N-code-review.md
 - phase-N-test-results.md
 - phase-N-completion-report.md (if exists)
@@ -80,7 +80,7 @@ worked correctly. The concern is repetition of the same rejection.
 
 ### Dimension C -- TDD cycle quality
 
-Check from tdd-results.md and telemetry:
+Check from phase-{N}-tdd-results.md and telemetry:
 
 RED discipline (test written before code):
   OK: all tasks show RED event before first GREEN attempt

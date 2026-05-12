@@ -1,8 +1,8 @@
 # Component Specification Template
 
-Use this template to produce the Component Specification child page after
-the interview. This page is saved as a Notion child page of the PRD and
-linked explicitly from the PRD header.
+Use this template to produce the Component Specification file after
+the interview. This file is saved to `.sage/prds/[FEATURE_ID]/component-spec.md`
+and linked explicitly from the PRD.
 
 One entry per component from the P4 inventory. Order by page, then by
 component type (new components first, then affected, then reused).

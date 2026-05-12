@@ -157,14 +157,25 @@
   "prd": {
     "completenessThreshold": 80,
     "thresholdAutoCalibrated": true,
-    "notionSpaceId": "34cb0a7bc8b2813d8319e52d1dd61728",
-    "notionPRDParentUrl": "https://app.notion.com/p/PRDs-353b0a7bc8b281d6b89ee2331841fb1c",
+    "prdDir": ".sage/prds",
     "requiredInterviewBranch": "dev-main",
     "remoteName": "origin",
     "telemetryFile": ".sage/prd-interview-telemetry.jsonl"
   },
 
-  "notionMetricsPageUrl": "https://app.notion.com/p/SAGE-Metrics-Dashboard-353b0a7bc8b281ac90f3da541f579292",
+  "intel": {
+    "dir": ".sage/intel",
+    "velocityFile": ".sage/intel/velocity-history.jsonl",
+    "releaseFile": ".sage/intel/release-history.jsonl",
+    "calibrationFiles": {
+      "mob": ".sage/intel/mob-calibration.json",
+      "sprint": ".sage/intel/sprint-calibration.json",
+      "pair": ".sage/intel/pair-calibration.json"
+    },
+    "notionDashboardUrl": "https://app.notion.com/p/SAGE-Metrics-Dashboard-353b0a7bc8b281ac90f3da541f579292",
+    "notionPublishEnabled": true
+  },
+
   "releaseCalendarUrl": "https://app.notion.com/p/SAGE-Release-Calendar-353b0a7bc8b2814e9b54f47e9bf5ecd7",
 
   "telemetry": {
@@ -205,7 +216,7 @@
       "dev-interview":       "phase-{N}-dev-interview-summary.md",
       "implementation-plan": "phase-{N}-implementation-plan.md",
       "traceability-review": "phase-{N}-traceability-review.md",
-      "plan-validation":     "phase-{N}-validation-mockup.html",
+      "plan-validation":     "phase-{N}-plan-preview.canvas.tsx",
       "build":               "(source files)",
       "code-review":         "phase-{N}-code-review.md",
       "agent-testing":       "phase-{N}-test-results.md",

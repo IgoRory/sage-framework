@@ -8,7 +8,7 @@ must appear in the output, even if the content is a TODO placeholder.
 
 ## PRD structure
 
-The PRD is generated as a Notion page with this exact structure:
+The PRD is generated as a markdown file at `.sage/prds/[FEATURE_ID]/prd.md` with this exact structure:
 
 ---
 
@@ -170,29 +170,21 @@ boundary and if so, which entities are read or written.]
 
 ### Screen inventory
 [List each new or modified screen. Format:
-| Screen name | New / Modified | Purpose |
-|-------------|---------------|---------|
-| [name] | [New/Modified] | [one sentence] |
+| Screen name | New / Modified | Purpose | Layout description |
+|-------------|---------------|---------|-------------------|
+| [name] | [New/Modified] | [one sentence] | [top-to-bottom component placement and spatial relationships] |
 ]
 
 ### Navigation
 [From Q5b.4. What triggers navigation to each screen.]
 
-### Mockup files
-[For each screen: the expected file path in the repository where the
-wireframe-agent will write the mockup. Format:
-| Screen | Mockup path |
-|--------|------------|
-| [name] | docs/wireframes/[feature-id]/[screen-name].html |
-]
-
 ### Component specification
 [This section states that the component specification is maintained in
-a separate Notion child page. Write:
+a separate file. Write:
 "Component specifications for all new and modified UI components are
-documented in the companion Component Specification page linked below.
+documented in the companion Component Specification file.
 
-[Link to Component Specification Notion child page]
+See: [component-spec.md](./component-spec.md)
 
 The component specification covers: [list component names]."
 ]
@@ -228,9 +220,9 @@ If no parked questions: "No open items."
 
 ---
 
-## Component specification page structure
+## Component specification file structure
 
-The component specification is a Notion child page of the PRD.
+The component specification is a separate file at `.sage/prds/[FEATURE_ID]/component-spec.md`.
 Title: "[Feature title] -- Component Specification"
 
 For each UI component identified in Section 5b:
