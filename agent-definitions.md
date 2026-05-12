@@ -1,6 +1,14 @@
 # SAGE Framework — Agent Definitions
 
-This file defines all fifteen agents in the SAGE Framework. Each agent definition is placed in `.cursor/agents/[agent-name].md` in the codebase repository. Agents are loaded by Cursor when invoked and operate within the constraints defined here. The hook layer enforces these constraints at the execution layer — an agent cannot exceed its defined scope through instruction alone.
+> **Source of truth:** The actual agent prompts live in `.cursor/agents/[agent-name].md`
+> (mirrored from the Profitability repo). This file is a **supplementary reference**
+> that provides extended descriptions, model recommendations, and additional
+> behavioural detail beyond what the agent prompt files contain.
+>
+> Model IDs listed here (e.g. `claude-4.6-opus-max`) are **recommended tiers**.
+> The Profitability agent prompts may use simpler model references (e.g. `claude-opus`).
+
+Each agent definition is placed in `.cursor/agents/[agent-name].md` in the codebase repository. Agents are loaded by Cursor when invoked and operate within the constraints defined here. The hook layer enforces these constraints at the execution layer — an agent cannot exceed its defined scope through instruction alone.
 
 ---
 
@@ -19,8 +27,10 @@ This file defines all fifteen agents in the SAGE Framework. Each agent definitio
 - [feature-doc-generator](#feature-doc-generator)
 - [session-performance-evaluator](#session-performance-evaluator)
 - [skill-effectiveness-evaluator](#skill-effectiveness-evaluator)
+- [prd-interviewer-effectiveness-evaluator](#prd-interviewer-effectiveness-evaluator)
 - [intel-recorder](#intel-recorder)
 - [intel-advisor](#intel-advisor)
+- [sage-s7-ado-handoff](#sage-s7-ado-handoff)
 
 ---
 
@@ -426,6 +436,35 @@ A skill must have been invoked in at least 3 of the 5 sessions in the evaluation
 
 ---
 
+## prd-interviewer-effectiveness-evaluator
+
+**Model:** claude-4.6-opus-max (or same as skill-effectiveness-evaluator)
+**Mode:** Background / on-demand (PM invocation)
+**Access:** Read / Write (staged diffs, Linear, history file — no direct SKILL apply)
+**Active during:** PRD quality review cadence · Optional every N completed PRD interviews
+
+### Role
+
+Evaluates **`prd-interviewer`** using **PRD JSONL telemetry** (`.sage/prd-interview-telemetry.jsonl` or path from `prd.telemetryFile`), **`skill-update-history.jsonl`**, and optional traceability-review artifacts. Proposes targeted improvements to **`prd-interviewer`** and **`references/question-sets.md`** with Product Manager approval via Linear (`skill-update`).
+
+### Mutual exclusion
+
+When this agent is deployed, **`skill-effectiveness-evaluator`** must **skip** **`prd-interviewer`** evaluation to avoid duplicate Linear proposals.
+
+### What it produces
+
+- Staged unified diff under `.skill-update-staging/[LINEAR_ISSUE_ID].diff`
+- Linear issue — Pending Approval, approver Product Manager
+- Append row to `skill-update-history.jsonl` with optional `evaluatorId: prd-interviewer-effectiveness-evaluator`
+
+### Constraints
+
+- Same governance as skill-effectiveness-evaluator: no direct SKILL apply without approved Linear issue
+- Minimum three completed PRD interview runs in telemetry before proposing changes
+- Suppress re-proposal for two evaluation cycles after rejection (align with `skillUpdates.suppressionCycles` policy)
+
+---
+
 ## intel-recorder
 
 **Model:** claude-4.6-sonnet-medium
@@ -506,3 +545,28 @@ Answers planning questions using the empirical dataset built by intel-recorder. 
 - Uses mode-specific calibration data — Mob estimates draw from `mob_calibration.json`, Sprint from `sprint_calibration.json`
 - Approval turnaround data is used in internal calculations but must never appear in outputs shown to leadership
 - Read only — never writes to any file during a planning query
+
+---
+
+## sage-s7-ado-handoff
+
+**Model:** *(reference documentation — invoke as needed; not a primary automation agent)*  
+**Mode:** On demand  
+**Access:** Read only  
+**Active during:** After S7 (`phase-{N}-test-results.md`) when aligning with Azure DevOps test evidence
+
+### Role
+
+Defines how **SAGE S7** (per-phase agent testing, `phase-{N}-test-results.md`) relates to the **ADO test plan** workflow (`2-1-test-plan-creation.mdc`). This agent file is a **mapping and checklist** document: S7 automation and ADO human-QA evidence are complementary; neither replaces the other.
+
+### What it specifies
+
+- Two paths: SAGE S7 (agent-driven artifacts) vs ADO UserStory test runs (stakeholder-facing).
+- Mapping rules: `tdd-results.md`, `code-review.md`, and `test-results.md` → ADO test cases / run notes / attachments.
+- Gate ordering: S6 code review → S7 test-runner → S8 completion report stop gate; ADO run updates **after** S7 PASS per document guidance.
+
+### Constraints
+
+- Does **not** substitute an ADO test plan for S7 `STATUS: PASS` or vice versa — both must be satisfied for full closure where the process requires them.
+- ADO updates follow the handoff checklist in `.cursor/agents/sage-s7-ado-handoff.md` after `phase-{N}-test-results.md` reaches `STATUS: PASS`.
+- Read only — the markdown file is normative reference for developers; it does not execute hooks or write ADO state itself.

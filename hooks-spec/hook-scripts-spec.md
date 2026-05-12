@@ -1521,11 +1521,14 @@ until this field is set.
 ```
         ├── hooks_utils.py                    ← shared utilities
         ├── telemetry_logger.py               ← logging (non-blocking)
+        ├── prd_telemetry_append.py           ← PRD interview telemetry helper
         ├── plan_mode_enforcer.py             ← S1 Plan mode gate
         ├── manifest_step_gate.py             ← S2-S8 step progression
         ├── required_references_gate.py       ← S5 reference files gate
         ├── validation_confirmed_gate.py      ← S5 validation gate
         ├── phase_approval_gate.py            ← S1 Linear approval gate
+        ├── foundation_verified_gate.py       ← S5 foundation gate (Dependent phases)
+        ├── batch_confirmation_gate.py        ← S5 checkpoint batch gate
         ├── completion_report_stop_gate.py    ← S8 stop hook (hardest gate)
         ├── tdd_results_gate.py               ← S6 TDD results gate
         ├── code_review_gate.py               ← S7 code review gate
@@ -1634,3 +1637,17 @@ writing this block correctly.
   }
 }
 ```
+
+---
+
+## PRD interview telemetry (optional helper)
+
+PRD lifecycle lines are **not** emitted by `telemetry_logger.py`. They go to the append-only file configured under **`prd.telemetryFile`** in `.sage/workflow-config.json` (default: `.sage/prd-interview-telemetry.jsonl`).
+
+**Script:** `prd_telemetry_append.py` (same `hooks-spec/scripts/` catalogue as other hook utilities; product repos mirror into `.cursor/hooks/scripts/`).
+
+**Behaviour:** Resolve repo root, read `prd.telemetryFile`, append one minified JSON line. Adds `timestamp` if missing. **Never raises** — failures exit 0 (same spirit as `telemetry_logger.py`).
+
+**Invocation:** `python prd_telemetry_append.py '<json-object>'` or pipe JSON on stdin. Used by **`prd-interviewer`** instructions and optionally by agents manually.
+
+See also `reference-docs/prd-interview-runbook.md` in sage-framework.

@@ -50,29 +50,32 @@ New-Item -ItemType Directory -Path ".skill-update-triggers" -Force
 New-Item -ItemType Directory -Path ".skill-update-staging" -Force
 ```
 
-Paste `workflow-config.json` content from `hooks-spec/workflow-config.json` in the handoff repository.
+Paste `workflow-config.json` content from `hooks-spec/workflow-config.json` in the handoff repository (same schema as Profitability `.sage/workflow-config.json`: `framework`, `linear`, `modes`, `telemetry`, `phases`, etc.).
 
 ### 1.2 Add .cursor/ files
 
 Copy all files from the handoff repository `.cursor/` directory:
 
-- `.cursor/hooks/hooks.json` and all Python hook scripts (12 scripts)
-- `.cursor/skills/` — all ten skill directories with SKILL.md files and references
-- `.cursor/agents/` — all fourteen agent definition files
-- `.cursor/rules/sage-session.mdc` and `phase-context.mdc`
+- `.cursor/hooks/hooks.json` and all Python hook scripts under `.cursor/hooks/scripts/` (13 modules: shared utils, gates, telemetry, watcher)
+- `.cursor/skills/` — seven top-level skill directories (including `sage-intel/` with `intel-recorder` and `intel-advisor`)
+- `.cursor/agents/` — sixteen agent definition files (`.md`)
+- `.cursor/rules/sage-session.mdc`, `phase-context.mdc`, and preserve existing `rules.mdc` as applicable
 - `.cursor/templates/session-manifest-template.md`
+- `.cursor/mcp.json` — MCP server URLs (Linear, Notion, Microsoft 365) as needed
 
-### 1.3 Add AGENTS.md to the repository root
+### 1.3 AGENTS files at the repository root (catalogue vs product context)
 
-Copy `AGENTS.md` from `profitability-repo-files/AGENTS.md` in the handoff package to the root of the Profitability codebase repository:
+Cursor reads root **`AGENTS.md`** automatically. On Profitability, that file is the **SAGE Framework Agent Catalogue** (framework roles and constraints), not the long-form product/codebase guide.
+
+1. Copy the catalogue from the handoff package root (same content as this repo’s [`AGENTS.md`](../AGENTS.md)) to the Profitability repo root:
 
 ```powershell
-Copy-Item "[path-to-handoff]\profitability-repo-files\AGENTS.md" -Destination "."
+Copy-Item "[path-to-handoff]\AGENTS.md" -Destination "."
 ```
 
-`AGENTS.md` is a Cursor convention — Cursor reads this file automatically before any agent takes action in the repository. It provides every agent with orientation context, domain knowledge, coding conventions, and workflow rules specific to the Profitability codebase. It must be at the repository root to be picked up automatically.
+2. Add the **Profitability product context** from [`docs/agents-profitability.md`](../docs/agents-profitability.md) (same content as [`profitability-repo-files/AGENTS.md`](../profitability-repo-files/AGENTS.md)) so agents still see domain rules — typically by adding a **Cursor Project Rule** that references `docs/agents-profitability.md`, or by copying that file into `docs/` in the product repo and `@`-mentioning it in team workflow. **Do not** overwrite root `AGENTS.md` with the product guide.
 
-> **Verify before committing:** Open `AGENTS.md` and confirm the codebase paths in Sections 2 and 5 match the actual directory structure of the Profitability repo on your machine. Adjust any paths that differ.
+> **Verify before committing:** Open the product context doc and confirm Sections 2 and 5 match the actual directory structure of the Profitability repo. Adjust any paths that differ.
 
 ### 1.4 Update .gitignore
 
@@ -87,17 +90,17 @@ Add-Content .gitignore ".skill-update-triggers/"
 ### 1.5 Commit
 
 ```powershell
-git add .sage/ .cursor/ .skill-update-triggers/ .skill-update-staging/ .gitignore AGENTS.md
+git add .sage/ .cursor/ .skill-update-triggers/ .skill-update-staging/ .gitignore AGENTS.md docs/
 git commit -m "init: SAGE framework structure
 
 - .sage/ with workflow-config.json and sessions structure
-- .cursor/hooks/ with hooks.json and all 12 Python gate scripts
-- .cursor/skills/ with all 10 skill SKILL.md files
-- .cursor/agents/ with all 14 agent definitions
+- .cursor/hooks/ with hooks.json and all Python gate scripts (13 modules under scripts/)
+- .cursor/skills/ with all skill directories (7 top-level, including sage-intel)
+- .cursor/agents/ with all 16 agent definitions
 - .cursor/rules/ with sage-session.mdc and phase-context.mdc
 - .cursor/templates/ with session manifest template
 - .skill-update-triggers/ and .skill-update-staging/ directories
-- AGENTS.md — Cursor codebase context file at repo root"
+- AGENTS.md — SAGE agent catalogue at repo root; docs/agents-profitability.md — product context"
 
 git push origin main
 ```
@@ -367,12 +370,13 @@ After the first session, review:
 All implementation files are in the handoff repository at `github.com/IgoRory/empyrean-rory-profitability-workflow`. Start with `README.md` for a full index.
 
 Key files:
-- `hooks-spec/hooks.json` — 12 hook definitions
+- `hooks-spec/hooks.json` — hook definitions (parity with Profitability `.cursor/hooks/hooks.json`)
 - `hooks-spec/hook-scripts-spec.md` — full Python script specifications
 - `hooks-spec/session-manifest-schema.md` — session manifest structure
-- `hooks-spec/workflow-config.json` — workflow configuration
+- `hooks-spec/workflow-config.json` — workflow configuration (parity with Profitability `.sage/workflow-config.json`)
+- `hooks-spec/scripts/` — mirror of Python gate scripts for offline handoff
 - `cursor-directory-spec/cursor-directory-spec.md` — full `.cursor/` directory specification
 - `cursor-directory-spec/git-worktree-spec.md` — git worktree setup and conventions
-- `AGENTS.md` — all 14 agent definitions
+- `AGENTS.md` — SAGE agent catalogue (root); `agent-definitions.md` — long-form definitions including model hints; `docs/agents-profitability.md` — Profitability product context
 - `webhook/README.md` — webhook receiver setup
 - `playwright-spec/playwright-mcp-spec.md` — Playwright MCP configuration

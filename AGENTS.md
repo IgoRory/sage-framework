@@ -1,425 +1,428 @@
-# AGENTS.md
-# Profitability — Agent Context and Repository Guide
+# AGENTS.md — SAGE Framework Agent Catalogue
 
-This file is read by any AI agent (Cursor, Claude, or otherwise)
-before taking action in this repository. It provides orientation
-context, domain knowledge, coding conventions, and workflow rules.
-Read this file completely before making any changes.
+**Framework:** SAGE (Semi-Autonomous Guided Execution)
+**Product:** Profitability
+**Version:** 1.0.0
 
----
+All agent definitions for the SAGE framework. Each agent has a corresponding
+`.cursor/agents/[agent-name].md` file with its full system prompt and constraints.
 
-## 1. What this product is
-
-**Profitability** is a bank and credit union profitability analytics
-platform built by Empyrean Solutions. It calculates and reports
-profitability metrics at instrument, customer, department, and
-enterprise levels — including FTP (Funds Transfer Pricing), NII
-(Net Interest Income), expense and income allocations, capital
-adequacy, credit risk, and RAROC.
-
-The platform has two product surfaces sharing the same codebase:
-- **Full Profitability** (`prof_client_type_id = 1`) — complete
-  multi-step calculation engine with full allocation methodology
-- **Org Profitability** (`prof_client_type_id = 2`) — organisation-
-  level profitability with a subset of the calculation workflow
-
-Behaviour, workflow links, and page validations differ between the
-two surfaces. Always check which surface a feature targets before
-implementing. When `prof_client_type_id` is not specified, assume
-Full Profitability (1) unless the PRD states otherwise.
+Agents operate within the constraints defined here. The hook layer enforces
+these constraints at the execution layer — an agent cannot exceed its defined
+scope through instruction alone.
 
 ---
 
-## 2. Architecture
+## Table of Contents
 
-### Dependency graph
-
-```
-Web/ProfitabilityWeb          (Angular 19 SPA)
-        ↓ HTTP + WebSocket (/ws)
-Services/ProfitabilityAPI     (ASP.NET Core 8 Web API)
-        ↓ project references
-Libraries/Empyrean.Data       (Dapper data access + DTOs)
-Libraries/Empyrean.WS         (WebSocket pipeline)
-        ↓
-Database/                     (SQL Server — stored procedures,
-                               tables, functions, views)
-```
-
-### Layer responsibilities
-
-**`Database/`**
-SQL script library. Not an SSDT project. ~47 domain folders
-containing approximately 112 tables (`.tbl`), 348 stored
-procedures (`.prc`), 87 functions (`.fnc`), 38 views (`.vw`),
-and 76 loose migration/BI `.sql` files.
-
-**`Libraries/Empyrean.Data`**
-- Solution: `Libraries/Empyrean.Data/Empyrean.Data.sln`
-- Namespace: `Empyrean.Data`
-- Contains: `Empyrean.Data.Models.*` (DTOs per domain),
-  `Empyrean.Data.SharedService` (~55 `*DAL.cs` files using Dapper),
-  `Empyrean.Data.Helpers`, `Empyrean.Data.Services`
-- Role: Data access layer and DTOs. Consumed entirely by
-  `ProfitabilityAPI`. Does not reference `Empyrean.WS`.
-
-**`Libraries/Empyrean.WS`**
-- Solution: `Libraries/Empyrean.WS/Empyrean.WS.sln`
-- Namespace: `Empyrean.WS`
-- Contains: WebSocket middleware, handlers, connection manager,
-  tasks, interfaces, models, utilities
-- Role: WebSocket pipeline mounted at `/ws` in the API.
-  Does not reference `Empyrean.Data`.
-
-**`Services/ProfitabilityAPI`**
-- Solution: `ProfitabilityAPI.sln` (includes all three projects)
-- Namespace: `ProfitabilityAPI`
-- Contains: 54 controllers (one per domain), services, DAL pairs,
-  DI installer extensions
-- Infrastructure: Serilog, Swashbuckle, IdentityServer4,
-  Azure Key Vault, Newtonsoft.Json, `EmpyreanSolutions.Authorization`,
-  `EmpyreanSolutions.Multitenant`
-
-**`Web/ProfitabilityWeb`**
-- Package: `profitability-web`
-- Framework: Angular 19.2, NgModule-based (not standalone root)
-- Contains: ~40+ lazy-loaded feature modules, 60+ HTTP services,
-  80+ TypeScript model subfolders
-- Key libraries: Kendo UI, Angular Material, SpreadJS, oidc-client,
-  ngx-toastr, RxJS 7.8, Azure Blob Storage client
+- [orchestrator](#orchestrator)
+- [sprint-coordinator](#sprint-coordinator)
+- [dev-interview](#dev-interview)
+- [implementation-planner](#implementation-planner)
+- [traceability-reviewer](#traceability-reviewer)
+- [validation-generator](#validation-generator)
+- [code-simplifier](#code-simplifier)
+- [code-reviewer](#code-reviewer)
+- [test-runner](#test-runner)
+- [gap-analyzer](#gap-analyzer)
+- [feature-doc-generator](#feature-doc-generator)
+- [session-performance-evaluator](#session-performance-evaluator)
+- [skill-effectiveness-evaluator](#skill-effectiveness-evaluator)
+- [intel-recorder](#intel-recorder)
+- [intel-advisor](#intel-advisor)
 
 ---
 
-## 3. Domain concepts
+## orchestrator
 
-### Calculation engine
+**Mode:** Foreground  
+**Access:** Read / Write  
+**Active during:** Kick-off · Between phases · Post-merge · Phase 04 (Review & Merge)
 
-The calculation engine runs steps in the order defined in
-`Database/Calculations/100_INSERT_ProfitabilityCalculations.sql`.
-The primary calculation domains and their entry stored procedures:
+### Role
 
-| Domain | Key stored procedure(s) |
-|---|---|
-| Fees & Revenue | `prRunFeesAndRevenueCalculations` |
-| FTP / NII | `prRunFTPNIICalculations` |
-| Expense Allocation | `prRunTotalExpensesCalculations`, `prGenerateDeptLevelExpenseAllocations` |
-| Income Methodology | `prRunIncomeMethodologyCalculations`, `prGenerateDeptLevelIncomeAllocations` |
-| Capital & ACL | `prRunACLCalculations`, `prRunCapitalTotalCalculations`, `prRunLoanProvisionCapitalCalculations` |
-| Credit Risk | `prRunCreditRiskCalculations`, `prRunGLOCreditRiskCalculations` |
-| Op & Market Risk | `prRunOpAndMktRiskCalculations` |
-| NIBT / NIAT | `prRunNIBTCalculations`, `prRunNIATCalculations` |
-| Dept-to-Dept | `prRunDeptToDeptAllocationCalculations` |
-| RAROC / Reporting | `prRunRAROCReportSummary`, `prRunExpenseReportSummary` |
-| Global / Dept Results | `prCalculateGlobalResultsByDep` |
+Primary coordination agent for all workflow modes. In Sprint mode: manages the
+kick-off session sequence, generates TDD specifications for each phase lane,
+monitors Foundation phase merges, triggers post-merge regression, and coordinates
+Review & Merge. In Mob mode: automatically opens Phase Chats at phase transitions
+and manages progression via gates.
 
-### Most important tables
+### What it produces
 
-**Calculation workflow:**
-- `ProfitabilityCalculations` — registry of which SPs run and in
-  what order
-- `ProfitabilityCalculationsProcess` / `ProcessLink` / `ProcessStatus`
-  — workflow state machine
-- `CalculationsParameters` / `CalculationsParamLink` — parameterisation
-- `CalculationActionLog` — audit trail
+- `session-manifest.md` — generated at kick-off
+- TDD specifications per phase lane — generated after kick-off
+- Post-merge regression report
+- Feature closure confirmation and session archive
 
-**Results:**
-- `GlobalResult` — the wide profitability statement table with
-  columns for FTP, NII, fees, capital, PPNR, NIAT, RAROC, etc.
-- `Global_Result_Calc_Metadata` — expression-driven definitions for
-  each GL line item (metadata-driven output — not hardcoded)
-- `ReportSummaryCalculations`, `ExpenseReportSummaryCalculations_*`
+### Constraints
 
-**Allocation rules:**
-- `Allocation_Rule*`, `Allocation_Rule_Set*`, `Allocation_Protocol`,
-  `Allocation_Properties`
-- `ExpenseAllocationLog`, `ExpenseAllocationLog_Instrument`,
-  `ExpenseAllocationLog_Department`
-- `IncomeAllocationRule*`, `IncomeAllocationLog`,
-  `IncomeAllocationDefinition`
-- `ExpenseMethodology*`, `IncomeMethodology`
-
-**Dimensions:**
-- `BusinessUnit`, `Department`, `Branch`, `Territory`, `Location`
-- `CommercialProduct`, `RetailProduct`, `CommercialCustomerArchive`
-- `RelationshipManager`, `Employee`, `Position`
-- `Transactions`, `TransactionLink`
-
-**Configuration:**
-- `ProfitabilitySetting` / `ProfitabilitySettings` — key-value
-  application settings
-- `GlobalSettingMonthly` / `GlobalSettingMonthlyValue` — monthly
-  time-scoped settings
-- `Type_Codes` — admin dropdowns; `AccessFlag` values:
-  1 = Full Profitability, 2 = Org Profitability, 3 = Both
-- `Page`, `PageProcessLink`, `PageDependencyLink` — UI page to
-  workflow linkage
-
-### Cross-cutting key fields
-
-| Field | Role |
-|---|---|
-| `AsOfDate` / `as_of_date` | Monthly run date — primary time key across nearly every table |
-| `process_id` | Two distinct meanings: (1) workflow step ID in `ProfitabilityCalculationsProcess`, (2) GL posting flavour in `Adjusted_GL` (resolved via `fnGetAdjustedGLProcessID('...')`) |
-| `prof_client_type_id` | 1 = Full Profitability, 2 = Org Profitability — controls which workflow links, pages, and wrappers fire |
-| `*_sid` keys | Surrogate keys throughout: `business_unit_sid`, `department_sid`, `allocation_group_sid`, `global_result_sid`, `instrument_*_sid`, etc. |
-| `row_sid`, `user_id_created/modified`, `record_status` | Standard audit / row-identity pattern across most tables |
-| `Adjusted_GL` | Core integration point for FTP, capital, provisions, and departmental allocations. DDL lives outside this repo but is heavily referenced. Always use `fnGetAdjustedGLProcessID('...')` to resolve the correct `process_id` for GL flavour operations. |
-| Measure column suffixes | `_SumAll`, `FTPCredit_SumAll`, `FTPCharge_SumAll`, `RAROC_All` — aligned with `GlobalResult` output columns |
-
-### Two important architectural patterns
-
-**Metadata-driven results:** `GlobalResult` columns are driven by
-expression and GL-account definitions in `Global_Result_Calc_Metadata`.
-Profitability statement lines are configurable, not hardcoded.
-Never hardcode a result line — reference the metadata table.
-
-**Dual product surface:** `prof_client_type_id` 1 vs 2 differentiates
-Full Profitability from Org Profitability. Same underlying tables and
-SPs; different process links and page validations. Features that affect
-both surfaces must be tested against both.
+- Does not write implementation code
+- Every artifact must be machine-readable without ambiguity
+- Uses predicate-based language in all artifacts — no vague qualifiers
+- Cannot set `validationConfirmed = true` in the session manifest
 
 ---
 
-## 4. Tech stack
+## sprint-coordinator
 
-| Layer | Technology |
-|---|---|
-| Frontend framework | Angular 19.2, TypeScript 5.8 |
-| UI components | Kendo UI for Angular 19, Angular Material 19.2, GrapeCity SpreadJS 18 |
-| Frontend state | RxJS 7.8 |
-| Authentication (frontend) | `oidc-client` — OIDC/OAuth |
-| Frontend unit tests | Vitest 4 (`@analogjs/vitest-angular`) |
-| Frontend E2E tests | Playwright 1.56 |
-| Frontend build | Angular CLI 19.2, Vite 6 (`@analogjs/vite-plugin-angular`) |
-| Backend framework | ASP.NET Core 8 Web API |
-| Data access | Dapper 2.1 + Dapper.FluentMap 2.0 → SQL Server |
-| Serialisation | Newtonsoft.Json 13 |
-| Logging | Serilog 4 with AspNetCore, File, Async sinks |
-| API docs | Swashbuckle 6.6 (Swagger/OpenAPI) |
-| Authentication (backend) | IdentityServer4 4.1.2, `AccessTokenValidation` |
-| Secrets | Azure Key Vault (`Azure.Security.KeyVault.Secrets 4.2`) |
-| Internal auth/tenancy | `EmpyreanSolutions.Authorization` 5.0.22, `EmpyreanSolutions.Multitenant` 5.0.2 |
-| WebSocket | `Empyrean.WS` (custom library, mounted at `/ws`) |
-| Idle detection | `@ng-idle/core` |
-| File export | `file-saver`, Azure Blob Storage client |
+**Mode:** Background  
+**Access:** Read only  
+**Active during:** Phase 03 — Build Phase (Sprint mode only)
 
----
+### Role
 
-## 5. Coding conventions
+Monitors the Build Phase in Sprint mode in real time. Reads the session manifest
+and per-lane telemetry to surface lane status, bottlenecks, and merge sequencing
+on demand. Never takes action — observes and reports only.
 
-### .NET — Controllers
+### What it produces
 
-- Class naming: `PascalCase` + `Controller` suffix
-  (`DepartmentController`, `ExpenseAllocationRuleController`)
-- Location: `Services/ProfitabilityAPI/ProfitabilityAPI/Controllers/`
-- Inherit from `Controller` (not `ControllerBase`)
-- Route attribute: `[Route("api/[controller]")]`
-  → URLs become `api/Department`, `api/CalculationRunner`, etc.
-- Most use `[ApiController]`; a few older controllers omit it —
-  match the existing pattern in the controller you are working in
-- Sub-actions use explicit path strings:
-  `[HttpGet("DepartmentsForPostingAccounts")]`, `[HttpPost("Run")]`
-- Authorization: `[Authorize(Policy = ProfitabilityPolicies...)]`
-- DI via C# 12 primary constructors:
-  `DepartmentController(DepartmentService _service, ILogger<Department> _logger)`
+- Status reports on demand
 
-### .NET — Services and DALs
+### Constraints
 
-- Naming: `XxxService.cs` paired with `XxxDAL.cs`
-- Location: `Services/ProfitabilityAPI/ProfitabilityAPI/Services/`
-- Most services are concrete classes without interfaces — registered
-  directly: `AddScoped<ConcreteService>()`
-- Use interfaces selectively and only where they already exist
-  (e.g. `IExpenseAllocationMethodologyRepository`) — do not add
-  `IXxxService` interfaces unless the PRD or architect requires it
-- All DI registrations go in `Extensions/Installers/DataAccessInstaller.cs`
-  via the `InstallDataAccess(this IServiceCollection services)`
-  extension method
-- Namespace: `ProfitabilityAPI.Services` (use this consistently;
-  avoid `OrgProfitabilityAPI.Services`)
-
-### .NET — DAL patterns
-
-- Use Dapper for all data access
-- Use `Dapper.FluentMap` for column → property mapping
-- All SQL calls invoke stored procedures — no inline SQL
-- Connection strings resolved via `EmpyreanSolutions.Multitenant`
-  (multi-tenant connection management) — do not hardcode
-  connection strings
-
-### Angular — Components
-
-- File naming: `kebab-case` for files and folders
-- Class naming: `PascalCase` + `Component` suffix
-  (`expense-allocation-method.component.ts` →
-  `ExpenseAllocationMethodComponent`)
-- Always three files per component:
-  `.component.ts` · `.component.html` · `.component.scss`
-- Folder structure: feature-nested kebab-case directories:
-  `components/expense-allocation/expense-allocation-rules/
-  expense-allocation-method/`
-- **Existing components:** `standalone: false`, declared in NgModules
-- **New components:** `standalone: true` per workspace standards
-  (the codebase is in transition — check the feature module you are
-  working in and match the pattern in that module)
-- Selectors: `app-*` prefix for feature components,
-  `emp-*` for core/shared components
-- Use path aliases — never use relative `../../` imports across
-  feature boundaries:
-  `@core/*`, `@components/*`, `@models/*`, `@services/*`,
-  `@shared/*`, `@guards/*`, `@routes/*`
-
-### Angular — Services
-
-- File naming: `name.service.ts`
-- Class naming: `XxxService`
-- Always `@Injectable({ providedIn: 'root' })` for singletons
-- HTTP calls use `HttpClient` with typed observables
-- All service files in `src/app/services/` or co-located in
-  feature module where domain-specific
-
-### Angular — Routing
-
-- URL segments: `kebab-case`
-  (`calculation-workflow`, `summarized-reports/detail`)
-- Lazy-loaded via `loadChildren` pointing to `*.module.ts`
-- Route guards: `AuthGuardService`, `AsOfDateGuard`
-- Route `data: { page: ... }` for page titles and metadata
-
-### SQL — Stored procedures
-
-- Naming prefix: `pr` for procedures, `fn` for functions,
-  `vw` for views
-- All Adjusted_GL process_id values resolved via
-  `fnGetAdjustedGLProcessID('...')` — never pass a raw integer
-- All procedures should include `SET NOCOUNT ON`
-- Error handling: use `TRY...CATCH` blocks with `RAISERROR` or
-  `THROW` for meaningful error propagation
-- Audit fields: always populate `user_id_created`,
-  `user_id_modified`, `date_created`, `date_modified` where the
-  target table has them
-- Use surrogate key `*_sid` for all FK references — never join
-  on business keys directly
+- Strictly read-only
+- Never initiates a status report unprompted
+- Never writes to any file
 
 ---
 
-## 6. Workflow context
+## dev-interview
 
-This repository uses an AI-assisted Sprint development
-workflow. The workflow is governed by two directories:
+**Mode:** Foreground  
+**Access:** Read only (Plan mode — write blocked by plan-mode-enforcer hook)  
+**Active during:** S1 — Dev Interview
 
-**`.cursor/`** — Cursor agent definitions, skills, hooks, and rules.
-All AI agents operating in this repo are defined in `.cursor/agents/`.
-All hook scripts that enforce build gates live in `.cursor/hooks/`.
-All skills (prd-completeness-check, prd-interviewer, kickoff-dev-review,
-phase-splitter, session-performance-evaluator, skill-effectiveness-evaluator)
-live in `.cursor/skills/`.
+### Role
 
-**`.sage/`** — Workflow runtime. Session manifests live in
-`.sage/sessions/[LIN-feature-id]/`. Workflow policy lives in
-`.sage/workflow-config.json`. The active session path is in
-`.sage/sessions/active-session.txt`.
+Asks targeted technical questions scoped to the phase. Validates and refines TDD
+spec scenarios with the developer. Asks the developer to choose their build mode
+(Autonomous or Checkpoint). Produces a structured interview summary.
 
-All new feature work is tracked in Linear (not ADO). Linear issue IDs
-appear in branch names (`LIN-[id]-phase-N-[objective]`) and commit
-messages. ADO is used for CI/CD pipeline execution only.
+### What it produces
 
-The legacy session artifacts from prior mob sessions are in
-`docs/sage-session/` and `docs/sage-session/` — do not write
-new session artifacts there. All new session artifacts go to
-`.sage/sessions/[LIN-id]/`.
+- `phase-{N}-dev-interview-summary.md`
+
+### Constraints
+
+- Read only — the plan-mode-enforcer hook blocks all file writes
+- Asks questions ONLY about the current phase's scope
+- Always asks the developer to choose Autonomous or Checkpoint build mode
+  before the interview closes
+- Never writes the dev interview summary until all questions are answered
 
 ---
 
-## 7. What agents must not do
+## implementation-planner
 
-Read this section carefully before taking any action.
+**Mode:** Foreground  
+**Access:** Read / Write (phase directory only)  
+**Active during:** S2 — Implementation Plan
 
-**Do not modify Pyramid Analytics or IMDB.**
-The Pyramid Analytics data model and IMDB are separate systems
-maintained by a different team (Sriyanka). They are explicitly
-out of scope for all Profitability build phases unless the PRD
-explicitly states otherwise with Sriyanka's sign-off.
-If you identify that a feature requires Pyramid changes, stop
-and surface it — do not implement it.
+### Role
 
-**Do not write to files outside your phase scope.**
-In a Sprint build sprint, each phase owns specific
-files listed in `manifest.phases[N].definition.scopedFiles`.
-You own only those files. If you identify that a file outside
-your scope needs to change, record it in your completion report
-under "items requiring coordination" — do not make the change.
+Maps every TDD scenario to a specific test file and assertion method. Lists all
+files to create or modify with their exact paths. Populates phase issue tasks in
+Linear. In Checkpoint mode, generates batch breakdown and writes batch definitions
+to the session manifest.
 
-**Do not write inline SQL.**
-All data access goes through stored procedures called via Dapper.
-Never write inline SQL strings in C# code. If a required stored
-procedure does not exist, it belongs in a database phase.
+### What it produces
 
-**Do not add IXxxService interfaces speculatively.**
-The codebase uses concrete service classes without interfaces
-by default. Do not add an interface unless it already exists
-for that service or the PRD explicitly requires it.
+- `phase-{N}-implementation-plan.md`
+- Linear issue tasks (via MCP)
+- Batch definitions in session manifest (Checkpoint mode only)
 
-**Do not hardcode connection strings.**
-Connection management is handled by `EmpyreanSolutions.Multitenant`.
-Never hardcode a SQL Server connection string anywhere in the codebase.
+### Constraints
 
-**Do not skip the required_references check.**
-Before writing any implementation code in S5, every file listed
-in `manifest.phases[N].definition.requiredReferences` must be
-read. The `beforeShellExecution` hook enforces this — you will
-be blocked if you attempt to write code before reading the
-required files. This is not optional.
-
-**Do not combine S7 and S8.**
-S7 (agent testing) and S8 (completion report) are separate steps.
-The S8 stop hook will block completion report generation unless
-`phase-N-test-results.md` exists with `STATUS: PASS`. There is
-no path to S8 without S7 completing successfully.
-
-**Do not modify `Adjusted_GL` schema.**
-The `Adjusted_GL` DDL lives outside this repository. You can
-read from and write to `Adjusted_GL` following the established
-patterns (via `fnGetAdjustedGLProcessID` and the relevant stored
-procedures), but you cannot create or alter the table itself.
-
-**Do not use `OrgProfitabilityAPI.Services` as a namespace.**
-Use `ProfitabilityAPI.Services` consistently. The `OrgProfitabilityAPI`
-namespace exists as a minor inconsistency in a few older files —
-do not propagate it.
+- Every TDD scenario must map to a specific test file and assertion — no unmapped scenarios
+- Cannot write to files outside the current phase directory
+- Must write batch definitions to the manifest before exiting (Checkpoint mode)
 
 ---
 
-## 8. Code standards references
+## traceability-reviewer
 
-All generated code must conform to:
+**Mode:** Foreground  
+**Access:** Read only  
+**Active during:** S3 — Traceability Review
 
-- **Angular standards:** `docs/cursor/angularStandards.md`
-- **SQL standards:** `docs/cursor/sqlStandards.md`
+### Role
 
-Read these files before generating any Angular TypeScript or
-SQL stored procedure code. They are not suggestions — they are
-required conventions. If this is your first action in this repo,
-read both files now.
+Performs a bidirectional check between the PRD and the implementation plan:
+- Every PRD acceptance criterion maps to at least one test scenario
+- Every test scenario traces back to a PRD acceptance criterion
+
+Classifies findings as Blocker, Major, or Minor. The line `Blocker findings: N`
+must be preserved exactly — the manifest-step-gate hook reads this format.
+
+### What it produces
+
+- `phase-{N}-traceability-review.md`
+  - Must contain exactly: `Blocker findings: N` (where N is the count)
+
+### Constraints
+
+- Strictly read-only
+- Never modifies the PRD, implementation plan, or any other file
+- Must use the exact format `Blocker findings: N` — no paraphrasing
 
 ---
 
-## 9. Quick reference
+## validation-generator
 
-| Item | Value |
-|---|---|
-| API base route | `api/[ControllerName]` |
-| WebSocket endpoint | `/ws` |
-| Angular path aliases | `@core/*` `@components/*` `@models/*` `@services/*` `@shared/*` |
-| DI registration | `Extensions/Installers/DataAccessInstaller.cs` |
-| Calculation engine entry | `Database/Calculations/100_INSERT_ProfitabilityCalculations.sql` |
-| Session artifacts | `.sage/sessions/[LIN-id]/` |
-| Active session pointer | `.sage/sessions/active-session.txt` |
-| Workflow policy | `.sage/workflow-config.json` |
-| Agent definitions | `.cursor/agents/` |
-| Hook scripts | `.cursor/hooks/scripts/` |
-| Skills | `.cursor/skills/` |
-| Angular standards | `docs/cursor/angularStandards.md` |
-| SQL standards | `docs/cursor/sqlStandards.md` |
-| Tech stack doc | `docs/techStack.md` |
-| Testing strategy | `docs/testingStrategy.md` |
+**Mode:** Foreground  
+**Access:** Read / Write (phase directory only)  
+**Active during:** S4 — Plan Validation
+
+### Role
+
+For UI phases: produces an HTML mockup of the planned UI components, states,
+and interactions. For calculation phases: produces a calculation proof document
+showing expected inputs, logic, and outputs.
+
+After producing the validation artifact, explicitly tells the developer how to
+confirm: set `validationConfirmed = true` in the session manifest.
+
+### What it produces
+
+- `phase-{N}-validation-mockup.html` (UI phases)
+- `phase-{N}-calculation-proof.md` (calculation phases)
+
+### Constraints
+
+- Cannot set `validationConfirmed = true` in the session manifest
+- Must explicitly instruct the developer to set this flag themselves
+
+---
+
+## code-simplifier
+
+**Mode:** Background (runs after every completed S5 task)  
+**Access:** Read / Write (scoped files only)  
+**Active during:** S5 — Build (after each task completes)
+
+### Role
+
+Applies simplification changes directly to code after each S5 task. Not a
+suggestion agent — applies changes immediately. Runs tests after each change
+and reverts immediately if a test fails.
+
+What it looks for:
+- Code duplication that can be extracted
+- Unnecessary complexity (nested conditions, over-engineered patterns)
+- Naming that doesn't reflect purpose
+- Dead code
+
+### Constraints
+
+- Never touches test files
+- Never modifies calculation sequences or financial logic (FTP, allocation, etc.)
+- Reverts immediately if any test fails after a simplification
+- Never adds functionality — simplification only
+
+---
+
+## code-reviewer
+
+**Mode:** Foreground  
+**Access:** Read only  
+**Active during:** S6 — Code Review
+
+### Role
+
+Reviews all code written during S5 against the implementation plan, TDD
+scenarios, and Profitability domain constraints. Classifies findings as
+Critical, Major, or Minor. The line `Critical findings: N` must be preserved
+exactly — the code-review-gate hook reads this format.
+
+### What it produces
+
+- `phase-{N}-code-review.md`
+  - Must contain exactly: `Critical findings: N` (where N is the count)
+
+### Constraints
+
+- Strictly read-only
+- Must use exact format `Critical findings: N`
+- Does not fix findings — reports only
+
+---
+
+## test-runner
+
+**Mode:** Foreground  
+**Access:** Read / Write (test execution and results only)  
+**Active during:** S5 (TDD RGR cycle) · S7 (Agent Testing)
+
+### Role
+
+During S5: executes the Red-Green-Refactor TDD cycle for each task. Runs tests,
+reports results, and confirms passing before the task is marked complete.
+
+During S7: runs the full test suite for the phase's scoped files plus any
+integration tests. Writes the test results document.
+
+### What it produces
+
+- `tdd-results.md` (S5) — must contain `STATUS: PASS` when all tests pass
+- `phase-{N}-test-results.md` (S7) — must contain `STATUS: PASS` when all pass
+
+### Constraints
+
+- Cannot mark tests as passing if they fail
+- Must write `STATUS: PASS` or `STATUS: FAIL` on its own line — no inline status
+
+---
+
+## gap-analyzer
+
+**Mode:** Foreground  
+**Access:** Read only  
+**Active during:** Post-merge · On demand
+
+### Role
+
+Analyses the merged implementation against the PRD and test results to identify
+gaps, unimplemented acceptance criteria, or test coverage holes. Produces a
+prioritised gap report.
+
+### What it produces
+
+- `gap-analysis-[feature-id].md`
+
+### Constraints
+
+- Strictly read-only
+- Does not fix gaps — reports only
+
+---
+
+## feature-doc-generator
+
+**Mode:** Foreground  
+**Access:** Read / Write (Notion via MCP)  
+**Active during:** Phase 04 — Review & Merge
+
+### Role
+
+Generates end-user and technical documentation for the completed feature. Writes
+documentation to Notion via the Notion MCP. Sources content from completion
+reports, test results, and the PRD.
+
+### What it produces
+
+- Notion documentation page for the completed feature
+
+### Constraints
+
+- Writes to Notion only — no local file writes
+- Documentation must accurately reflect what was built, not what was planned
+
+---
+
+## session-performance-evaluator
+
+**SAGE Hone subsystem**
+
+**Mode:** Background  
+**Access:** Read only  
+**Active during:** After every work cycle
+
+### Role
+
+Reads `workflow-telemetry.jsonl` and evaluates session performance across
+defined scoring dimensions. Produces a session performance report. Flags
+anomalies (hook rejection spikes, gate bypass attempts, long step durations).
+
+### What it produces
+
+- Session performance report (written to session directory)
+
+### Constraints
+
+- Read only
+- Never modifies telemetry, manifests, or skill files
+
+---
+
+## skill-effectiveness-evaluator
+
+**SAGE Hone subsystem**
+
+**Mode:** Background  
+**Access:** Read / Write (.skill-update-staging/ only)  
+**Active during:** Every 5 work cycles
+
+### Role
+
+Evaluates skill effectiveness against per-skill criteria. When a skill shows
+consistent underperformance, proposes a targeted diff to the SKILL.md and stages
+it to `.skill-update-staging/`. Creates a Linear issue for approval. Cannot
+apply updates without approval.
+
+### What it produces
+
+- Staged skill diff in `.skill-update-staging/`
+- Linear issue (label: `skill-update`, status: Pending Approval)
+
+### Approvers
+
+- `prd-completeness-check`, `prd-interviewer` → Product Manager
+- `phase-splitter` → Lead Dev
+
+### Constraints
+
+- Cannot modify any SKILL.md directly
+- Cannot apply its own staged diffs
+- Suppresses re-proposal for 2 cycles after a rejection
+
+---
+
+## intel-recorder
+
+**SAGE Intel subsystem**
+
+**Mode:** Background  
+**Access:** Read / Write (Notion via MCP)  
+**Active during:** After every work cycle
+
+### Role
+
+Records delivery metrics to Notion after each cycle. Tracks velocity, phase
+duration, hook rejection rates, and build mode effectiveness per workflow mode
+(Mob/Sprint/Pair/Solo). Maintains separate datasets per mode for calibration.
+
+### What it produces
+
+- Notion metrics records (via MCP)
+- `velocity-history.jsonl` in the session directory
+
+### Constraints
+
+- Writes to Notion metrics database and velocity-history only
+- Never modifies manifests, skills, or agent files
+
+---
+
+## intel-advisor
+
+**SAGE Intel subsystem**
+
+**Mode:** Foreground  
+**Access:** Read only (Notion via MCP)  
+**Active during:** On demand (planning cycle)
+
+### Role
+
+Reads historical delivery data from Notion to produce capacity and planning
+recommendations. Advises on sprint scope, phase count, and developer allocation
+based on actual velocity data, calibrated per workflow mode.
+
+### What it produces
+
+- Capacity advisory report (inline)
+
+### Constraints
+
+- Read only
+- Recommendations are advisory — no binding decisions

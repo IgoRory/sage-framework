@@ -39,7 +39,7 @@ signing secret as a User environment variable:
 ### Step 2 — Run the setup script
 
 ```powershell
-cd [REPO_ROOT]\.mob\webhook
+cd [REPO_ROOT]\.sage\webhook
 .\setup_webhook_receiver.ps1
 ```
 
@@ -89,7 +89,7 @@ test issue with the `skill-update` label and moving it to Approved).
 
 Check the log:
 ```powershell
-Get-Content [REPO_ROOT]\.mob\webhook\receiver.log -Tail 20
+Get-Content [REPO_ROOT]\.sage\webhook\receiver.log -Tail 20
 ```
 
 You should see:
@@ -119,7 +119,7 @@ Stop-ScheduledTask -TaskName "LinearWebhookReceiver"
 
 ### View live log
 ```powershell
-Get-Content [REPO_ROOT]\.mob\webhook\receiver.log -Wait -Tail 50
+Get-Content [REPO_ROOT]\.sage\webhook\receiver.log -Wait -Tail 50
 ```
 
 ### Uninstall

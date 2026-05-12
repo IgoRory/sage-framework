@@ -1,0 +1,74 @@
+---
+description: SAGE phase context — loaded for each active phase
+globs: [".sage/sessions/**/*", ".cursor/agents/**/*"]
+alwaysApply: false
+---
+
+# SAGE Phase Context
+
+When working within a phase, the following context applies.
+
+## Step sequence
+
+Phases progress through 8 steps in strict order:
+
+| Step | Code | What happens |
+|------|------|--------------|
+| S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes) |
+| S2 | implementation-plan | Agent produces implementation plan with TDD mapping |
+| S3 | traceability-review | Agent checks PRD ↔ implementation plan bidirectionally |
+| S4 | plan-validation | Agent produces validation mockup; developer confirms |
+| S5 | build | Agent builds implementation (autonomous or checkpoint) |
+| S6 | code-review | Agent reviews code quality |
+| S7 | agent-testing | Agent runs full test suite |
+| S8 | completion-report | Agent produces completion report |
+
+No step can begin until the prior step's required artifact exists.
+This is enforced by the manifest-step-gate hook — not by instruction.
+
+## Phase artifact naming convention
+
+All artifacts use the pattern: `phase-{N}-{artifact-type}.md`
+
+Where {N} is the phase number (e.g. phase-1, phase-2).
+
+Examples:
+- `phase-1-dev-interview-summary.md`
+- `phase-1-implementation-plan.md`
+- `phase-1-traceability-review.md`
+- `phase-1-validation-mockup.html`
+- `phase-1-code-review.md`
+- `phase-1-test-results.md`
+- `phase-1-completion-report.md`
+
+## Gate conditions
+
+| Gate | Condition to pass |
+|------|------------------|
+| plan-mode-enforcer | currentStep ≠ 'dev-interview' |
+| manifest-step-gate | Prior artifact exists |
+| phase-approval-gate | linearIssueStatus = 'Approved' |
+| required-references-gate | All requiredReferences have been read |
+| validation-confirmed-gate | validationConfirmed = true (set by developer) |
+| foundation-verified-gate | foundationVerified = true (Dependent phases only) |
+| batch-confirmation-gate | batches[N].confirmed = true (Checkpoint mode only) |
+| tdd-results-gate | tdd-results.md contains 'STATUS: PASS' |
+| code-review-gate | code-review.md contains 'Critical findings: 0' |
+| completion-report-stop-gate | test-results.md contains 'STATUS: PASS' |
+
+## Profitability domain context
+
+This codebase implements instrument-level profitability calculations:
+- FTP (Funds Transfer Pricing)
+- Expense and income allocation
+- Capital allocation
+- Provisions
+
+Key outputs: 42-measure set via views `vw_BI_AllInstruments` and `Global_Result`
+Data boundary: Dataverse for GL and reference data
+
+Known edge cases to consider:
+- Named revision dates
+- Return codes −1 through −8 (initialization blocking)
+- Flag logic: `NewInstFlag`, `ClosedInstFlag`, `PlugInstrumentFlag`
+- Naming inconsistencies exist in the codebase — verify before assuming

@@ -14,20 +14,25 @@ The file has two parts:
    from the JSON at kick-off and at each significant state change.
    The markdown is for the team — it is never parsed by hooks.
 
+> **Note:** The canonical manifest structure is defined by the
+> session-manifest-template at `.cursor/templates/session-manifest-template.md`.
+> The expanded schema below documents the full field set including fields
+> that may be added during the work cycle. When in doubt, the template
+> and running hooks in Profitability are the source of truth.
+
 **Write ownership:**
 - `phase-splitter` skill writes the initial manifest at kick-off, including
   assigning `phaseType` per phase using this logic:
-  - `foundation` — no `upstreamDependencies` AND has `downstreamConsumers`
-  - `independent` — no `upstreamDependencies` AND no `downstreamConsumers`
-  - `dependent` — has one or more `upstreamDependencies`
-- Hook scripts update `phases[N].currentStep`, `phases[N].stepStatus`,
-  and `phases[N].validation_confirmed` during the build sprint
-- Orchestrator agent sets `sessionState.foundationVerified`,
-  `sessionState.foundationVerifiedAt`, and
-  `sessionState.foundationRegressionResult` after post-merge regression
-- `kickoff-dev-review` appends to `phaseSplitterBriefing` during kick-off
-- No agent or hook ever modifies the `header` or `phases[N].definition`
-  sections after kick-off — these are immutable once written
+  - `foundation` — no `upstreamPhases` AND has `downstreamPhases`
+  - `independent` — no `upstreamPhases` AND no `downstreamPhases`
+  - `dependent` — has one or more `upstreamPhases`
+- Hook scripts update `phases[N].runtime.currentStep`,
+  `phases[N].runtime.stepStatus`, and `phases[N].runtime.validationConfirmed`
+  during the build sprint
+- Orchestrator agent sets `sessionState.foundationVerified`
+  after post-merge regression
+- No agent or hook ever modifies `phases[N].definition`
+  after kick-off — definitions are immutable once written
 
 ---
 

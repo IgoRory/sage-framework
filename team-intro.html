@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAGE Framework — Team Introduction</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2230;
+    --surface3: #21262d;
+    --border: #30363d;
+    --border-light: #3d444d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #6e7681;
+    --accent: #58a6ff;
+    --accent-glow: rgba(88,166,255,0.12);
+    --green: #3fb950;
+    --green-bg: rgba(63,185,80,0.1);
+    --purple: #bc8cff;
+    --purple-bg: rgba(188,140,255,0.1);
+    --orange: #f0883e;
+    --orange-bg: rgba(240,136,62,0.1);
+    --teal: #39d2b5;
+    --teal-bg: rgba(57,210,181,0.1);
+    --red: #f85149;
+    --red-bg: rgba(248,81,73,0.1);
+    --yellow: #e3b341;
+    --yellow-bg: rgba(227,179,65,0.1);
+    --sidebar-w: 240px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    display: flex;
+  }
+
+  /* ── SIDEBAR ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 100;
+    padding: 24px 0 40px;
+  }
+
+  nav .logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  nav .logo .badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+
+  nav .logo p {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  nav ul { list-style: none; }
+
+  nav ul li a {
+    display: block;
+    padding: 7px 20px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  nav ul li a:hover,
+  nav ul li a.active {
+    color: var(--text);
+    background: var(--accent-glow);
+    border-left-color: var(--accent);
+  }
+
+  nav ul li.section-label {
+    padding: 14px 20px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ── MAIN ── */
+  main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 900px;
+    padding: 48px 56px 80px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 48px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 56px;
+  }
+
+  .hero .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .hero h1 {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero .subtitle {
+    font-size: 17px;
+    color: var(--text-muted);
+    max-width: 620px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .hero .meta {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  .hero .meta span {
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  /* ── SECTIONS ── */
+  section {
+    margin-bottom: 72px;
+    scroll-margin-top: 32px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    width: 28px; height: 28px;
+    background: var(--surface3);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .section-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+    margin-top: 24px;
+  }
+
+  p {
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    background: var(--accent-glow);
+    border: 1px solid rgba(88,166,255,0.25);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .callout.green { background: var(--green-bg); border-color: rgba(63,185,80,0.3); }
+  .callout.purple { background: var(--purple-bg); border-color: rgba(188,140,255,0.3); }
+  .callout.orange { background: var(--orange-bg); border-color: rgba(240,136,62,0.3); }
+
+  /* ── FOUR LAYERS ── */
+  .layers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+
+  .layer-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .layer-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .layer-card.blue::before { background: linear-gradient(90deg, var(--accent), transparent); }
+  .layer-card.green::before { background: linear-gradient(90deg, var(--green), transparent); }
+  .layer-card.purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+  .layer-card.teal::before { background: linear-gradient(90deg, var(--teal), transparent); }
+
+  .layer-card .layer-icon {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .layer-card .layer-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .layer-card .layer-sub {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .layer-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* ── S1–S8 PIPELINE ── */
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .pipeline::before {
+    content: '';
+    position: absolute;
+    left: 19px; top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .pipeline-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 14px 0;
+    position: relative;
+  }
+
+  .step-num {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    z-index: 1;
+    transition: all 0.2s;
+  }
+
+  .pipeline-step.highlight .step-num {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .step-body {
+    padding-top: 6px;
+    flex: 1;
+  }
+
+  .step-body .step-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .step-body .step-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .step-body .step-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-top: 5px;
+  }
+
+  .tag-gate { background: var(--red-bg); color: var(--red); }
+  .tag-human { background: var(--yellow-bg); color: var(--yellow); }
+  .tag-auto { background: var(--green-bg); color: var(--green); }
+  .tag-plan { background: var(--purple-bg); color: var(--purple); }
+
+  /* ── MODES TABLE ── */
+  .modes-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .mode-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 16px;
+    position: relative;
+  }
+
+  .mode-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 10px 10px 0 0;
+  }
+
+  .mode-mob::before { background: var(--accent); }
+  .mode-sprint::before { background: var(--green); }
+  .mode-pair::before { background: var(--purple); }
+  .mode-solo::before { background: var(--orange); }
+
+  .mode-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+
+  .mode-mob .mode-badge { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .mode-sprint .mode-badge { background: rgba(63,185,80,0.15); color: var(--green); }
+  .mode-pair .mode-badge { background: rgba(188,140,255,0.15); color: var(--purple); }
+  .mode-solo .mode-badge { background: rgba(240,136,62,0.15); color: var(--orange); }
+
+  .mode-card .mode-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .mode-card .mode-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .mode-card .mode-use {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+
+  /* ── BUILD MODES ── */
+  .build-modes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .bm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .bm-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bm-autonomous .bm-header { background: rgba(63,185,80,0.07); }
+  .bm-checkpoint .bm-header { background: rgba(227,179,65,0.07); }
+
+  .bm-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding: 3px 9px;
+    border-radius: 4px;
+  }
+
+  .bm-autonomous .bm-badge { background: var(--green-bg); color: var(--green); }
+  .bm-checkpoint .bm-badge { background: var(--yellow-bg); color: var(--yellow); }
+
+  .bm-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .bm-body {
+    padding: 16px 20px;
+  }
+
+  .bm-body p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+
+  .bm-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .bm-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 13px;
+  }
+
+  .bm-row .bm-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .bm-row .bm-text { color: var(--text-muted); line-height: 1.45; }
+  .bm-row .bm-text strong { color: var(--text); font-weight: 600; }
+
+  .bm-when {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .bm-autonomous .bm-when { background: var(--green-bg); border: 1px solid rgba(63,185,80,0.2); }
+  .bm-checkpoint .bm-when { background: var(--yellow-bg); border: 1px solid rgba(227,179,65,0.2); }
+
+  .bm-when strong { font-weight: 600; }
+
+  /* ── ROLES ── */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .role-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 22px 18px;
+  }
+
+  .role-card .role-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .role-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .role-pm .role-icon { background: rgba(227,179,65,0.15); }
+  .role-lead .role-icon { background: rgba(88,166,255,0.15); }
+  .role-dev .role-icon { background: rgba(63,185,80,0.15); }
+  .role-qa .role-icon { background: rgba(109,109,109,0.15); }
+
+  .role-card .role-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .role-card .role-sub {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .role-card ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .role-card ul li {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .role-card ul li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+    font-size: 11px;
+    top: 1px;
+  }
+
+  /* ── TOOLCHAIN ── */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .tool-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 14px 12px;
+    text-align: center;
+  }
+
+  .tool-item .tool-emoji { font-size: 22px; margin-bottom: 8px; }
+  .tool-item .tool-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .tool-item .tool-role { font-size: 11px; color: var(--text-dim); }
+  .tool-item.dimmed { opacity: 0.55; }
+
+  /* ── TIMELINE ── */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .tl-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 120px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .tl-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  .tl-bar-wrap {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 32px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .tl-bar {
+    height: 100%;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    white-space: nowrap;
+  }
+
+  .tl-meta {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: left;
+  }
+
+  .tl-row.phase1 .tl-bar { background: rgba(88,166,255,0.6); width: 20%; }
+  .tl-row.phase2 .tl-bar { background: rgba(88,166,255,0.4); width: 10%; }
+  .tl-row.phase3 .tl-bar { background: rgba(227,179,65,0.5); width: 14%; }
+  .tl-row.phase4 .tl-bar { background: rgba(88,166,255,0.7); width: 55%; }
+  .tl-row.phase5 .tl-bar { background: rgba(57,210,181,0.55); width: 55%; }
+  .tl-row.phase6 .tl-bar { background: rgba(227,179,65,0.6); width: 14%; }
+  .tl-row.phase7 .tl-bar { background: rgba(63,185,80,0.6); width: 60%; }
+
+  .tl-header {
+    display: grid;
+    grid-template-columns: 90px 1fr 120px;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .tl-header span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .tl-header span:first-child { text-align: right; }
+
+  .parallel-note {
+    background: var(--surface3);
+    border: 1px dashed var(--border-light);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ── CHECKLISTS ── */
+  .checklist-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .tab-btn.active, .tab-btn:hover {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .check-item:hover { border-color: var(--border-light); }
+
+  .check-item.done { opacity: 0.5; }
+
+  .check-box {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border-light);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    transition: all 0.15s;
+  }
+
+  .check-item.done .check-box {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+
+  .check-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .check-text .check-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: block;
+    margin-top: 2px;
+  }
+
+  /* ── PRINCIPLES ── */
+  .principles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .principle-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .principle-item .p-num {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--border-light);
+    line-height: 1;
+    min-width: 32px;
+    font-family: var(--mono);
+    padding-top: 2px;
+  }
+
+  .principle-item .p-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+
+  .principle-item .p-body {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.55;
+  }
+
+  /* ── AGENTS GRID ── */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .agent-pill {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 14px;
+  }
+
+  .agent-pill .agent-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+
+  .agent-pill .agent-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  /* ── SUCCESS METRICS ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .metric-card .m-value {
+    font-size: 24px;
+    font-weight: 800;
+    font-family: var(--mono);
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+
+  .metric-card .m-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: gap;
+  }
+
+  footer p { font-size: 12px; color: var(--text-dim); margin: 0; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 960px) {
+    main { padding: 32px 28px 60px; }
+    .layers-grid { grid-template-columns: 1fr; }
+    .modes-grid { grid-template-columns: 1fr 1fr; }
+    .agents-grid { grid-template-columns: 1fr 1fr; }
+    .tools-grid { grid-template-columns: repeat(3, 1fr); }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR NAV -->
+<nav>
+  <div class="logo">
+    <div class="badge">SAGE</div>
+    <p>Semi-Autonomous<br>Guided Execution</p>
+  </div>
+  <ul>
+    <li class="section-label">Overview</li>
+    <li><a href="#what-is-sage">What is SAGE?</a></li>
+    <li><a href="#four-layers">The Four Layers</a></li>
+    <li><a href="#s1-s8">S1–S8 Build Steps</a></li>
+    <li><a href="#build-modes">Build Modes</a></li>
+    <li class="section-label">Structure</li>
+    <li><a href="#modes">Workflow Modes</a></li>
+    <li><a href="#roles">Team Roles</a></li>
+    <li><a href="#agents">AI Agents</a></li>
+    <li class="section-label">Adoption</li>
+    <li><a href="#toolchain">Toolchain</a></li>
+    <li><a href="#roadmap">Transition Roadmap</a></li>
+    <li><a href="#checklists">Setup Checklists</a></li>
+    <li class="section-label">Principles</li>
+    <li><a href="#principles">Operating Principles</a></li>
+    <li><a href="#metrics">Success Metrics</a></li>
+  </ul>
+</nav>
+
+<!-- MAIN CONTENT -->
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="eyebrow">Team Introduction · v1.0 · 2026</div>
+    <h1>The <span>SAGE Framework</span></h1>
+    <p class="subtitle">A repeatable, enforced path from feature idea to production-ready code — using AI as the primary executor, with human judgment at every critical gate.</p>
+    <div class="meta">
+      <span>Profitability Team</span>
+      <span>Status: Approved</span>
+      <span>~6–7 days to live</span>
+    </div>
+  </div>
+
+  <!-- 1. WHAT IS SAGE -->
+  <section id="what-is-sage">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2>What is SAGE?</h2>
+    </div>
+
+    <div class="callout">
+      <strong>SAGE</strong> = Semi-Autonomous Guided Execution. It is a structured workflow framework that rebuilds mob programming principles for distributed teams — with AI as the primary code executor and humans as the decision-makers at critical gates.
+    </div>
+
+    <p>The core problem SAGE solves: as teams adopt AI-assisted development, output quality becomes inconsistent. One developer gets great results; another gets hallucinated code. One session produces verified, tested features; another produces something that breaks in review.</p>
+
+    <p>SAGE makes quality an <strong>enforced structural property</strong> of the process, not a function of individual skill or prompting technique. Because the gates are implemented in code — not in instructions — an AI agent cannot skip them.</p>
+
+    <h3>Three things SAGE replaces</h3>
+    <div class="layers-grid" style="grid-template-columns: 1fr 1fr 1fr; margin-top: 8px;">
+      <div class="layer-card blue">
+        <div class="layer-title">Story point estimation</div>
+        <p>Replaced by <strong>SAGE Intel</strong> — empirical velocity data from every completed phase. Planning uses real delivery history, not guesses.</p>
+      </div>
+      <div class="layer-card green">
+        <div class="layer-title">Manual ADO work tracking</div>
+        <p>Replaced by <strong>Linear</strong> with structured states, auto-linked commits/PRs, and machine-readable metadata blocks.</p>
+      </div>
+      <div class="layer-card purple">
+        <div class="layer-title">"It worked on my machine" reviews</div>
+        <p>Replaced by <strong>12 enforced hook gates</strong> — tests must pass, code review must clear Critical findings, completion reports must exist.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. FOUR LAYERS -->
+  <section id="four-layers">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2>The Four Layers</h2>
+    </div>
+
+    <p>SAGE operates across four interconnected layers. Each layer has a distinct purpose and can evolve independently.</p>
+
+    <div class="layers-grid">
+      <div class="layer-card blue">
+        <div class="layer-icon">⚡</div>
+        <div class="layer-sub">Layer 1</div>
+        <div class="layer-title">Execution Structure</div>
+        <p>Four workflow modes (Mob, Sprint, Pair, Solo) matched to team configuration and feature type. Eight build steps (S1–S8) within each phase provide a consistent, verifiable delivery path.</p>
+      </div>
+      <div class="layer-card green">
+        <div class="layer-icon">🔒</div>
+        <div class="layer-sub">Layer 2</div>
+        <div class="layer-title">Enforcement</div>
+        <p>Twelve Python hook scripts integrated into Cursor's execution layer. Every step transition is gated. Agents cannot skip steps or declare work complete without verifiable artifacts. Gates fire at the tool call level — not the instruction level.</p>
+      </div>
+      <div class="layer-card purple">
+        <div class="layer-icon">🧬</div>
+        <div class="layer-sub">Layer 3</div>
+        <div class="layer-title">SAGE Hone</div>
+        <p>The self-improving subsystem. Every session is observed via telemetry. Every 5 cycles, AI performance is evaluated and evidence-backed improvements to AI instructions are proposed. Changes require human approval before applying — the framework improves itself, under human control.</p>
+      </div>
+      <div class="layer-card teal">
+        <div class="layer-icon">📊</div>
+        <div class="layer-sub">Layer 4</div>
+        <div class="layer-title">SAGE Intel</div>
+        <p>Delivery intelligence from every completed cycle. Records velocity, calibration confidence, and agent quality rates. Powers the <code>intel-advisor</code> for weekly planning, release forecasting, and scope-change analysis. No human estimation required.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. S1–S8 -->
+  <section id="s1-s8">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2>S1–S8 Build Steps</h2>
+    </div>
+
+    <p>Every phase in every workflow mode runs the same eight build steps. The session manifest tracks which step is current. Gates fire at each transition — you cannot proceed to the next step without completing the prior one.</p>
+
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="step-num">S1</div>
+        <div class="step-body">
+          <div class="step-label">Dev Interview</div>
+          <p class="step-desc">The <code>dev-interview</code> agent conducts a structured interview to establish the implementation plan. <strong>Plan-only mode</strong> — no code writes permitted during this step.</p>
+          <span class="step-tag tag-plan">Plan mode enforced</span>
+        </div>
+      </div>
+
+      <div class="pipeline-step">
+        <div class="step-num">S2</div>
+        <div class="step-body">
+          <div class="step-label">Implementation Plan</div>
+          <p class="step-desc">The <code>implementation-planner</code> produces a machine-readable implementation plan artifact from the S1 interview output. Required before any subsequent step can begin.</p>
+          <span class="step-tag tag-gate">Gate: S1 artifact required</span>
+        </div>
+      </div>
+
+      <div class="pipeline-step">
+        <div class="step-num">S3</div>
+        <div class="step-body">
+          <div class="step-label">Traceability Review</div>
+          <p class="step-desc">The <code>traceability-reviewer</code> checks the implementation plan against the PRD and component spec. Blocker count must reach zero before proceeding to S4.</p>
+          <span class="step-tag tag-gate">Gate: Zero blockers required</span>
+        </div>
+      </div>
+
+      <div class="pipeline-step highlight">
+        <div class="step-num">S4</div>
+        <div class="step-body">
+          <div class="step-label">Validation Mockup</div>
+          <p class="step-desc">The <code>validation-generator</code> produces an HTML mockup or calculation proof. A human developer must manually set <code>validationConfirmed: true</code> in the session manifest — an agent cannot set this flag. Build cannot start until confirmed.</p>
+          <span class="step-tag tag-human">Human confirmation required</span>
+        </div>
+      </div>
+
+      <div class="pipeline-step">
+        <div class="step-num">S5</div>
+        <div class="step-body">
+          <div class="step-label">Build / TDD</div>
+          <p class="step-desc">The primary build step. Agent runs test-driven development with required reference files loaded. The optional <code>code-simplifier</code> runs post-RGR to clean up complexity. In Sprint mode, dependent phases are gated until foundation phases merge.</p>
+          <span class="step-tag tag-gate">Gate: Required refs + validation confirmed</span>
+        </div>
+      </div>
+
+      <div class="pipeline-step">
+        <div class="step-num">S6</div>
+        <div class="step-body">
+          <div class="step-label">Code Review</div>
+          <p class="step-desc">The <code>code-reviewer</code> performs a structured review against the implementation plan. Proceeding requires zero unresolved Critical findings.</p>
+          <span class="step-tag tag-gate">Gate: No Critical findings</span>
+        </div>
+      </div>
+
+      <div class="pipeline-step">
+        <div class="step-num">S7</div>
+        <div class="step-body">
+          <div class="step-label">Agent Testing</div>
+          <p class="step-desc">The <code>test-runner</code> executes the test suite. The <code>gap-analyzer</code> checks for coverage gaps using Playwright MCP (when enabled). Test results file must contain <code>STATUS: PASS</code>.</p>
+          <span class="step-tag tag-gate">Gate: STATUS: PASS required</span>
+        </div>
+      </div>
+
+      <div class="pipeline-step">
+        <div class="step-num">S8</div>
+        <div class="step-body">
+          <div class="step-label">Completion Report</div>
+          <p class="step-desc">The <code>feature-doc-generator</code> produces the completion report and posts to the phase issue. The stop gate fires here — S8 cannot complete without a passing test results file from S7.</p>
+          <span class="step-tag tag-gate">Gate: Pass evidence required to stop</span>
+          <span class="step-tag tag-auto" style="margin-left: 4px;">→ Telemetry recorded</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BUILD MODES -->
+  <section id="build-modes">
+    <div class="section-header">
+      <div class="section-num">3b</div>
+      <h2>Build Modes: Autonomous vs Checkpoint</h2>
+    </div>
+
+    <p>At S1 (Dev Interview), the developer sets the build mode for their phase. This choice controls how much the agent batches work before pausing for human review. Both modes run the same S1–S8 gates — the difference is in pacing and visibility during S5.</p>
+
+    <div class="build-modes-grid">
+      <div class="bm-card bm-autonomous">
+        <div class="bm-header">
+          <div class="bm-badge">AUTONOMOUS</div>
+          <div class="bm-title">Full-run mode</div>
+        </div>
+        <div class="bm-body">
+          <p>The agent executes the entire S5 build cycle without pausing for human confirmation between tasks. It works through the TDD task list end-to-end, running tests after each task and self-correcting on failures.</p>
+          <div class="bm-rows">
+            <div class="bm-row">
+              <div class="bm-icon">⚡</div>
+              <div class="bm-text"><strong>Speed:</strong> Fastest time to completion — no interruptions between tasks.</div>
+            </div>
+            <div class="bm-row">
+              <div class="bm-icon">🎯</div>
+              <div class="bm-text"><strong>Context:</strong> Agent maintains full context across the entire phase build.</div>
+            </div>
+            <div class="bm-row">
+              <div class="bm-icon">👁️</div>
+              <div class="bm-text"><strong>Visibility:</strong> Developer reviews the full output at S6 (code review) rather than during the build.</div>
+            </div>
+            <div class="bm-row">
+              <div class="bm-icon">🔒</div>
+              <div class="bm-text"><strong>Gates still enforced:</strong> All 12 hook gates still fire. The agent cannot skip S6, S7, or S8 regardless of mode.</div>
+            </div>
+          </div>
+          <div class="bm-when"><strong>Use when:</strong> the phase is well-understood, the implementation plan is detailed, and you want maximum throughput with review at code review time.</div>
+        </div>
+      </div>
+
+      <div class="bm-card bm-checkpoint">
+        <div class="bm-header">
+          <div class="bm-badge">CHECKPOINT</div>
+          <div class="bm-title">Batch-confirm mode</div>
+        </div>
+        <div class="bm-body">
+          <p>The TDD task list is split into confirmation batches (defined in the session manifest). The agent builds one batch, pauses, and waits for the developer to review and confirm before proceeding to the next batch.</p>
+          <div class="bm-rows">
+            <div class="bm-row">
+              <div class="bm-icon">🛑</div>
+              <div class="bm-text"><strong>Pause points:</strong> Agent stops after each batch and waits for a developer to set the confirmation flag in the manifest.</div>
+            </div>
+            <div class="bm-row">
+              <div class="bm-icon">🔍</div>
+              <div class="bm-text"><strong>Visibility:</strong> Developer reviews incremental work while it is fresh, before the next batch begins.</div>
+            </div>
+            <div class="bm-row">
+              <div class="bm-icon">🧭</div>
+              <div class="bm-text"><strong>Course-correction:</strong> Easier to catch a wrong direction early. Batch 1 output informs whether the plan needs adjusting before Batch 2 runs.</div>
+            </div>
+            <div class="bm-row">
+              <div class="bm-icon">🔒</div>
+              <div class="bm-text"><strong>Gates still enforced:</strong> The <code>batch_confirmation_gate</code> hook rejects the next batch if the confirmation flag has not been set by a human.</div>
+            </div>
+          </div>
+          <div class="bm-when"><strong>Use when:</strong> the phase is exploratory, involves complex logic, or when you want to catch mistakes before they propagate across the full build.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="font-size: 13px;">
+      <strong>How to set it:</strong> At S1, the developer records the chosen mode in the session manifest under <code>buildMode</code>. The orchestrator reads this value at kick-off and configures the batch confirmation blocks accordingly. Changing the mode mid-phase requires a manifest edit approved by the developer — not the agent.
+    </div>
+  </section>
+
+  <!-- 4. MODES -->
+  <section id="modes">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <h2>Workflow Modes</h2>
+    </div>
+
+    <p>Choose a mode based on team availability, feature complexity, and how much real-time collaboration adds value. All modes run the same S1–S8 steps — the difference is in team structure and kick-off format.</p>
+
+    <div class="modes-grid">
+      <div class="mode-card mode-mob">
+        <div class="mode-badge">MOB</div>
+        <div class="mode-title">Mob</div>
+        <div class="mode-detail">Single terminal, sequential phases. Full team on screen share. Driver + Navigator roles. Mob Kick-off (~2 hrs) required. Feature Walkthrough mandatory the day before.</div>
+        <div class="mode-use">Best for: onboarding, collaborative features, complex decisions needing collective judgment</div>
+      </div>
+      <div class="mode-card mode-sprint">
+        <div class="mode-badge">SPRINT</div>
+        <div class="mode-title">Sprint</div>
+        <div class="mode-detail">Parallel git worktrees, each developer owns one phase. Sprint Kick-off (~75 min) required. Phases run simultaneously after kick-off, then merge in dependency order.</div>
+        <div class="mode-use">Best for: multi-component features where parallel execution reduces delivery time</div>
+      </div>
+      <div class="mode-card mode-pair">
+        <div class="mode-badge">PAIR</div>
+        <div class="mode-title">Pair</div>
+        <div class="mode-detail">Two developers, sequential phases, no synchronous kick-off. PRD required at Ready status. Async phase breakdown only. Good for knowledge transfer without meeting overhead.</div>
+        <div class="mode-use">Best for: medium complexity work where knowledge transfer adds value</div>
+      </div>
+      <div class="mode-card mode-solo">
+        <div class="mode-badge">SOLO</div>
+        <div class="mode-title">Solo</div>
+        <div class="mode-detail">Single developer, no kick-off. No PRD required — a Linear issue is sufficient. All 12 hook gates still active. Autonomous or checkpoint build mode.</div>
+        <div class="mode-use">Best for: hotfixes, minor enhancements, well-scoped contained work</div>
+      </div>
+    </div>
+
+    <div class="callout green" style="margin-top: 4px; font-size: 13px;">
+      <strong>Phased adoption:</strong> Sprint and Solo modes launch first. Mob and Pair are introduced once Sprint is running stably. The Feature Walkthrough for Sprint is optional initially and becomes standard practice as the team builds familiarity.
+    </div>
+  </section>
+
+  <!-- 5. ROLES -->
+  <section id="roles">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <h2>Team Roles</h2>
+    </div>
+
+    <p>SAGE has well-defined responsibilities for each role. The governance model assigns skill update approvals by domain — PRD-layer changes go to the PM, execution-layer changes go to the Lead Dev.</p>
+
+    <div class="roles-grid">
+      <div class="role-card role-pm">
+        <div class="role-header">
+          <div class="role-icon">🗂️</div>
+          <div>
+            <div class="role-title">Product Manager</div>
+            <div class="role-sub">PRD layer + planning</div>
+          </div>
+        </div>
+        <ul>
+          <li>Authors PRDs using <code>prd-interviewer</code></li>
+          <li>Runs <code>prd-completeness-check</code> (score ≥ 80 before build)</li>
+          <li>Facilitates Sprint and Mob kick-offs</li>
+          <li>Approves phase breakdowns before build begins</li>
+          <li>Reviews completion reports for product correctness</li>
+          <li>Runs <code>intel-advisor</code> for weekly planning cycles</li>
+          <li>Approves skill updates for PRD-layer skills</li>
+        </ul>
+      </div>
+
+      <div class="role-card role-lead">
+        <div class="role-header">
+          <div class="role-icon">🛠️</div>
+          <div>
+            <div class="role-title">Lead Developer</div>
+            <div class="role-sub">Framework ownership + merges</div>
+          </div>
+        </div>
+        <ul>
+          <li>Owns SAGE installation and configuration on the codebase</li>
+          <li>Reviews and merges PRs in dependency order</li>
+          <li>Approves phase breakdowns alongside the PM</li>
+          <li>Reviews SAGE Hone performance reports</li>
+          <li>Acts on systematic violation flags within one work cycle</li>
+          <li>Maintains hook scripts and <code>workflow-config.json</code></li>
+          <li>Approves all execution-layer skill updates</li>
+        </ul>
+      </div>
+
+      <div class="role-card role-dev">
+        <div class="role-header">
+          <div class="role-icon">💻</div>
+          <div>
+            <div class="role-title">Developers</div>
+            <div class="role-sub">S1–S8 per phase</div>
+          </div>
+        </div>
+        <ul>
+          <li>Run the full S1–S8 cycle on assigned phases</li>
+          <li>Choose Autonomous or Checkpoint build mode at S1</li>
+          <li>Manually confirm validation mockup at S4 (edits session manifest)</li>
+          <li>Post completion reports to phase issues at S8</li>
+          <li>Act as Driver or Navigator in Mob mode sessions</li>
+        </ul>
+      </div>
+
+      <div class="role-card role-qa">
+        <div class="role-header">
+          <div class="role-icon">🔍</div>
+          <div>
+            <div class="role-title">QA (optional, pre-live)</div>
+            <div class="role-sub">Observer + async review</div>
+          </div>
+        </div>
+        <ul>
+          <li>Attends Mob sessions as QA Observer (optional)</li>
+          <li>Reviews completion reports asynchronously</li>
+          <li>A formal QA gate will be added before the framework is used in production release cycles</li>
+          <li>Extension is configuration-level — no structural rebuild needed</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. AI AGENTS -->
+  <section id="agents">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <h2>AI Agents</h2>
+    </div>
+
+    <p>SAGE ships with 15 purpose-built AI agents. Each has a defined model, access scope, and constraints. The agents are installed as <code>.cursor/agents/*.md</code> files in the codebase — Cursor loads them automatically when invoked.</p>
+
+    <div class="agents-grid">
+      <div class="agent-pill">
+        <div class="agent-name">orchestrator</div>
+        <div class="agent-desc">Primary coordinator. Manages kick-offs, session manifests, phase transitions, and Review &amp; Merge.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">sprint-coordinator</div>
+        <div class="agent-desc">Read-only Sprint observer. Surfaces per-lane status and merge sequencing on demand.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">dev-interview</div>
+        <div class="agent-desc">Conducts S1 structured interview. Plan-only mode — no file writes permitted.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">implementation-planner</div>
+        <div class="agent-desc">Produces the S2 machine-readable implementation plan from interview output.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">traceability-reviewer</div>
+        <div class="agent-desc">S3 — validates implementation plan against PRD. Must reach zero blockers.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">validation-generator</div>
+        <div class="agent-desc">S4 — produces HTML mockup or calculation proof for human sign-off.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">code-simplifier</div>
+        <div class="agent-desc">Optional S5 post-build simplification. Reduces complexity without changing logic.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">code-reviewer</div>
+        <div class="agent-desc">S6 — structured code review against the implementation plan. Blocks on Critical findings.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">test-runner</div>
+        <div class="agent-desc">S7 — executes the test suite. Must produce STATUS: PASS file to proceed.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">gap-analyzer</div>
+        <div class="agent-desc">S7 — optional Playwright MCP testing to identify coverage gaps.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">feature-doc-generator</div>
+        <div class="agent-desc">S8 — produces completion report and posts to the phase issue.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">session-performance-evaluator</div>
+        <div class="agent-desc">SAGE Hone — evaluates every session, flags violations, posts Notion report.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">skill-effectiveness-evaluator</div>
+        <div class="agent-desc">SAGE Hone — every 5 cycles, proposes evidence-backed skill updates for approval.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">intel-recorder</div>
+        <div class="agent-desc">SAGE Intel — records velocity, calibration, and agent quality data after each cycle.</div>
+      </div>
+      <div class="agent-pill">
+        <div class="agent-name">intel-advisor</div>
+        <div class="agent-desc">SAGE Intel — answers planning questions using the empirical dataset. No estimation.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. TOOLCHAIN -->
+  <section id="toolchain">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <h2>Toolchain</h2>
+    </div>
+
+    <p>Every team member needs the following tools installed and connected before the first session.</p>
+
+    <div class="tools-grid">
+      <div class="tool-item">
+        <div class="tool-emoji">⌨️</div>
+        <div class="tool-name">Cursor</div>
+        <div class="tool-role">Primary IDE + agent runtime</div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-emoji">📋</div>
+        <div class="tool-name">Linear</div>
+        <div class="tool-role">Work tracking (replaces ADO for features)</div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-emoji">🐙</div>
+        <div class="tool-name">GitHub</div>
+        <div class="tool-role">Source control + branch protection</div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-emoji">📝</div>
+        <div class="tool-name">Notion</div>
+        <div class="tool-role">PRDs, docs, SAGE Intel dashboards</div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-emoji">💬</div>
+        <div class="tool-name">Microsoft 365 MCP</div>
+        <div class="tool-role">Teams transcripts for kick-off review</div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-emoji">🎭</div>
+        <div class="tool-name">Playwright</div>
+        <div class="tool-role">E2E testing via MCP (S7 optional)</div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-emoji">🐍</div>
+        <div class="tool-name">Python 3.12</div>
+        <div class="tool-role">Hook script runtime (all machines)</div>
+      </div>
+      <div class="tool-item">
+        <div class="tool-emoji">🟢</div>
+        <div class="tool-name">Node.js v24</div>
+        <div class="tool-role">Playwright MCP agent testing layer</div>
+      </div>
+    </div>
+
+    <div class="callout orange" style="font-size: 13px;">
+      <strong>ADO stays for CI/CD only.</strong> Azure DevOps pipelines are unaffected by this transition. Feature work tracking moves to Linear; CI/CD pipelines remain in ADO with no changes. YAML pipelines can still point at GitHub branches as before.
+    </div>
+  </section>
+
+  <!-- 8. ROADMAP -->
+  <section id="roadmap">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <h2>Transition Roadmap</h2>
+    </div>
+
+    <p>The implementation is split into seven phases. Phases 1–5 are owned by the Lead Dev. Phase 6 is owned by the PM. Phase 7 is the first live session with the full team. Total elapsed time with parallelism: approximately <strong>6–7 working days</strong>.</p>
+
+    <div class="tl-header">
+      <span>Phase</span>
+      <span>Relative effort</span>
+      <span>Owner / time</span>
+    </div>
+
+    <div class="timeline">
+      <div class="tl-row phase1">
+        <div class="tl-label">1 · Repo setup</div>
+        <div class="tl-bar-wrap">
+          <div class="tl-bar">Directory structure, .cursor files, AGENTS.md, branch protection</div>
+        </div>
+        <div class="tl-meta">Lead Dev · ~2 hrs</div>
+      </div>
+      <div class="tl-row phase2">
+        <div class="tl-label">2 · Dev machines</div>
+        <div class="tl-bar-wrap">
+          <div class="tl-bar">Python, env vars, MCP connections, Linear/Notion access</div>
+        </div>
+        <div class="tl-meta">Lead Dev · ~1 hr</div>
+      </div>
+      <div class="tl-row phase3">
+        <div class="tl-label">3 · Linear config</div>
+        <div class="tl-bar-wrap">
+          <div class="tl-bar">Workflow states, mode labels, GitHub integration, webhook</div>
+        </div>
+        <div class="tl-meta">PM · ~3 hrs ‖ parallel</div>
+      </div>
+      <div class="tl-row phase4">
+        <div class="tl-label">4 · Hook validation</div>
+        <div class="tl-bar-wrap">
+          <div class="tl-bar">Validate all 12 gate scripts, full S1–S8 dry run on test branch</div>
+        </div>
+        <div class="tl-meta">Lead Dev · ~1 day</div>
+      </div>
+      <div class="tl-row phase5">
+        <div class="tl-label">5 · Intel + Hone</div>
+        <div class="tl-bar-wrap">
+          <div class="tl-bar">Notion metrics dashboard, release calendar, Playwright MCP, Hone pipeline</div>
+        </div>
+        <div class="tl-meta">Lead Dev · ~1 day</div>
+      </div>
+      <div class="tl-row phase6">
+        <div class="tl-label">6 · PRD setup</div>
+        <div class="tl-bar-wrap">
+          <div class="tl-bar">Test prd-interviewer + prd-completeness-check end-to-end</div>
+        </div>
+        <div class="tl-meta">PM · ~3 hrs</div>
+      </div>
+      <div class="tl-row phase7">
+        <div class="tl-label">7 · First session</div>
+        <div class="tl-bar-wrap">
+          <div class="tl-bar">Full team · real low-risk feature · PRD → kick-off → S1–S8 → merge</div>
+        </div>
+        <div class="tl-meta">Full team · ~1 day</div>
+      </div>
+    </div>
+
+    <div class="parallel-note">
+      <span>↕</span>
+      <span>Phase 2 (dev machines) and Phase 3 (Linear config) run in parallel — Lead Dev and PM can execute simultaneously, saving approximately one day from the critical path.</span>
+    </div>
+
+    <h3 style="margin-top: 28px;">What counts as "ready to go live"</h3>
+    <p>The first live session (Phase 7) should use a feature that is real but low-risk — not on the critical delivery path — multi-component (suited to Sprint mode), and well-understood by the team. This session doubles as a framework validation run and produces the first SAGE Intel data point.</p>
+  </section>
+
+  <!-- 9. CHECKLISTS -->
+  <section id="checklists">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <h2>Setup Checklists</h2>
+    </div>
+
+    <p>Click items to mark them complete. Use these during Phase 2 of the transition to confirm each machine is ready before the first session.</p>
+
+    <div class="checklist-tabs">
+      <button class="tab-btn active" onclick="switchTab(event, 'dev')">Developers</button>
+      <button class="tab-btn" onclick="switchTab(event, 'pm')">Product Manager</button>
+      <button class="tab-btn" onclick="switchTab(event, 'lead')">Lead Developer</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-dev">
+      <div class="checklist" id="checklist-dev">
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Main clone at <code>C:\Users\[name]\cursor-prof\Profitability</code>
+            <span class="check-sub">Pull latest main — confirm .sage/ and updated .cursor/ are present</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Worktrees directory exists at <code>C:\Sage\worktrees\</code>
+            <span class="check-sub">Create if not present: mkdir C:\Sage\worktrees</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Python 3.12.x installed and confirmed
+            <span class="check-sub">python --version → must show 3.12.x</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Node.js v24.x installed and confirmed
+            <span class="check-sub">node --version → must show v24.x</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text"><code>filelock</code> package installed
+            <span class="check-sub">pip install filelock --break-system-packages</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text"><code>LINEAR_API_KEY</code> environment variable set
+            <span class="check-sub">User-scope env var — restart Cursor after setting</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text"><code>NOTION_API_KEY</code> environment variable set
+            <span class="check-sub">User-scope env var — restart Cursor after setting</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text"><code>M365_ACCESS_TOKEN</code> environment variable set
+            <span class="check-sub">OAuth token — configure refresh or use long-lived token; expires ~1 hr</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Linear MCP connected in Cursor settings</div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Notion MCP connected in Cursor settings</div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Microsoft 365 MCP connected in Cursor settings</div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Cursor restarted after all environment variables are set</div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Linear account confirmed with access to the Profitability project</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-pm">
+      <div class="checklist" id="checklist-pm">
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">All developer checklist items completed
+            <span class="check-sub">PM machine requires identical setup to developers</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Notion PRD storage location confirmed
+            <span class="check-sub">Parent page URL added to workflow-config.json under notionPRDParentUrl</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">SAGE Intel metrics dashboard created in Notion
+            <span class="check-sub">Use notion-metrics-template.md from sage-intel/intel-recorder/references/</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Release Calendar Notion page created and URL captured
+            <span class="check-sub">Add to workflow-config.json under releaseCalendarUrl</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Linear feature workflow states created
+            <span class="check-sub">Backlog → PRD In Progress → PRD Under Review → Ready → Planned</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Linear phase workflow states created (Sprint + Mob/Pair/Solo variants)</div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Linear skill update workflow states created
+            <span class="check-sub">Pending Approval → Approved → Applied → Rejected—recorded → Apply Failed</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Four mode labels created in Linear
+            <span class="check-sub">mode:mob, mode:sprint, mode:pair, mode:solo — grouped under "SAGE Workflow Mode"</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text"><code>prd-interviewer</code> tested end-to-end on a test feature
+            <span class="check-sub">Confirm PRD page created in correct Notion location with component spec linked</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text"><code>prd-completeness-check</code> tested on test PRD
+            <span class="check-sub">Confirm scoring runs and Linear issue status updates to Ready on pass (≥80)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-lead">
+      <div class="checklist" id="checklist-lead">
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">All developer checklist items completed</div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">GitHub admin access to the Profitability repository confirmed</div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Branch protection rule configured on <code>main</code>
+            <span class="check-sub">PR required, 1 approval (Lead Dev), dismiss stale, status checks required, no force push</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">SAGE directory structure created and committed
+            <span class="check-sub">.sage/, .cursor/, .skill-update-triggers/, AGENTS.md at repo root</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">AGENTS.md paths verified against actual codebase directory structure
+            <span class="check-sub">Sections 2 and 5 in AGENTS.md must match actual repo paths before committing</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">All 12 hook scripts validated individually
+            <span class="check-sub">Each gate fires correctly + telemetry event written — see Phase 4 test sequence</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Full S1–S8 dry run completed on a test branch
+            <span class="check-sub">All artifacts produced, all gates fire at correct transitions, completion report generated</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Linear ↔ GitHub integration configured and tested
+            <span class="check-sub">Auto-link commits via LIN-[id], auto-link PRs, auto-update Linear status on merge</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Webhook receiver installed and receiving Linear approval events
+            <span class="check-sub">Follow webhook/README.md in the handoff repo</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">Playwright MCP configured (when ready)
+            <span class="check-sub">Follow playwright-spec/playwright-mcp-spec.md — set playwrightE2ETesting: true when live</span>
+          </div>
+        </div>
+        <div class="check-item" onclick="toggleCheck(this)">
+          <div class="check-box"></div>
+          <div class="check-text">All developer machines confirmed ready via developer checklist</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. PRINCIPLES -->
+  <section id="principles">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <h2>Operating Principles</h2>
+    </div>
+
+    <p>These five principles govern how SAGE is designed and how it should be operated. When something doesn't seem to fit, these are the rules to reason from.</p>
+
+    <div class="principles-list">
+      <div class="principle-item">
+        <div class="p-num">01</div>
+        <div>
+          <div class="p-title">Structural enforcement over agent instruction</div>
+          <p class="p-body">Quality gates are hook scripts that reject tool calls at the execution layer. They do not rely on agent compliance with instructions. An AI agent cannot skip a step or declare work complete without verifiable evidence — regardless of what it is instructed to do.</p>
+        </div>
+      </div>
+      <div class="principle-item">
+        <div class="p-num">02</div>
+        <div>
+          <div class="p-title">Artifact quality determines pipeline quality</div>
+          <p class="p-body">The highest-leverage quality investment is at PRD creation and phase breakdown — before any code is written. A feature cannot enter the build phase without a PRD scoring 80/100 or above. The component specification is a required artifact, not a best-effort addition.</p>
+        </div>
+      </div>
+      <div class="principle-item">
+        <div class="p-num">03</div>
+        <div>
+          <div class="p-title">Async-first, synchronous by exception</div>
+          <p class="p-body">Synchronous sessions (kick-offs, feature walkthroughs) are reserved for decisions that genuinely benefit from real-time discussion. Everything else flows asynchronously so that no team member's execution is blocked by another's schedule or time zone.</p>
+        </div>
+      </div>
+      <div class="principle-item">
+        <div class="p-num">04</div>
+        <div>
+          <div class="p-title">Evidence over estimation</div>
+          <p class="p-body">No human estimation is used at any stage of planning. All effort estimates and release forecasts are derived from the SAGE Intel empirical dataset, which grows with every completed work cycle. The first 5–9 completed phases per layer type build the initial calibration baseline.</p>
+        </div>
+      </div>
+      <div class="principle-item">
+        <div class="p-num">05</div>
+        <div>
+          <div class="p-title">Self-improvement is automatic, approval is human</div>
+          <p class="p-body">SAGE Hone proposes improvements to AI instructions based on evidence from real sessions. Every proposed change is staged for human review before being applied. The framework improves from the bottom up — no manual tuning required. The PM approves PRD-layer changes; the Lead Dev approves all execution-layer changes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. SUCCESS METRICS -->
+  <section id="metrics">
+    <div class="section-header">
+      <div class="section-num">11</div>
+      <h2>Success Metrics</h2>
+    </div>
+
+    <p>These are the steady-state quality targets for the framework after the first operational quarter. SAGE Intel will recalibrate based on actual delivery data.</p>
+
+    <div class="metrics-grid" style="margin-bottom: 28px;">
+      <div class="metric-card">
+        <div class="m-value">&gt;90%</div>
+        <div class="m-label">Hook compliance rate<br><span style="color:var(--text-dim)">Few unexpected gate rejections</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="m-value">&gt;70%</div>
+        <div class="m-label">TDD first-pass rate<br><span style="color:var(--text-dim)">Agent passes tests on first GREEN attempt</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="m-value">&gt;80%</div>
+        <div class="m-label">Agent quality rate<br><span style="color:var(--text-dim)">AI-written code survives to merge</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="m-value">80+</div>
+        <div class="m-label">PRD completeness score at kick-off<br><span style="color:var(--text-dim)">On first submission</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="m-value">±20%</div>
+        <div class="m-label">Phase effort accuracy<br><span style="color:var(--text-dim)">vs SAGE Intel estimate at steady state</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="m-value">5–9</div>
+        <div class="m-label">Phases for calibration<br><span style="color:var(--text-dim)">Phases per layer type → Moderate confidence</span></div>
+      </div>
+    </div>
+
+    <h3>Adoption milestones</h3>
+    <div class="checklist" style="pointer-events: none; opacity: 0.85;">
+      <div class="check-item">
+        <div class="check-box" style="border-color: var(--accent); color: var(--accent);">→</div>
+        <div class="check-text">First Sprint session completed <span class="check-sub">Target: within 2 weeks of framework activation</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box" style="border-color: var(--accent); color: var(--accent);">→</div>
+        <div class="check-text">All developers running S1–S8 independently <span class="check-sub">Target: within 4 weeks</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box" style="border-color: var(--accent); color: var(--accent);">→</div>
+        <div class="check-text">SAGE Intel calibration at Moderate confidence <span class="check-sub">After 5–9 completed phases per layer type</span></div>
+      </div>
+      <div class="check-item">
+        <div class="check-box" style="border-color: var(--accent); color: var(--accent);">→</div>
+        <div class="check-text">First skill update proposed and applied by SAGE Hone <span class="check-sub">Target: within 10 work cycles</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>SAGE Framework · v1.0 · Profitability Team · 2026</p>
+    <p>Reference: <code>sage-framework/reference-docs/terms-of-reference.md</code></p>
+  </footer>
+
+</main>
+
+<script>
+  // Tab switching
+  function switchTab(e, id) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    document.getElementById('tab-' + id).classList.add('active');
+  }
+
+  // Checkbox toggle
+  function toggleCheck(el) {
+    el.classList.toggle('done');
+    const box = el.querySelector('.check-box');
+    box.textContent = el.classList.contains('done') ? '✓' : '';
+  }
+
+  // Active nav link on scroll
+  const sections = document.querySelectorAll('section[id], div.hero');
+  const navLinks = document.querySelectorAll('nav ul li a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => {
+          link.classList.remove('active');
+          const href = link.getAttribute('href');
+          if (href && href.slice(1) === entry.target.id) {
+            link.classList.add('active');
+          }
+        });
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

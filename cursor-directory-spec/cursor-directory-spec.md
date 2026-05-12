@@ -5,39 +5,46 @@
 ```
 [REPO_ROOT]/
 ├── .cursor/
-│   ├── agents/
-│   │   ├── orchestrator.md
-│   │   ├── sprint-coordinator.md
-│   │   ├── dev-interview.md
-│   │   ├── implementation-planner.md
-│   │   ├── traceability-reviewer.md
-│   │   ├── validation-generator.md
-│   │   ├── code-simplifier.md
+│   ├── agents/                                ← agent definition files (catalogue + PRD evaluator)
 │   │   ├── code-reviewer.md
-│   │   ├── test-runner.md
-│   │   ├── gap-analyzer.md
+│   │   ├── code-simplifier.md
+│   │   ├── dev-interview.md
 │   │   ├── feature-doc-generator.md
+│   │   ├── gap-analyzer.md
+│   │   ├── implementation-planner.md
+│   │   ├── intel-advisor.md
+│   │   ├── intel-recorder.md
+│   │   ├── orchestrator.md
+│   │   ├── sage-s7-ado-handoff.md             ← S7 ↔ ADO mapping (reference agent doc)
 │   │   ├── session-performance-evaluator.md
-│   │   └── skill-effectiveness-evaluator.md
+│   │   ├── skill-effectiveness-evaluator.md
+│   │   ├── prd-interviewer-effectiveness-evaluator.md
+│   │   ├── sprint-coordinator.md
+│   │   ├── test-runner.md
+│   │   ├── traceability-reviewer.md
+│   │   └── validation-generator.md
 │   ├── hooks/
-│   │   ├── hooks.json                         ← fully specified
-│   │   └── scripts/
+│   │   ├── hooks.json                         ← valid JSON; parity with handoff hooks-spec/hooks.json
+│   │   └── scripts/                           ← Python modules (including shared utils + PRD telemetry helper)
 │   │       ├── hooks_utils.py
 │   │       ├── telemetry_logger.py
+│   │       ├── prd_telemetry_append.py
 │   │       ├── plan_mode_enforcer.py
 │   │       ├── manifest_step_gate.py
+│   │       ├── phase_approval_gate.py
 │   │       ├── required_references_gate.py
 │   │       ├── validation_confirmed_gate.py
-│   │       ├── phase_approval_gate.py
-│   │       ├── completion_report_stop_gate.py
+│   │       ├── foundation_verified_gate.py
+│   │       ├── batch_confirmation_gate.py
 │   │       ├── tdd_results_gate.py
 │   │       ├── code_review_gate.py
+│   │       ├── completion_report_stop_gate.py
 │   │       └── skill_update_trigger_watcher.py
 │   ├── rules/
-│   │   ├── rules.mdc                          ← existing, preserved unchanged
-│   │   ├── sage-session.mdc                    ← new
-│   │   └── phase-context.mdc                  ← new
-│   ├── skills/
+│   │   ├── rules.mdc                          ← existing product rules; preserve as applicable
+│   │   ├── sage-session.mdc
+│   │   └── phase-context.mdc
+│   ├── skills/                                ← 7 top-level skill packages
 │   │   ├── prd-completeness-check/
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
@@ -57,39 +64,53 @@
 │   │   │   └── references/
 │   │   │       ├── splitting-heuristics.md
 │   │   │       └── phase-breakdown-template.md
+│   │   ├── sage-intel/
+│   │   │   ├── intel-recorder/
+│   │   │   │   ├── SKILL.md
+│   │   │   │   └── references/
+│   │   │   │       ├── metric-definitions.md
+│   │   │   │       └── notion-metrics-template.md
+│   │   │   └── intel-advisor/
+│   │   │       ├── SKILL.md
+│   │   │       └── references/
+│   │   │           └── notion-metrics-template.md
 │   │   ├── session-performance-evaluator/
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
 │   │   │       └── scoring-dimensions.md
-│   │   └── skill-effectiveness-evaluator/
+│   │   ├── skill-effectiveness-evaluator/
+│   │   │   ├── SKILL.md
+│   │   │   └── references/
+│   │   │       └── per-skill-criteria.md
+│   │   └── prd-interviewer-effectiveness-evaluator/
 │   │       ├── SKILL.md
 │   │       └── references/
-│   │           └── per-skill-criteria.md
+│   │           └── prd-interviewer-signals.md
 │   ├── templates/
 │   │   └── session-manifest-template.md
-│   └── mcp.json
+│   └── mcp.json                               ← MCP server URLs (e.g. Linear, Notion, Microsoft 365)
 │
 ├── .sage/
-│   ├── workflow-config.json                   ← fully specified
+│   ├── workflow-config.json                   ← policy: modes, linear, telemetry filename, phases, featureFlags
 │   ├── current-phase.txt
 │   ├── skill-update-history.jsonl
 │   └── sessions/
 │       ├── active-session.txt
 │       └── [LIN-feature-id]/                  ← SESSION_ROOT per work cycle
 │           ├── session-manifest.md
+│           ├── workflow-telemetry.jsonl       ← session-scoped (see workflow-config telemetry.scope)
 │           ├── phase-breakdown.md
 │           ├── kickoff-dev-review-log.md
 │           ├── manifest.lock
 │           ├── phase-1/
-│           │   ├── telemetry.jsonl
 │           │   ├── phase-1-dev-interview-summary.md
 │           │   ├── phase-1-implementation-plan.md
 │           │   ├── phase-1-traceability-review.md
+│           │   ├── phase-1-validation-mockup.html
 │           │   ├── phase-1-tdd-results.md
 │           │   ├── phase-1-code-review.md
 │           │   ├── phase-1-test-results.md
-│           │   ├── phase-1-completion-report.md
-│           │   └── phase-1-handoff.md
+│           │   └── phase-1-completion-report.md
 │           └── phase-N/
 │               └── ...
 │
@@ -100,11 +121,12 @@
 │   └── LIN-[id]-diff.md                       ← staged by skill-effectiveness-evaluator
 │
 ├── docs/
+│   ├── agents-profitability.md                ← product/context guide (optional in product repo)
 │   └── cursor/
-│       ├── angularStandards.md                ← existing, referenced by rules.mdc
-│       └── sqlStandards.md                    ← existing, referenced by rules.mdc
+│       ├── angularStandards.md
+│       └── sqlStandards.md
 │
-└── AGENTS.md                                  ← repo-root level, TBD
+└── AGENTS.md                                  ← SAGE Framework Agent Catalogue (repo root; Cursor convention)
 ```
 
 ---
@@ -1149,59 +1171,60 @@ Maximum threshold delta per cycle: 5 points.
 
 ---
 
-## New rules files
+## Rules files
 
 ### .cursor/rules/sage-session.mdc
 
 ```markdown
 ---
-description: >
-  Apply during all Sprint and Pair work cycle sessions.
-  Injects mob session context and enforces workflow discipline
-  for all agents operating within a work cycle.
-globs:
-  - ".sage/**"
-  - ".cursor/agents/**"
-alwaysApply: false
+description: SAGE Framework session rules — active during all phase work
+globs: ["**/*"]
+alwaysApply: true
 ---
 
-# Sprint session context
+# SAGE Framework — Session Rules
 
-You are operating within an AI-assisted Sprint work cycle
-for the Profitability product at Empyrean Solutions.
+You are operating within the SAGE (Semi-Autonomous Guided Execution) framework
+on the Profitability codebase. These rules apply to every agent in every phase.
 
-## Workflow discipline
+## Core principles
 
-1. Always resolve SESSION_ROOT before taking any action.
-   Read `.sage/sessions/active-session.txt` for the path.
+1. **Structural gates are not negotiable.** Hook scripts enforce gates at the
+   execution layer. You cannot instruct your way past a gate. If a gate blocks
+   you, the condition it checks must be satisfied in the real world — not by
+   instruction, workaround, or assumption.
 
-2. Always read the session manifest before taking any action.
-   `[SESSION_ROOT]/session-manifest.md`
+2. **Artifact quality determines pipeline quality.** Every artifact you produce
+   is consumed by a downstream agent or gate. Use predicate-based language.
+   Write machine-readable outputs. Avoid vague qualifiers.
 
-3. Never skip steps. The step sequence S1→S8 is enforced
-   by hooks. Attempting to skip will be blocked.
+3. **You operate within your phase scope only.** Read files freely across the
+   codebase, but write only within your assigned phase's files and directories
+   unless explicitly stated otherwise in your agent definition.
 
-4. Never write to a file in another phase's scope.
-   Each phase owns its scoped files exclusively.
+4. **The session manifest is the source of truth.** Before taking any action,
+   verify the current step by reading the session manifest. Do not assume your
+   step from context alone.
 
-5. Every artifact you write must be complete before marking
-   a step as done. A partial artifact is worse than no artifact
-   because it may pass a gate check while being incomplete.
+5. **validationConfirmed and batch.confirmed cannot be set by you.** These flags
+   require explicit developer action. Do not attempt to set them. Do not suggest
+   workarounds. Wait for the developer to act.
 
-6. When in doubt, surface a specific question rather than
-   making an assumption. Assumptions made during build are
-   the primary source of rework.
+## Session manifest location
 
-## Profitability domain context
+`.sage/sessions/[session-id]/session-manifest.md`
 
-- Data layer: SQL Server stored procedures, Adjusted_GL table,
-  GLAllocationLog, ProcessID reference framework
-- Backend: .NET / C# service layer
-- Frontend: Angular with TypeScript
-- BI layer: Pyramid Analytics (out of scope for build phases
-  unless explicitly in PRD)
-- Standards: `docs/cursor/angularStandards.md` and
-  `docs/cursor/sqlStandards.md` apply to all generated code
+The session ID is in `.sage/sessions/active-session.txt`.
+
+## Phase directory
+
+All phase artifacts are written to:
+`.sage/sessions/[session-id]/phase-[N]/`
+
+## Telemetry
+
+All tool calls are logged automatically by the telemetry-logger hook.
+Do not attempt to write telemetry manually — the hook handles this.
 ```
 
 ---
@@ -1210,50 +1233,79 @@ for the Profitability product at Empyrean Solutions.
 
 ```markdown
 ---
-description: >
-  Injects phase-specific context when operating within a phase lane.
-  Applies when CURSOR_PHASE environment variable is set.
-globs:
-  - "src/**"
-  - "tests/**"
-  - "*.cs"
-  - "*.ts"
-  - "*.sql"
+description: SAGE phase context — loaded for each active phase
+globs: [".sage/sessions/**/*", ".cursor/agents/**/*"]
 alwaysApply: false
 ---
 
-# Phase lane context
+# SAGE Phase Context
 
-You are operating within a specific phase lane of a Distributed
-Sprint work cycle.
+When working within a phase, the following context applies.
 
-## Phase scope discipline
+## Step sequence
 
-You own ONLY the files listed in your phase's `scopedFiles` in the
-session manifest. You do not read or write files outside your scope
-unless they are in `requiredReferences` (read only) or are test
-files for your own phase.
+Phases progress through 8 steps in strict order:
 
-If you identify that a file outside your scope needs to change,
-do NOT make the change. Record it in your completion report under
-"items requiring coordination" so the orchestrator can handle it.
+| Step | Code | What happens |
+|------|------|--------------|
+| S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes) |
+| S2 | implementation-plan | Agent produces implementation plan with TDD mapping |
+| S3 | traceability-review | Agent checks PRD ↔ implementation plan bidirectionally |
+| S4 | plan-validation | Agent produces validation mockup; developer confirms |
+| S5 | build | Agent builds implementation (autonomous or checkpoint) |
+| S6 | code-review | Agent reviews code quality |
+| S7 | agent-testing | Agent runs full test suite |
+| S8 | completion-report | Agent produces completion report |
 
-## Required references
+No step can begin until the prior step's required artifact exists.
+This is enforced by the manifest-step-gate hook — not by instruction.
 
-Before writing any code, open and read every file listed in your
-phase's `requiredReferences`. The `beforeShellExecution` hook
-checks telemetry for these read events. If you attempt to write
-code without reading a required reference, the build will be blocked.
+## Phase artifact naming convention
 
-## Code standards
+All artifacts use the pattern: `phase-{N}-{artifact-type}.md`
 
-All code you write must conform to:
-- Angular standards: `docs/cursor/angularStandards.md`
-- SQL standards: `docs/cursor/sqlStandards.md`
+Where {N} is the phase number (e.g. phase-1, phase-2).
 
-These standards apply without exception. If a standard seems to
-conflict with the implementation plan, surface the conflict rather
-than deviating from either.
+Examples:
+- `phase-1-dev-interview-summary.md`
+- `phase-1-implementation-plan.md`
+- `phase-1-traceability-review.md`
+- `phase-1-validation-mockup.html`
+- `phase-1-code-review.md`
+- `phase-1-test-results.md`
+- `phase-1-completion-report.md`
+
+## Gate conditions
+
+| Gate | Condition to pass |
+|------|------------------|
+| plan-mode-enforcer | currentStep ≠ 'dev-interview' |
+| manifest-step-gate | Prior artifact exists |
+| phase-approval-gate | linearIssueStatus = 'Approved' |
+| required-references-gate | All requiredReferences have been read |
+| validation-confirmed-gate | validationConfirmed = true (set by developer) |
+| foundation-verified-gate | foundationVerified = true (Dependent phases only) |
+| batch-confirmation-gate | batches[N].confirmed = true (Checkpoint mode only) |
+| tdd-results-gate | tdd-results.md contains 'STATUS: PASS' |
+| code-review-gate | code-review.md contains 'Critical findings: 0' |
+| completion-report-stop-gate | test-results.md contains 'STATUS: PASS' |
+
+## Profitability domain context
+
+This codebase implements instrument-level profitability calculations:
+- FTP (Funds Transfer Pricing)
+- Expense and income allocation
+- Capital allocation
+- Provisions
+
+Key outputs: 42-measure set via views `vw_BI_AllInstruments` and `Global_Result`
+Data boundary: Dataverse for GL and reference data
+
+Known edge cases to consider:
+- Named revision dates
+- Return codes −1 through −8 (initialization blocking)
+- Flag logic: `NewInstFlag`, `ClosedInstFlag`, `PlugInstrumentFlag`
+- Naming inconsistencies exist in the codebase — verify before assuming
 ```
 
 ---
@@ -1330,13 +1382,25 @@ Restart Cursor after setting environment variables.
 
 `.cursor/templates/session-manifest-template.md` is the template
 used by the `phase-splitter` skill to generate a new manifest at
-kick-off. It is a copy of the session manifest schema with all values
-set to their initial state (null timestamps, pending step statuses,
-empty arrays, false booleans).
+kick-off. The template defines the JSON structure and initial values
+that phase-splitter populates with session-specific data.
 
-The phase-splitter skill reads this template, populates it with the
-session-specific values from the phase breakdown, runs path validation,
-and writes the result to `[SESSION_ROOT]/session-manifest.md`.
+The template uses a flat top-level structure (not the layered schema
+from `session-manifest-schema.md`). Key structural points:
 
-The template itself is not reproduced here — it is the session manifest
-schema document with all runtime fields set to initial values.
+- Top-level fields: `sessionId`, `featureId`, `featureTitle`, `mode`,
+  `kickoffDate`
+- `sessionState` contains: `status`, `allPhasesApproved`,
+  `foundationVerified`, `completionLog`
+- Phase `definition` uses: `title`, `description`, `phaseType`, `layer`,
+  `assignedDeveloper`, `linearIssueId`, `scopedFiles` (array),
+  `requiredReferences`, `upstreamPhases`, `downstreamPhases`,
+  `estimatedHours`
+- Phase `runtime` uses: `linearIssueStatus`, `currentStep`, `buildMode`,
+  `validationConfirmed`, `currentBatchId`, `startedAt`, `completedAt`,
+  `actualDurationHours`, `stepStatus`, `stepTimestamps`, `batches`,
+  `hookRejectionCount`, `deferredItems`
+- Mode enum: `mob | sprint | pair | solo`
+
+The template is mirrored in this repo at
+`.cursor/templates/session-manifest-template.md`.

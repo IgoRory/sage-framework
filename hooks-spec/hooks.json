@@ -1,15 +1,8 @@
 {
   "hooks": [
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // LOGGING HOOK
-    // Fires on every event type. Writes a telemetry record to the phase lane's
-    // telemetry.jsonl file. Always runs — never blocks. Separate from all
-    // enforcement hooks so logging failures do not affect gate behaviour.
-    // ─────────────────────────────────────────────────────────────────────────
     {
       "id": "telemetry-logger",
-      "description": "Writes every hook event to phase-lane telemetry.jsonl",
+      "description": "Writes every hook event to the session-scoped workflow-telemetry.jsonl. Always runs, never blocks. Logging failures do not affect gate behaviour.",
       "events": [
         "preToolUse",
         "afterFileEdit",
@@ -22,175 +15,93 @@
       "blocking": false,
       "timeout_ms": 2000
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // PLAN MODE ENFORCEMENT — S1 DEV INTERVIEW
-    // Fires on preToolUse. Rejects any file-write tool call while the manifest
-    // currentStep is "dev-interview". Enforces Plan mode structurally.
-    // ─────────────────────────────────────────────────────────────────────────
     {
       "id": "plan-mode-enforcer",
-      "description": "Blocks file-write tool calls during S1 dev interview step",
+      "description": "Blocks all file-write tool calls while the session manifest currentStep is 'dev-interview'. Enforces Plan mode structurally during S1.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/plan_mode_enforcer.py",
       "blocking": true,
       "timeout_ms": 3000
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // MANIFEST STEP GATE
-    // Fires on preToolUse. Checks that the previous step is marked complete
-    // in the manifest before allowing step-specific tools to run.
-    // Covers transitions: S1→S2, S2→S3, S3→S4, S4→S5, S5→S6, S6→S7, S7→S8.
-    // ─────────────────────────────────────────────────────────────────────────
     {
       "id": "manifest-step-gate",
-      "description": "Enforces sequential step progression via manifest state",
+      "description": "Enforces the S1→S8 step progression. Before any step begins, checks that the prior step's required artifact exists in the phase directory.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/manifest_step_gate.py",
       "blocking": true,
       "timeout_ms": 3000
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // REQUIRED REFERENCES GATE — S5 BUILD
-    // Fires on beforeShellExecution. Before any code-writing shell command
-    // runs during S5, verifies that every file listed in
-    // manifest.required_references has a corresponding afterReadFile event
-    // in the phase lane's telemetry.jsonl. Blocks with the exact file name
-    // if any reference has not been read.
-    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "id": "phase-approval-gate",
+      "description": "Blocks S1 from starting until the phase Linear issue status is 'Approved'. Prevents build work beginning before Product Manager and Lead Dev have approved the phase.",
+      "events": ["preToolUse"],
+      "script": ".cursor/hooks/scripts/phase_approval_gate.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
     {
       "id": "required-references-gate",
-      "description": "Blocks S5 build until all manifest.required_references have been read",
-      "events": ["beforeShellExecution"],
+      "description": "Blocks S5 build from starting until all files listed in the phase's requiredReferences have been read in the current session (confirmed via read_file calls recorded in telemetry).",
+      "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/required_references_gate.py",
       "blocking": true,
-      "timeout_ms": 5000
+      "timeout_ms": 3000
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // VALIDATION CONFIRMED GATE — S5 BUILD
-    // Fires on preToolUse. Blocks the build tool from launching if
-    // manifest.validation_confirmed is not true. Works alongside the
-    // required-references-gate — both must pass before S5 proceeds.
-    // ─────────────────────────────────────────────────────────────────────────
     {
       "id": "validation-confirmed-gate",
-      "description": "Blocks S5 build until manifest.validation_confirmed = true",
+      "description": "Blocks S5 build from starting until the developer has set validationConfirmed = true in the session manifest. This flag cannot be set by any agent or hook — only the developer can set it.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/validation_confirmed_gate.py",
       "blocking": true,
       "timeout_ms": 3000
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // PHASE APPROVAL GATE — S1 LAUNCH
-    // Fires on preToolUse. Before S1 can begin, verifies that the Linear
-    // phase issue for this phase is at status "Approved". Reads Linear via
-    // MCP. Blocks launch if status is not Approved.
-    // ─────────────────────────────────────────────────────────────────────────
-    {
-      "id": "phase-approval-gate",
-      "description": "Blocks phase launch until Linear phase issue is Approved",
-      "events": ["preToolUse"],
-      "script": ".cursor/hooks/scripts/phase_approval_gate.py",
-      "blocking": true,
-      "timeout_ms": 8000
-    },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // COMPLETION REPORT STOP HOOK — S8
-    // Fires on stop. This is the hardest gate in the workflow. Blocks the
-    // agent from ending its turn to generate the completion report unless
-    // phase-N-test-results.md exists in the phase directory with a line
-    // containing exactly "STATUS: PASS". No exceptions.
-    // ─────────────────────────────────────────────────────────────────────────
-    {
-      "id": "completion-report-stop-gate",
-      "description": "Blocks S8 completion report unless test-results STATUS:PASS exists",
-      "events": ["stop"],
-      "script": ".cursor/hooks/scripts/completion_report_stop_gate.py",
-      "blocking": true,
-      "timeout_ms": 3000
-    },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // TDD RESULTS GATE — S6 CODE REVIEW
-    // Fires on preToolUse. Blocks the code-review tool from running unless
-    // phase-N-tdd-results.md exists with STATUS: PASS. Ensures S6 only
-    // runs after a genuinely passing TDD suite.
-    // ─────────────────────────────────────────────────────────────────────────
-    {
-      "id": "tdd-results-gate",
-      "description": "Blocks S6 code review until tdd-results STATUS:PASS exists",
-      "events": ["preToolUse"],
-      "script": ".cursor/hooks/scripts/tdd_results_gate.py",
-      "blocking": true,
-      "timeout_ms": 3000
-    },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // CODE REVIEW GATE — S7 AGENT TESTING
-    // Fires on preToolUse. Blocks the test-runner tool from launching unless
-    // phase-N-code-review.md exists with zero open Critical findings.
-    // ─────────────────────────────────────────────────────────────────────────
-    {
-      "id": "code-review-gate",
-      "description": "Blocks S7 agent testing until code review has zero Critical findings",
-      "events": ["preToolUse"],
-      "script": ".cursor/hooks/scripts/code_review_gate.py",
-      "blocking": true,
-      "timeout_ms": 3000
-    },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // FOUNDATION VERIFIED GATE — DEPENDENT PHASES ONLY
-    // Fires on preToolUse. For Dependent phases only, blocks S5 build from
-    // starting until manifest.sessionState.foundationVerified = true.
-    // Foundation and Independent phases are not affected — they pass
-    // this gate immediately. Dependent phases may complete S1–S4
-    // (planning steps) before Foundation/Independent phases have merged.
-    // ─────────────────────────────────────────────────────────────────────────
     {
       "id": "foundation-verified-gate",
-      "description": "Blocks Dependent phases from starting S5 build until Foundation phases have merged and passed regression",
+      "description": "Blocks Dependent phase lanes from entering S5 until foundationVerified = true in the session manifest. Set by the orchestrator after all Foundation and Independent phases have merged and regression has passed.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/foundation_verified_gate.py",
       "blocking": true,
       "timeout_ms": 3000
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // BATCH CONFIRMATION GATE — CHECKPOINT BUILD MODE (S5)
-    // Fires on preToolUse. Only active when manifest.phases[N].runtime.buildMode
-    // = "checkpoint". Blocks the next batch's build tool from launching until
-    // the developer has set batches[currentBatchId].confirmed = true in the
-    // session manifest. Does nothing in autonomous mode.
-    // ─────────────────────────────────────────────────────────────────────────
     {
       "id": "batch-confirmation-gate",
-      "description": "In checkpoint build mode, blocks next batch until developer sets batches[N].confirmed = true",
+      "description": "In Checkpoint build mode only: blocks the next batch's build tool call until the developer has set batches[N].confirmed = true in the session manifest after reviewing the batch review document.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/batch_confirmation_gate.py",
       "blocking": true,
       "timeout_ms": 3000
     },
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // SKILL UPDATE TRIGGER WATCHER
-    // Fires on afterFileEdit. Watches the .skill-update-triggers/ directory.
-    // When a new trigger file appears (written by the webhook receiver),
-    // invokes the skill-effectiveness-evaluator apply step.
-    // ─────────────────────────────────────────────────────────────────────────
+    {
+      "id": "tdd-results-gate",
+      "description": "Blocks S6 code review from starting until the phase's tdd-results.md file exists and contains 'STATUS: PASS'.",
+      "events": ["preToolUse"],
+      "script": ".cursor/hooks/scripts/tdd_results_gate.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
+    {
+      "id": "code-review-gate",
+      "description": "Blocks S7 agent testing from starting until the phase's code-review.md exists and contains 'Critical findings: 0'.",
+      "events": ["preToolUse"],
+      "script": ".cursor/hooks/scripts/code_review_gate.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
+    {
+      "id": "completion-report-stop-gate",
+      "description": "Fires on the stop event. Blocks the agent from ending its turn until the phase's test-results.md exists and contains 'STATUS: PASS'.",
+      "events": ["stop"],
+      "script": ".cursor/hooks/scripts/completion_report_stop_gate.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
     {
       "id": "skill-update-trigger-watcher",
-      "description": "Detects new skill update trigger files and fires the apply step",
+      "description": "Fires on afterFileEdit. Detects new trigger files written to .skill-update-triggers/ by the Linear webhook receiver and fires the skill-effectiveness-evaluator apply step.",
       "events": ["afterFileEdit"],
       "script": ".cursor/hooks/scripts/skill_update_trigger_watcher.py",
       "blocking": false,
       "timeout_ms": 5000
     }
-
   ]
 }

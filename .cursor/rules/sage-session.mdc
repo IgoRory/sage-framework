@@ -1,0 +1,49 @@
+---
+description: SAGE Framework session rules — active during all phase work
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# SAGE Framework — Session Rules
+
+You are operating within the SAGE (Semi-Autonomous Guided Execution) framework
+on the Profitability codebase. These rules apply to every agent in every phase.
+
+## Core principles
+
+1. **Structural gates are not negotiable.** Hook scripts enforce gates at the
+   execution layer. You cannot instruct your way past a gate. If a gate blocks
+   you, the condition it checks must be satisfied in the real world — not by
+   instruction, workaround, or assumption.
+
+2. **Artifact quality determines pipeline quality.** Every artifact you produce
+   is consumed by a downstream agent or gate. Use predicate-based language.
+   Write machine-readable outputs. Avoid vague qualifiers.
+
+3. **You operate within your phase scope only.** Read files freely across the
+   codebase, but write only within your assigned phase's files and directories
+   unless explicitly stated otherwise in your agent definition.
+
+4. **The session manifest is the source of truth.** Before taking any action,
+   verify the current step by reading the session manifest. Do not assume your
+   step from context alone.
+
+5. **validationConfirmed and batch.confirmed cannot be set by you.** These flags
+   require explicit developer action. Do not attempt to set them. Do not suggest
+   workarounds. Wait for the developer to act.
+
+## Session manifest location
+
+`.sage/sessions/[session-id]/session-manifest.md`
+
+The session ID is in `.sage/sessions/active-session.txt`.
+
+## Phase directory
+
+All phase artifacts are written to:
+`.sage/sessions/[session-id]/phase-[N]/`
+
+## Telemetry
+
+All tool calls are logged automatically by the telemetry-logger hook.
+Do not attempt to write telemetry manually — the hook handles this.

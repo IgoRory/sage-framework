@@ -29,16 +29,27 @@ LOG_LEVEL = os.environ.get("WEBHOOK_LOG_LEVEL", "INFO")
 
 # Linear webhook signing secret — set as environment variable
 # Generate in Linear: Settings → API → Webhooks → [your webhook] → Signing secret
-WEBHOOK_SECRET = os.environ.get("LINEAR_WEBHOOK_SECRET", "")
+# Also supports reading from a secret file at .sage/webhook/.webhook_secret for environments
+# where env var inheritance is unreliable (e.g., Windows Scheduled Tasks).
+def _load_webhook_secret() -> str:
+    val = os.environ.get("LINEAR_WEBHOOK_SECRET", "").strip()
+    if val:
+        return val
+    secret_file = SCRIPT_DIR / ".webhook_secret"
+    if secret_file.exists():
+        return secret_file.read_text(encoding="ascii").strip()
+    return ""
+
+WEBHOOK_SECRET = _load_webhook_secret()
 
 # Resolve repo root from this file's location
 # This file lives at [REPO_ROOT]/.sage/webhook/webhook_receiver.py
 SCRIPT_DIR = Path(__file__).parent.resolve()
-HIVE_DIR = SCRIPT_DIR.parent
-REPO_ROOT = HIVE_DIR.parent
+SAGE_DIR = SCRIPT_DIR.parent
+REPO_ROOT = SAGE_DIR.parent
 
 TRIGGERS_DIR = REPO_ROOT / ".skill-update-triggers"
-LOG_FILE = HIVE_DIR / "webhook" / "receiver.log"
+LOG_FILE = SAGE_DIR / "webhook" / "receiver.log"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Logging setup
@@ -56,7 +67,6 @@ logging.basicConfig(
 )
 log = logging.getLogger("webhook_receiver")
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Signature validation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -64,8 +74,8 @@ log = logging.getLogger("webhook_receiver")
 def validate_signature(payload_bytes: bytes, signature_header: str) -> bool:
     """
     Validate Linear's HMAC-SHA256 webhook signature.
-    Linear sends: Linear-Signature: <hex_digest>
-    We compute:   HMAC-SHA256(secret, payload_bytes).hexdigest()
+    Linear sends: Linear-Signature: <hex-digest>
+    We compute: HMAC-SHA256(secret, payload_bytes).hexdigest()
     """
     if not WEBHOOK_SECRET:
         log.warning(
@@ -84,8 +94,14 @@ def validate_signature(payload_bytes: bytes, signature_header: str) -> bool:
         hashlib.sha256,
     ).hexdigest()
 
-    # Use constant-time comparison to prevent timing attacks
-    return hmac.compare_digest(expected, signature_header.strip())
+    sig_clean = signature_header.strip()
+    if not hmac.compare_digest(expected, sig_clean):
+        log.warning(
+            f"Signature mismatch — expected={expected[:16]}... got={sig_clean[:16]}... "
+            f"secret_len={len(WEBHOOK_SECRET)} body_len={len(payload_bytes)}"
+        )
+        return False
+    return True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -100,24 +116,7 @@ REJECTED_STATUS = "rejected"
 def extract_event_type(payload: dict) -> str | None:
     """
     Determine if this webhook event is a skill-update approval or rejection.
-
-    Linear webhook payload structure for issue status changes:
-    {
-      "type": "Issue",
-      "action": "update",
-      "data": {
-        "id": "issue-uuid",
-        "identifier": "LIN-4822",
-        "title": "Skill update proposal — prd-completeness-check — ...",
-        "state": { "name": "Approved", "type": "completed", ... },
-        "labels": [{ "name": "skill-update", ... }],
-        ...
-      },
-      "updatedFrom": {
-        "stateId": "...",
-        "state": { "name": "Pending Approval", ... }
-      }
-    }
+    Returns "approved", "rejected", or None if the event is not relevant.
     """
     if payload.get("type") != "Issue":
         return None
@@ -127,13 +126,11 @@ def extract_event_type(payload: dict) -> str | None:
 
     data = payload.get("data", {})
 
-    # Check for skill-update label
     labels = data.get("labels", [])
     label_names = [lbl.get("name", "").lower() for lbl in labels]
     if SKILL_UPDATE_LABEL not in label_names:
         return None
 
-    # Check if state changed (updatedFrom must have a prior state)
     updated_from = payload.get("updatedFrom", {})
     if "stateId" not in updated_from:
         return None
@@ -155,7 +152,6 @@ def extract_event_type(payload: dict) -> str | None:
 def write_trigger_file(payload: dict, event_type: str) -> Path:
     """
     Write a trigger file to .skill-update-triggers/.
-    The file name includes the Linear issue identifier for traceability.
     Returns the path of the written file.
     """
     TRIGGERS_DIR.mkdir(parents=True, exist_ok=True)
@@ -165,20 +161,18 @@ def write_trigger_file(payload: dict, event_type: str) -> Path:
     issue_id = data.get("id", "unknown")
     issue_title = data.get("title", "")
 
-    # Extract skill name from the issue title
+    # Extract skill name from issue title
     # Expected format: "Skill update proposal — [skill-name] — ..."
     skill_name = "unknown"
-    if "—" in issue_title:
-        parts = issue_title.split("—")
+    if "\u2014" in issue_title:
+        parts = issue_title.split("\u2014")
         if len(parts) >= 2:
             skill_name = parts[1].strip()
 
-    # Extract assignee
     assignee = data.get("assignee", {})
     approved_by = assignee.get("email", assignee.get("name", "unknown"))
 
-    # Find the diff path from the issue description or custom fields
-    # The diff path is stored as a custom field "diff_path" on the Linear issue
+    # Find diff path from issue description custom fields
     diff_path = ""
     custom_fields = data.get("customFields", [])
     for field in custom_fields:
@@ -186,7 +180,6 @@ def write_trigger_file(payload: dict, event_type: str) -> Path:
             diff_path = field.get("value", "")
             break
 
-    # If diff_path not in custom fields, construct expected path
     if not diff_path:
         diff_path = str(
             REPO_ROOT / ".skill-update-staging" / f"{issue_identifier}-diff.md"
@@ -204,11 +197,7 @@ def write_trigger_file(payload: dict, event_type: str) -> Path:
         "issue_title": issue_title,
     }
 
-    # Include rejection comment if present
     if event_type == "rejected":
-        # Linear includes comments in webhook payload for some event types
-        # The rejection rationale comes from a separate comment webhook
-        # We write what we have and the evaluator reads the full comment via MCP
         trigger_data["rejection_rationale_source"] = "read_from_linear_via_mcp"
 
     filename = f"{issue_identifier}-{event_type}.json"
@@ -231,36 +220,39 @@ def write_trigger_file(payload: dict, event_type: str) -> Path:
 class WebhookHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):  # noqa: N802
-        # Read body
         content_length = int(self.headers.get("Content-Length", 0))
         body_bytes = self.rfile.read(content_length)
 
+        # Capture header before responding — self.headers may not survive thread boundary
+        signature = self.headers.get("Linear-Signature", "")
+
         # Always respond 200 immediately to prevent Linear retries
-        # Processing happens after the response is sent
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(b'{"ok": true}')
 
-        # Process in background thread to avoid blocking the response
+        # Process in background thread
         thread = threading.Thread(
             target=self._process_payload,
-            args=(body_bytes,),
+            args=(body_bytes, signature),
             daemon=True,
         )
         thread.start()
 
-    def _process_payload(self, body_bytes: bytes):
-        # Validate signature
-        signature = self.headers.get("Linear-Signature", "")
+    def _process_payload(self, body_bytes: bytes, signature: str):
+        # signature captured in do_POST before thread spawn
+        try:
+            self._process_payload_inner(body_bytes, signature)
+        except Exception:
+            log.exception("Unhandled error in _process_payload")
+
+    def _process_payload_inner(self, body_bytes: bytes, signature: str):
+        log.info(f"Processing payload: body_len={len(body_bytes)} sig_len={len(signature)}")
         if not validate_signature(body_bytes, signature):
-            log.warning(
-                "Webhook signature validation failed — payload discarded. "
-                f"Path: {self.path}"
-            )
+            log.warning("Webhook signature validation failed — payload discarded.")
             return
 
-        # Parse JSON
         try:
             payload = json.loads(body_bytes.decode("utf-8"))
         except json.JSONDecodeError as e:
@@ -272,20 +264,14 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
             f"action={payload.get('action')}"
         )
 
-        # Filter for skill-update events
         event_type = extract_event_type(payload)
         if not event_type:
             log.debug("Webhook event not relevant — ignored.")
             return
 
-        issue_id = (
-            payload.get("data", {}).get("identifier", "unknown")
-        )
-        log.info(
-            f"Skill update event: {issue_id} → {event_type}"
-        )
+        issue_id = payload.get("data", {}).get("identifier", "unknown")
+        log.info(f"Skill update event: {issue_id} -> {event_type}")
 
-        # Write trigger file
         try:
             trigger_path = write_trigger_file(payload, event_type)
             log.info(f"Trigger file ready: {trigger_path.name}")
@@ -293,7 +279,6 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
             log.error(f"Failed to write trigger file: {e}", exc_info=True)
 
     def log_message(self, format, *args):  # noqa: A002
-        # Suppress default HTTP server access log — we use our own logger
         log.debug(f"HTTP: {format % args}")
 
 
@@ -302,28 +287,26 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_startup_checks() -> bool:
-    """Run pre-start validation. Returns True if all checks pass."""
     passed = True
 
     if not WEBHOOK_SECRET:
         log.warning(
-            "⚠  LINEAR_WEBHOOK_SECRET is not set. "
+            "LINEAR_WEBHOOK_SECRET is not set. "
             "Signature validation is disabled. "
             "Set this environment variable before using in production."
         )
 
     if not TRIGGERS_DIR.parent.exists():
         log.error(
-            f"❌  Repository root not found at expected path: {REPO_ROOT}\n"
-            "   Ensure the receiver script is at "
-            "[REPO_ROOT]/.sage/webhook/webhook_receiver.py"
+            f"Repository root not found at expected path: {REPO_ROOT}\n"
+            "  Ensure this file is at [REPO_ROOT]/.sage/webhook/webhook_receiver.py"
         )
         passed = False
 
-    log.info(f"📁  Repo root:     {REPO_ROOT}")
-    log.info(f"📁  Triggers dir:  {TRIGGERS_DIR}")
-    log.info(f"📋  Log file:      {LOG_FILE}")
-    log.info(f"🔌  Port:          {PORT}")
+    log.info(f"Repo root:    {REPO_ROOT}")
+    log.info(f"Triggers dir: {TRIGGERS_DIR}")
+    log.info(f"Log file:     {LOG_FILE}")
+    log.info(f"Port:         {PORT}")
 
     return passed
 
@@ -350,11 +333,7 @@ def main():
     signal.signal(signal.SIGTERM, shutdown_handler)
     signal.signal(signal.SIGINT, shutdown_handler)
 
-    log.info(f"✅  Listening on http://localhost:{PORT}")
-    log.info(
-        "   Configure Linear webhook to POST to: "
-        f"http://localhost:{PORT} (via ngrok or reverse proxy)"
-    )
+    log.info(f"Listening on http://localhost:{PORT}")
 
     try:
         server.serve_forever()
