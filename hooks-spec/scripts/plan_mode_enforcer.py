@@ -4,23 +4,24 @@ SAGE Framework — Hook: plan-mode-enforcer
 Event: preToolUse
 Blocking: True
 
-Blocks all file-write tool calls while the session manifest currentStep
-is 'dev-interview'. Enforces Plan mode structurally during S1 — the agent
-cannot write files regardless of its instructions.
+Blocks file-write tool calls during S1 dev-interview, except for the
+agent's declared output artifact (phase-{N}-dev-interview-summary.md).
 
 Permits immediately if:
 - No active session exists (workflow not initialised)
 - No SAGE_PHASE_ID set (not in a phase context)
 - currentStep is not 'dev-interview'
 - The tool call is not a file-write operation
+- The write target is phase-{N}-dev-interview-summary.md in the phase directory
 """
 
 import sys
 import json
+from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, get_phase_dir, block, permit,
-    write_telemetry_event
+    write_telemetry_event, NoSessionError, SessionIntegrityError
 )
 
 # Tool names that constitute file-write operations
@@ -37,9 +38,11 @@ def main():
         session_root = get_session_root(repo_root)
         phase_id = get_phase_id()
         manifest = read_manifest(session_root)
-    except RuntimeError:
-        # No active session or missing manifest — not in workflow context
+    except NoSessionError:
         permit()
+        return
+    except SessionIntegrityError as e:
+        block(message=f"SESSION INTEGRITY ERROR — {e}")
         return
 
     if not phase_id:
@@ -68,7 +71,19 @@ def main():
         permit()
         return
 
-    # Block the write
+    # Allow the dev-interview agent to write its declared output artifact
+    tool_input = event_input.get("tool_input", {})
+    target_path = tool_input.get("path") or tool_input.get("file_path") or tool_input.get("file") or ""
+    if target_path:
+        target = Path(target_path)
+        allowed_artifact = get_phase_dir(session_root, phase_id) / f"phase-{phase_id}-dev-interview-summary.md"
+        try:
+            if target.resolve() == allowed_artifact.resolve():
+                permit()
+                return
+        except (OSError, ValueError):
+            pass
+
     write_telemetry_event(session_root, {
         "event": "hook_rejection",
         "hook": "plan-mode-enforcer",
@@ -80,11 +95,10 @@ def main():
     block(
         message=(
             "PLAN MODE — File writes are blocked during S1 Dev Interview.\n\n"
-            "The dev-interview agent operates in read-only Plan mode.\n"
-            "Complete the interview and produce phase-{N}-dev-interview-summary.md\n"
-            "before the implementation-planner agent can write files.\n\n"
-            "To proceed: finish the dev interview, then update currentStep to "
-            "'implementation-plan' in the session manifest."
+            "The dev-interview agent may only write phase-{N}-dev-interview-summary.md\n"
+            "to the phase directory. All other file writes are blocked.\n\n"
+            "To proceed: finish the dev interview, write the summary, then update\n"
+            "currentStep to 'implementation-plan' in the session manifest."
         ),
         phase_id=phase_id
     )

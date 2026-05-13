@@ -22,6 +22,8 @@ scope through instruction alone.
 - [traceability-reviewer](#traceability-reviewer)
 - [plan-preview-generator](#plan-preview-generator)
 - [code-simplifier](#code-simplifier)
+- [test-author](#test-author)
+- [tdd-builder](#tdd-builder)
 - [code-reviewer](#code-reviewer)
 - [test-runner](#test-runner)
 - [gap-analyzer](#gap-analyzer)
@@ -51,6 +53,7 @@ and manages progression via gates.
 
 - `session-manifest.md` — generated at kick-off
 - TDD specifications per phase lane — generated after kick-off
+- `phase-{N}-completion-report.md` — generated at S8 for each phase
 - Post-merge regression report
 - Feature closure confirmation and session archive
 
@@ -90,7 +93,7 @@ on demand. Never takes action — observes and reports only.
 ## dev-interview
 
 **Mode:** Foreground  
-**Access:** Read only (Plan mode — write blocked by plan-mode-enforcer hook)  
+**Access:** Artifact-write only (Plan mode — writes only declared output to phase directory)  
 **Active during:** S1 — Dev Interview
 
 ### Role
@@ -105,7 +108,7 @@ spec scenarios with the developer. Asks the developer to choose their build mode
 
 ### Constraints
 
-- Read only — the plan-mode-enforcer hook blocks all file writes
+- Artifact-write only — no product/source/config edits; writes only `phase-{N}-dev-interview-summary.md` to the phase directory
 - Asks questions ONLY about the current phase's scope
 - Always asks the developer to choose Autonomous or Checkpoint build mode
   before the interview closes
@@ -143,7 +146,7 @@ to the session manifest.
 ## traceability-reviewer
 
 **Mode:** Foreground  
-**Access:** Read only  
+**Access:** Artifact-write only (writes only declared output to phase directory)  
 **Active during:** S3 — Traceability Review
 
 ### Role
@@ -162,7 +165,7 @@ must be preserved exactly — the manifest-step-gate hook reads this format.
 
 ### Constraints
 
-- Strictly read-only
+- Artifact-write only — no product/source/config edits; writes only `phase-{N}-traceability-review.md` to the phase directory
 - Never modifies the PRD, implementation plan, or any other file
 - Must use the exact format `Blocker findings: N` — no paraphrasing
 
@@ -209,9 +212,9 @@ confirm: set `validationConfirmed = true` in the session manifest.
 
 ## code-simplifier
 
-**Mode:** Background (runs after every completed S5 task)  
+**Mode:** Background (runs after every completed S5b task)  
 **Access:** Read / Write (scoped files only)  
-**Active during:** S5 — Build (after each task completes)
+**Active during:** S5b — Build (after each tdd-builder task completes)
 
 ### Role
 
@@ -234,10 +237,64 @@ What it looks for:
 
 ---
 
+## test-author
+
+**Mode:** Foreground  
+**Access:** Read / Write (test files and phase directory only)  
+**Active during:** S5a — Build (RED phase)
+
+### Role
+
+Writes failing tests (RED phase of TDD) for each task in the implementation plan.
+Writes test files only — never writes production code. Produces the red results
+document that gates S5b.
+
+### What it produces
+
+- Test files as specified in the implementation plan
+- `phase-{N}-red-results.md`
+  - Must contain exactly: `STATUS: RED CONFIRMED` when all RED tests pass
+
+### Constraints
+
+- Writes test files only — no production code, configuration, or infrastructure
+- Cannot skip tasks or reorder from the implementation plan
+- Each test must fail with a meaningful assertion error, not a compilation error
+
+---
+
+## tdd-builder
+
+**Mode:** Foreground  
+**Access:** Read / Write (production files and phase directory only)  
+**Active during:** S5b — Build (GREEN-REFACTOR phases)
+
+### Role
+
+Writes production code to make the RED tests pass (GREEN phase) and then refactors
+(REFACTOR phase). Writes production code only — never modifies test files. The
+`red-results-gate` hook blocks all S5b production writes until `STATUS: RED CONFIRMED`
+is present.
+
+### What it produces
+
+- Production code changes as specified in the implementation plan
+- `phase-{N}-tdd-results.md`
+  - Must contain exactly: `STATUS: PASS` when all tests pass
+
+### Constraints
+
+- Writes production code only — never modifies test files
+- If a test is wrong, report it and ask the developer
+- Must write `STATUS: PASS` or `STATUS: FAIL` on its own line — no inline status
+- The `red-results-gate` hook blocks S5b until `STATUS: RED CONFIRMED` is present
+
+---
+
 ## code-reviewer
 
 **Mode:** Foreground  
-**Access:** Read only  
+**Access:** Artifact-write only (writes only declared output to phase directory)  
 **Active during:** S6 — Code Review
 
 ### Role
@@ -254,7 +311,7 @@ exactly — the code-review-gate hook reads this format.
 
 ### Constraints
 
-- Strictly read-only
+- Artifact-write only — no product/source/config edits; writes only `phase-{N}-code-review.md` to the phase directory
 - Must use exact format `Critical findings: N`
 - Does not fix findings — reports only
 
@@ -264,32 +321,30 @@ exactly — the code-review-gate hook reads this format.
 
 **Mode:** Foreground  
 **Access:** Read / Write (test execution and results only)  
-**Active during:** S5 (TDD RGR cycle) · S7 (Agent Testing)
+**Active during:** S7 (Agent Testing)
 
 ### Role
 
-During S5: executes the Red-Green-Refactor TDD cycle for each task. Runs tests,
-reports results, and confirms passing before the task is marked complete.
-
-During S7: runs the full test suite for the phase's scoped files plus any
-integration tests. Writes the test results document.
+Runs the full test suite for the phase's scoped files plus any integration tests
+during S7. Coordinates with the gap-analyzer for exploratory testing. Writes the
+test results document.
 
 ### What it produces
 
-- `phase-{N}-tdd-results.md` (S5) — must contain `STATUS: PASS` when all tests pass
 - `phase-{N}-test-results.md` (S7) — must contain `STATUS: PASS` when all pass
 
 ### Constraints
 
 - Cannot mark tests as passing if they fail
 - Must write `STATUS: PASS` or `STATUS: FAIL` on its own line — no inline status
+- Must wait for gap-analyzer to complete before writing final results
 
 ---
 
 ## gap-analyzer
 
 **Mode:** Foreground  
-**Access:** Read only  
+**Access:** Artifact-write only (writes only declared output to session root)  
 **Active during:** Post-merge · On demand
 
 ### Role
@@ -304,7 +359,7 @@ prioritised gap report.
 
 ### Constraints
 
-- Strictly read-only
+- Artifact-write only — no product/source/config edits; writes only `gap-analysis.md` to the session root
 - Does not fix gaps — reports only
 
 ---
@@ -339,7 +394,7 @@ Sources content from completion reports, test results, and the PRD.
 **SAGE Hone subsystem**
 
 **Mode:** Background  
-**Access:** Read only  
+**Access:** Artifact-write only (writes only declared output to session directory; creates Linear issues for violations)  
 **Active during:** After every work cycle
 
 ### Role
@@ -354,7 +409,7 @@ anomalies (hook rejection spikes, gate bypass attempts, long step durations).
 
 ### Constraints
 
-- Read only
+- Artifact-write only — no product/source/config edits; writes only `performance-report-cycle-[N].md` to the session directory and creates Linear issues for violations
 - Never modifies telemetry, manifests, or skill files
 
 ---

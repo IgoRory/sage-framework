@@ -18,7 +18,8 @@ Phases progress through 8 steps in strict order:
 | S2 | implementation-plan | Agent produces implementation plan with TDD mapping |
 | S3 | traceability-review | Agent checks PRD ↔ implementation plan bidirectionally |
 | S4 | plan-validation | Agent produces plan preview; developer confirms |
-| S5 | build | Agent builds implementation (autonomous or checkpoint) |
+| S5a | build (red) | test-author writes failing tests; produces red-results.md |
+| S5b | build (green-refactor) | tdd-builder writes production code; produces tdd-results.md |
 | S6 | code-review | Agent reviews code quality |
 | S7 | agent-testing | Agent runs full test suite |
 | S8 | completion-report | Agent produces completion report |
@@ -37,6 +38,7 @@ Examples:
 - `phase-1-implementation-plan.md`
 - `phase-1-traceability-review.md`
 - `phase-1-plan-preview.canvas.tsx`
+- `phase-1-red-results.md`
 - `phase-1-tdd-results.md`
 - `phase-1-code-review.md`
 - `phase-1-test-results.md`
@@ -46,30 +48,35 @@ Examples:
 
 | Gate | Condition to pass |
 |------|------------------|
-| plan-mode-enforcer | currentStep ≠ 'dev-interview' |
-| manifest-step-gate | Prior artifact exists |
+| plan-mode-enforcer | currentStep ≠ 'dev-interview' OR write targets dev-interview-summary.md |
+| manifest-step-gate | Prior artifact exists (plan-validation also requires Blocker findings: 0) |
 | phase-approval-gate | linearIssueStatus = 'Approved' |
 | required-references-gate | All requiredReferences have been read |
 | validation-confirmed-gate | validationConfirmed = true (set by developer) |
 | foundation-verified-gate | foundationVerified = true (Dependent phases only) |
 | batch-confirmation-gate | batches[N].confirmed = true (Checkpoint mode only) |
+| protected-manifest-fields-gate | No protected fields (validationConfirmed, batches[*].confirmed, foundationVerified) changed |
+| red-results-gate | phase-{N}-red-results.md contains 'STATUS: RED CONFIRMED' (S5b only) |
 | tdd-results-gate | phase-{N}-tdd-results.md contains 'STATUS: PASS' |
 | code-review-gate | phase-{N}-code-review.md contains 'Critical findings: 0' |
 | completion-report-stop-gate | phase-{N}-test-results.md contains 'STATUS: PASS' |
 
-## Profitability domain context
+## Domain source verification
 
-This codebase implements instrument-level profitability calculations:
-- FTP (Funds Transfer Pricing)
-- Expense and income allocation
-- Capital allocation
-- Provisions
+Before referencing specific database objects, measures, data boundaries,
+return codes, or flags, verify from the PRD, manifest `requiredReferences`,
+and scoped code/schema. Do not assume domain details from prior knowledge.
 
-Key outputs: 42-measure set via views `vw_BI_AllInstruments` and `Global_Result`
-Data boundary: Dataverse for GL and reference data
-
-Known edge cases to consider:
-- Named revision dates
-- Return codes −1 through −8 (initialization blocking)
-- Flag logic: `NewInstFlag`, `ClosedInstFlag`, `PlugInstrumentFlag`
-- Naming inconsistencies exist in the codebase — verify before assuming
+As of the current specification — verify before generating scenarios,
+proofs, or reviews:
+- Output measures may be defined in views such as `vw_BI_AllInstruments`
+  and `Global_Result` — confirm the exact view and measure set from the PRD
+  and scoped schema
+- Data boundary (e.g. Dataverse for GL and reference data) — confirm from
+  the PRD and architecture documentation
+- Return codes (e.g. -1 through -8) — confirm which codes apply from the
+  TDD spec and scoped stored procedures
+- Flags (e.g. `NewInstFlag`, `ClosedInstFlag`, `PlugInstrumentFlag`) —
+  confirm applicability from the scoped code
+- Naming inconsistencies exist in the codebase — always verify against
+  the actual schema before writing specs or reviews

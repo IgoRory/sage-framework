@@ -13,13 +13,27 @@ from datetime import datetime, timezone
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Exceptions
+# ─────────────────────────────────────────────────────────────────────────────
+
+class NoSessionError(Exception):
+    """No active SAGE session — fail-open is correct."""
+    pass
+
+
+class SessionIntegrityError(Exception):
+    """Active session exists but data is invalid — should NOT fail-open."""
+    pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Repository and session resolution
 # ─────────────────────────────────────────────────────────────────────────────
 
 def find_repo_root() -> Path:
     """
     Walk up from cwd until a directory containing .git is found.
-    Raises RuntimeError if not found within 10 levels.
+    Raises NoSessionError if not found within 10 levels (not in a repo context).
     """
     current = Path.cwd()
     for _ in range(10):
@@ -29,35 +43,32 @@ def find_repo_root() -> Path:
         if parent == current:
             break
         current = parent
-    raise RuntimeError(
-        "HOOK ERROR: Could not locate .git directory. "
-        "Ensure this script runs inside the Profitability repository."
+    raise NoSessionError(
+        "Could not locate .git directory — not running inside a repository."
     )
 
 
 def get_session_root(repo_root: Path) -> Path:
     """
     Read the active session root from .sage/sessions/active-session.txt.
-    Raises RuntimeError if no active session exists.
+    Raises NoSessionError when no active-session.txt exists (fail-open).
+    Raises SessionIntegrityError when session ID exists but directory doesn't.
     """
     active_file = repo_root / ".sage" / "sessions" / "active-session.txt"
     if not active_file.exists():
-        raise RuntimeError(
-            "HOOK ERROR: No active session found.\n"
-            "Expected: .sage/sessions/active-session.txt\n"
-            "Run the session initialiser at kick-off before starting phase work."
+        raise NoSessionError(
+            "No active session found — .sage/sessions/active-session.txt does not exist."
         )
     session_id = active_file.read_text(encoding="utf-8").strip()
     if not session_id:
-        raise RuntimeError(
-            "HOOK ERROR: active-session.txt is empty.\n"
-            "Run the session initialiser to populate this file."
+        raise NoSessionError(
+            "active-session.txt is empty — no active session."
         )
     session_root = repo_root / ".sage" / "sessions" / session_id
     if not session_root.exists():
-        raise RuntimeError(
-            f"HOOK ERROR: Session directory not found: {session_root}\n"
-            "The session ID in active-session.txt does not match any session folder."
+        raise SessionIntegrityError(
+            f"Session ID '{session_id}' found in active-session.txt but session "
+            f"directory does not exist: {session_root}"
         )
     return session_root
 
@@ -88,31 +99,53 @@ def read_manifest(session_root: Path) -> dict:
     The manifest file contains a markdown document with an embedded JSON block
     delimited by ```json ... ```.
     Returns the parsed dict.
-    Raises RuntimeError if the file or JSON block is missing/invalid.
+    Raises SessionIntegrityError if the file exists but JSON is malformed.
+    Raises NoSessionError if the manifest file does not exist.
     """
     manifest_path = session_root / "session-manifest.md"
     if not manifest_path.exists():
-        raise RuntimeError(
-            f"HOOK ERROR: session-manifest.md not found at:\n  {manifest_path}\n"
-            "Ensure the phase-splitter has run and the manifest has been generated."
+        raise SessionIntegrityError(
+            f"session-manifest.md not found at: {manifest_path}\n"
+            "Session directory exists but manifest is missing."
         )
 
     content = manifest_path.read_text(encoding="utf-8")
 
-    # Extract JSON block
     match = re.search(r"```json\s*\n(.*?)\n```", content, re.DOTALL)
     if not match:
-        raise RuntimeError(
-            "HOOK ERROR: No JSON block found in session-manifest.md.\n"
+        raise SessionIntegrityError(
+            "No JSON block found in session-manifest.md. "
             "The manifest must contain a ```json ... ``` block."
         )
 
     try:
         return json.loads(match.group(1))
     except json.JSONDecodeError as e:
-        raise RuntimeError(
-            f"HOOK ERROR: Failed to parse session manifest JSON: {e}"
+        raise SessionIntegrityError(
+            f"Failed to parse session manifest JSON: {e}"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Anchored line parsing
+# ─────────────────────────────────────────────────────────────────────────────
+
+def find_marker_value(content: str, prefix: str) -> int | None:
+    """
+    Search for a line matching `<prefix>: <integer>` anchored at start-of-line.
+    Returns the integer value, or None if no matching line is found.
+    """
+    match = re.search(rf"^{re.escape(prefix)}:\s*(\d+)\s*$", content, re.MULTILINE)
+    return int(match.group(1)) if match else None
+
+
+def has_status_marker(content: str, marker: str) -> bool:
+    """
+    Return True if `marker` appears as a standalone line (anchored at start-of-line).
+    Prevents false matches inside narrative text.
+    """
+    pattern = rf"^{re.escape(marker)}\s*$"
+    return bool(re.search(pattern, content, re.MULTILINE))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

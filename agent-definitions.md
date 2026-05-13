@@ -21,6 +21,8 @@ Each agent definition is placed in `.cursor/agents/[agent-name].md` in the codeb
 - [traceability-reviewer](#traceability-reviewer)
 - [plan-preview-generator](#plan-preview-generator)
 - [code-simplifier](#code-simplifier)
+- [test-author](#test-author)
+- [tdd-builder](#tdd-builder)
 - [code-reviewer](#code-reviewer)
 - [test-runner](#test-runner)
 - [gap-analyzer](#gap-analyzer)
@@ -49,6 +51,7 @@ Primary coordination agent for all workflow modes. In Sprint mode: manages the k
 
 - Session manifest (`session-manifest.md`) — generated at kick-off
 - TDD specifications per phase lane — generated after kick-off
+- `phase-{N}-completion-report.md` — generated at S8 for each phase (fields: phase summary, files changed, tests passing, deferred items, handoff notes)
 - Post-merge regression report
 - Feature closure confirmation and session archive
 
@@ -90,12 +93,12 @@ Monitors the Build Phase in Sprint mode in real time. Reads the session manifest
 
 **Model:** claude-4.6-sonnet-medium
 **Mode:** Foreground
-**Access:** Read only
+**Access:** Artifact-write only (Plan mode — writes only declared output to phase directory)
 **Active during:** S1
 
 ### Role
 
-Runs the S1 developer interview. Asks targeted technical questions scoped to the current phase only, validates and refines TDD spec scenarios with the developer, and asks the developer to choose their build mode (Autonomous or Checkpoint) before the interview closes. Operates in Plan mode — the `plan-mode-enforcer` hook blocks all file writes during this step regardless of agent instruction.
+Runs the S1 developer interview. Asks targeted technical questions scoped to the current phase only, validates and refines TDD spec scenarios with the developer, and asks the developer to choose their build mode (Autonomous or Checkpoint) before the interview closes. Operates in Plan mode — the `plan-mode-enforcer` hook permits only the declared output artifact write.
 
 ### What it produces
 
@@ -103,7 +106,7 @@ Runs the S1 developer interview. Asks targeted technical questions scoped to the
 
 ### Constraints
 
-- Read only — cannot write files, modify code, or execute shell commands
+- Artifact-write only — no product/source/config edits; writes only `phase-{N}-dev-interview-summary.md` to the phase directory
 - Asks questions ONLY about the current phase's scope — never references other phase lanes
 - Must ask the developer to choose Autonomous or Checkpoint build mode before the interview closes
 - Cannot proceed to implementation — that is S2's responsibility
@@ -140,7 +143,7 @@ Produces the S2 implementation plan. Reads the dev interview summary, TDD spec, 
 
 **Model:** claude-4.6-opus-high
 **Mode:** Foreground
-**Access:** Read only
+**Access:** Artifact-write only (writes only declared output to phase directory)
 **Active during:** S3
 
 ### Role
@@ -161,7 +164,7 @@ Runs the S3 bidirectional traceability check. Verifies every requirement in the 
 
 ### Constraints
 
-- Strictly read-only — never modifies the PRD, implementation plan, or any other file
+- Artifact-write only — no product/source/config edits; writes only `phase-{N}-traceability-review.md` to the phase directory. Never modifies the PRD, implementation plan, or any other file
 - The line `Blocker findings: N` must be the exact format used — the step gate reads this string
 - Cannot proceed to S4 if Blockers exist — must surface them for developer resolution
 
@@ -198,11 +201,11 @@ Produces plan preview artifacts for PM confirmation before the build phase begin
 **Model:** claude-4-sonnet
 **Mode:** Background
 **Access:** Read / Write
-**Active during:** S5 (automatic — runs after every completed RGR task)
+**Active during:** S5b (automatic — runs after every completed tdd-builder task)
 
 ### Role
 
-Applies simplification changes to production code after every completed red-green-refactor (RGR) task during S5. Runs automatically without developer input. Never produces a suggestion report — applies changes directly and runs tests to confirm they pass. Reverts any change that causes a test failure immediately.
+Applies simplification changes to production code after every completed GREEN-REFACTOR task during S5b. Runs automatically without developer input. Never produces a suggestion report — applies changes directly and runs tests to confirm they pass. Reverts any change that causes a test failure immediately.
 
 ### What it looks for
 
@@ -222,16 +225,65 @@ Applies simplification changes to production code after every completed red-gree
 
 ---
 
+## test-author
+
+**Model:** claude-4-sonnet
+**Mode:** Foreground
+**Access:** Read / Write (test files and phase directory only)
+**Active during:** S5a
+
+### Role
+
+Writes failing tests (RED phase of TDD) for each task in the implementation plan. Writes test files only — never writes production code. Produces the red results document that gates S5b production writes.
+
+### What it produces
+
+- Test files as specified in the implementation plan
+- `phase-N-red-results.md` — must contain `STATUS: RED CONFIRMED` when all RED tests confirmed
+
+### Constraints
+
+- Writes test files only — no production code, configuration, or infrastructure
+- Cannot skip tasks or reorder from the implementation plan
+- Each test must fail with a meaningful assertion error, not a compilation or import error
+
+---
+
+## tdd-builder
+
+**Model:** claude-4-sonnet
+**Mode:** Foreground
+**Access:** Read / Write (production files and phase directory only)
+**Active during:** S5b
+
+### Role
+
+Writes production code to make the RED tests pass (GREEN phase) and then refactors (REFACTOR phase). Writes production code only — never modifies test files. The `red-results-gate` hook blocks all S5b production writes until `STATUS: RED CONFIRMED` is present in `phase-{N}-red-results.md`.
+
+### What it produces
+
+- Production code changes as specified in the implementation plan
+- `phase-N-tdd-results.md` — must contain `STATUS: PASS` when all tasks complete and all tests pass
+
+### Constraints
+
+- Writes production code only — never modifies test files
+- If a test is wrong, report it to the developer — do not change the test
+- The `red-results-gate` hook blocks S5b until `STATUS: RED CONFIRMED` is present
+- Invokes `code-simplifier` after each task's REFACTOR phase
+
+---
+
 ## code-reviewer
 
 **Model:** claude-4.6-opus-high
 **Mode:** Foreground
-**Access:** Read only
+**Access:** Artifact-write only (writes only declared output to phase directory)
 **Active during:** S6
 
 ### Role
 
-Runs the S6 automated code review after the TDD suite passes. Reviews all production code written during S5 across five dimensions. Read-only.
+Runs the S6 automated code review after the TDD suite passes. Reviews all production code written during S5 across five dimensions.
 
 ### Review dimensions
 
@@ -247,7 +299,7 @@ Runs the S6 automated code review after the TDD suite passes. Reviews all produc
 
 ### Constraints
 
-- Strictly read-only — never modifies production code, test files, or any other artifact
+- Artifact-write only — no product/source/config edits; writes only `phase-{N}-code-review.md` to the phase directory
 - The line `Critical findings: N` must be the exact format used — the gate reads this string
 - Cannot proceed to S7 if Critical findings exist — must surface them for developer resolution
 
@@ -256,18 +308,18 @@ Runs the S6 automated code review after the TDD suite passes. Reviews all produc
 ## test-runner
 
 **Model:** claude-4-sonnet
-**Mode:** Background
-**Access:** Read / Write
+**Mode:** Foreground
+**Access:** Read / Write (test execution and results only)
 **Active during:** S7
 
 ### Role
 
-Runs the S7 automated test suite. Executes the full TDD suite as a regression check, signals the gap-analyzer to begin exploratory testing, waits for gap-analyzer results, compiles all results, and writes the test results file.
+Runs the S7 automated test suite. Executes the full TDD suite as a regression check, coordinates with the gap-analyzer for exploratory testing, compiles all results, and writes the test results file.
 
 ### Execution sequence
 
 1. Run full TDD suite as regression check
-2. Confirm all tests pass across all phases in scope
+2. Confirm all tests pass across all scoped files
 3. Signal gap-analyzer to generate additional scenarios
 4. Execute all automatable gap scenarios
 5. Compile all results into a single test results document
@@ -290,7 +342,7 @@ Runs the S7 automated test suite. Executes the full TDD suite as a regression ch
 
 **Model:** claude-4.6-sonnet-medium
 **Mode:** Background
-**Access:** Read / Write
+**Access:** Artifact-write only (appends only to declared output in phase directory)
 **Active during:** S7 (runs alongside test-runner)
 
 ### Role
@@ -311,7 +363,7 @@ Generates and executes additional test scenarios during S7 that are not covered 
 
 ### Constraints
 
-- Appends to `phase-{N}-test-results.md` — never overwrites or replaces test-runner's output
+- Artifact-write only — no product/source/config edits; appends only to `phase-{N}-test-results.md` in the phase directory
 - Only runs Playwright browser-based testing when `playwrightE2ETesting: true` in `workflow-config.json`
 - Does not re-run scenarios already covered in the TDD spec
 
@@ -359,7 +411,7 @@ Both documents written to `.sage/prds/[FEATURE_ID]/feature-docs/` (two files: `t
 
 **Model:** claude-4.6-opus-max
 **Mode:** Background
-**Access:** Read / Write
+**Access:** Artifact-write only (writes only declared output to session directory; creates Linear issues for violations)
 **Active during:** Post-cycle (runs automatically after all phase issues reach Build Complete)
 
 ### Role
@@ -383,7 +435,7 @@ Evaluates agent execution quality after every completed work cycle. Part of SAGE
 
 ### Constraints
 
-- A systematic violation is defined as the same gate firing against the same agent more than twice in a single session — not a one-off rejection
+- Artifact-write only — no product/source/config edits; writes only `performance-report-cycle-[N].md` to the session directory and creates Linear issues for violations
 - Does not raise violation issues for isolated gate rejections — only patterns
 - Violation issue must include: which gate fired, which agent triggered it, how many times, and the relevant session manifest context
 
@@ -409,11 +461,13 @@ A skill must have been invoked in at least 3 of the 5 sessions in the evaluation
 - Staged skill diffs written to `.skill-update-staging/[LINEAR_ISSUE_ID].diff`
 - Linear issues at `Pending Approval` status (label: `skill-update`) — one per proposed change
 
-### What it produces (apply step)
+### What it produces (apply step — manual)
 
-- Updated SKILL.md committed to the repository with message: `skill-update([skill-name]): [summary]`
-- Linear issue status updated to `Applied`
-- Entry written to `skill-update-history.jsonl`
+The apply step is manual. When an approved trigger is detected:
+- The `skill-update-trigger-watcher` hook logs to `skill-update-history.jsonl` with status `pending_manual_apply`
+- The hook prints a manual-apply instruction: `git apply [diff_path]`
+- The developer applies the diff manually and commits with message: `skill-update([skill-name]): [summary]`
+- Linear issue status is updated to `Applied` after manual apply
 
 ### Change limits per evaluation cycle
 

@@ -72,6 +72,14 @@
       "timeout_ms": 3000
     },
     {
+      "id": "red-results-gate",
+      "description": "Blocks S5b production writes until the phase's phase-{N}-red-results.md exists and contains 'STATUS: RED CONFIRMED'. Enforces RED-before-GREEN TDD discipline.",
+      "events": ["preToolUse"],
+      "script": ".cursor/hooks/scripts/red_results_gate.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
+    {
       "id": "tdd-results-gate",
       "description": "Blocks S6 code review from starting until the phase's phase-{N}-tdd-results.md file exists and contains 'STATUS: PASS'.",
       "events": ["preToolUse"],
@@ -96,8 +104,16 @@
       "timeout_ms": 3000
     },
     {
+      "id": "protected-manifest-fields-gate",
+      "description": "Guards against agents modifying protected fields (validationConfirmed, batches[*].confirmed, foundationVerified) in session-manifest.md. Blocks if any protected field value changed in the proposed write.",
+      "events": ["preToolUse"],
+      "script": ".cursor/hooks/scripts/protected_manifest_fields_gate.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
+    {
       "id": "skill-update-trigger-watcher",
-      "description": "Fires on afterFileEdit. Detects new trigger files written to .skill-update-triggers/ by the Linear webhook receiver and fires the skill-effectiveness-evaluator apply step.",
+      "description": "Fires on afterFileEdit. Detects new trigger files in .skill-update-triggers/ from the Linear webhook receiver. Validates the trigger, logs to skill-update-history.jsonl, archives the trigger, and prints manual-apply instructions. Does NOT apply diffs or commit.",
       "events": ["afterFileEdit"],
       "script": ".cursor/hooks/scripts/skill_update_trigger_watcher.py",
       "blocking": false,

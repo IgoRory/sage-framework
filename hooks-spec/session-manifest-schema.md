@@ -50,7 +50,7 @@ The file has two parts:
     "featureLinearId": "string — Linear feature issue ID e.g. PROF-7",
     "featurePrdPath": "string — repo-relative path to PRD e.g. .sage/prds/PROF-7/prd.md",
     "featureComponentSpecPath": "string — repo-relative path to component spec e.g. .sage/prds/PROF-7/component-spec.md",
-    "mode": "hive | pair | solo",
+    "mode": "mob | sprint | pair | solo",
     "prdCompletenessScore": 87,
     "kickoffDate": "ISO 8601 date e.g. 2026-05-12",
     "kickoffParticipants": ["the Product Manager", "Developer 1", "Developer 2", "Developer 3", "the Product Manager"],
@@ -106,6 +106,7 @@ The file has two parts:
         "linearIssueStatus": "Pending Approval | Approved | In Progress | Build Complete | Done",
         "currentStep": "dev-interview | implementation-plan | traceability-review | plan-validation | build | code-review | agent-testing | completion-report | complete",
         "buildMode": "autonomous | checkpoint",
+        "buildSubStep": "red | green-refactor | null — tracks S5a/S5b progression within the build step",
         "validationConfirmed": false,
         "startedAt": "ISO 8601 datetime | null",
         "completedAt": "ISO 8601 datetime | null",
@@ -276,9 +277,9 @@ NEW path patterns (files expected to be created during build):
 | `phases[N].runtime.currentStep` | Hook scripts | During build sprint |
 | `phases[N].runtime.stepStatus[step]` | Hook scripts | During build sprint |
 | `phases[N].runtime.validationConfirmed` | Developer (manual) | S4 |
-| `phases[N].runtime.stepTimestamps` | Hook scripts | During build sprint |
-| `phases[N].runtime.findingSummary` | Agent skills (S3, S6) | During build sprint |
-| `phases[N].runtime.hookRejectionCount` | Hook scripts | On each rejection |
+| `phases[N].runtime.stepTimestamps` | Hook scripts (Planned — not yet implemented) | During build sprint |
+| `phases[N].runtime.findingSummary` | Agent skills (Planned — not yet implemented) | During build sprint |
+| `phases[N].runtime.hookRejectionCount` | Hook scripts (Planned — not yet implemented) | On each rejection |
 | `phases[N].runtime.deferredItems` | Agent skills | During build sprint |
 | `phases[N].runtime.linearIssueStatus` | Hook scripts (afterMCPExecution) | On Linear status change |
 | `sessionState.*` | Hook scripts + orchestrator | Throughout work cycle |
@@ -302,6 +303,12 @@ phase lanes corrupting the JSON.
 ---
 
 ## File lock protocol
+
+> **Status: Planned — not yet implemented.** The `manifest.lock` /
+> `fcntl` locking mechanism described below is not implemented in the
+> current `hooks_utils.py`. It is documented here as the intended
+> design for a future enhancement when concurrent manifest writes
+> become a practical concern.
 
 Since three phase lanes may attempt to write to the manifest
 simultaneously (e.g. all three phases completing within seconds

@@ -112,6 +112,48 @@ Every scenario must be specific enough that a developer can write a failing test
 
 For Profitability-specific scenarios, reference measures by their exact names from `vw_BI_AllInstruments` and `Global_Result`. Include return code handling (-1 through -8) where relevant to the phase scope.
 
+## S8 — Completion Report
+
+The orchestrator owns the S8 completion report for each phase. After S7 test results show `STATUS: PASS`, produce `phase-{N}-completion-report.md` in the phase directory.
+
+### phase-{N}-completion-report.md format
+
+```markdown
+# Completion Report - Phase [N]: [Phase Title]
+
+**Date:** [ISO datetime]
+**Phase ID:** [N]
+**Session:** [session ID]
+
+## Phase summary
+
+[1-3 sentence summary of what this phase implemented]
+
+## Files changed
+
+| File | Action | Description |
+|------|--------|-------------|
+| [path] | Created / Modified | [brief description] |
+
+## Tests passing
+
+| Test file | Test count | Status |
+|-----------|-----------|--------|
+| [path] | [N] | PASS |
+
+**Total:** [N] tests passing
+
+## Deferred items
+
+[List any items from the implementation plan that were intentionally deferred, with justification]
+
+## Handoff notes
+
+[Any information the next phase or the reviewer needs to know — integration points, known limitations, decisions made during build]
+```
+
+The `completion-report-stop-gate` hook blocks the agent from ending its turn at S8 until `phase-{N}-test-results.md` contains `STATUS: PASS`.
+
 ## Constraints
 
 - Do not write implementation code - coordination and specification only
@@ -121,13 +163,14 @@ For Profitability-specific scenarios, reference measures by their exact names fr
 - Cannot set `batches[N].confirmed = true` - only the developer can
 - In Mob mode: open Phase Chats automatically; do not wait for manual paste or instruction
 
-## Profitability domain awareness
+## Domain source verification
 
-This codebase implements instrument-level profitability calculations. Key context for TDD spec generation:
+Before referencing specific database objects, measures, data boundaries, return codes, or flags in TDD specs, verify from the PRD, manifest `requiredReferences`, and scoped code/schema. Do not assume domain details from prior knowledge.
 
-- Output measures are defined in `vw_BI_AllInstruments` and `Global_Result` (42-measure set)
-- Data boundary: Dataverse for GL and reference data; Profitability for calculation logic
-- Return codes -1 through -8 signal initialisation blocking - specs involving calculation triggers must include return code handling
-- Flags: `NewInstFlag`, `ClosedInstFlag`, `PlugInstrumentFlag` affect calculation scope
-- Named revision dates affect FTP and allocation calculations - specs must specify which revision date context applies
-- Naming inconsistencies exist in the codebase - verify names against the actual schema before writing specs
+As of the current specification — verify before generating TDD scenarios:
+- Output measures may be defined in views such as `vw_BI_AllInstruments` and `Global_Result` — confirm the exact view and measure set from the PRD and scoped schema
+- Data boundary (e.g. Dataverse for GL and reference data) — confirm from the PRD and architecture documentation
+- Return codes (e.g. -1 through -8) — confirm which codes apply from the scoped stored procedures
+- Flags (e.g. `NewInstFlag`, `ClosedInstFlag`, `PlugInstrumentFlag`) — confirm applicability from the scoped code
+- Named revision dates — confirm which revision date context applies from the PRD
+- Naming inconsistencies exist in the codebase — always verify against the actual schema before writing specs

@@ -16,7 +16,8 @@ import sys
 import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, get_phase_dir, block, permit, write_telemetry_event
+    read_manifest, get_phase_dir, block, permit, write_telemetry_event,
+    has_status_marker, NoSessionError, SessionIntegrityError
 )
 
 CODE_REVIEW_INITIATING_TOOLS = {
@@ -26,7 +27,6 @@ CODE_REVIEW_INITIATING_TOOLS = {
 
 def tdd_results_filename(phase_id: str) -> str:
     return f"phase-{phase_id}-tdd-results.md"
-PASS_MARKER = "STATUS: PASS"
 
 
 def main():
@@ -35,8 +35,11 @@ def main():
         session_root = get_session_root(repo_root)
         phase_id = get_phase_id()
         manifest = read_manifest(session_root)
-    except RuntimeError:
+    except NoSessionError:
         permit()
+        return
+    except SessionIntegrityError as e:
+        block(message=f"SESSION INTEGRITY ERROR — {e}")
         return
 
     if not phase_id:
@@ -85,7 +88,7 @@ def main():
         )
 
     content = tdd_results_path.read_text(encoding="utf-8")
-    if PASS_MARKER not in content:
+    if not has_status_marker(content, "STATUS: PASS"):
         write_telemetry_event(session_root, {
             "event": "hook_rejection",
             "hook": "tdd-results-gate",

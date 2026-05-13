@@ -23,155 +23,94 @@ All scripts import from this shared module. Specify once here.
 
 ```python
 # .cursor/hooks/scripts/hooks_utils.py
+# This is a summary of the actual implementation — see the source file for full code.
 
 import os
 import json
 import sys
+import re
 from pathlib import Path
 from datetime import datetime, timezone
 
 
-def find_repo_root() -> Path:
-    """
-    Walk up from cwd until a directory containing .git is found.
-    Raises RuntimeError if no .git directory is found within 10 levels.
-    """
-    current = Path.cwd()
-    for _ in range(10):
-        if (current / ".git").exists():
-            return current
-        parent = current.parent
-        if parent == current:
-            break
-        current = parent
-    raise RuntimeError(
-        "HOOK ERROR: Could not locate .git directory. "
-        "Are you running inside a git repository?"
-    )
+# ── Typed exceptions ──────────────────────────────────────────────
 
+class NoSessionError(Exception):
+    """No active SAGE session — fail-open is correct."""
+    pass
+
+class SessionIntegrityError(Exception):
+    """Active session exists but data is invalid — should NOT fail-open."""
+    pass
+
+
+# ── Repository and session resolution ─────────────────────────────
+
+def find_repo_root() -> Path:
+    """Walk up from cwd until .git is found. Raises NoSessionError."""
 
 def get_session_root(repo_root: Path) -> Path:
     """
-    Read the active session root path from
-    [REPO_ROOT]/.sage/sessions/active-session.txt.
-    Raises RuntimeError if the file does not exist (no active session).
+    Read active session from .sage/sessions/active-session.txt.
+    Raises NoSessionError when file missing (fail-open).
+    Raises SessionIntegrityError when session ID exists but directory doesn't.
     """
-    active_session_file = repo_root / ".sage" / "sessions" / "active-session.txt"
-    if not active_session_file.exists():
-        raise RuntimeError(
-            "HOOK ERROR: No active session found. "
-            "Expected file: .sage/sessions/active-session.txt\n"
-            "Run the session initialiser at kick-off before starting phase work."
-        )
-    return Path(active_session_file.read_text(encoding="utf-8").strip())
 
+def get_phase_id() -> str | None:
+    """Read from SAGE_PHASE_ID environment variable. Returns None if not set."""
 
-def get_phase_id() -> str:
-    """
-    Read the current phase ID from the CURSOR_PHASE environment variable.
-    Set by Cursor when launching a phase chat from the session manifest.
-    Falls back to reading from .sage/current-phase.txt if env var not set.
-    """
-    phase = os.environ.get("CURSOR_PHASE")
-    if phase:
-        return phase
-    repo_root = find_repo_root()
-    phase_file = repo_root / ".sage" / "current-phase.txt"
-    if phase_file.exists():
-        return phase_file.read_text(encoding="utf-8").strip()
-    raise RuntimeError(
-        "HOOK ERROR: Cannot determine current phase. "
-        "CURSOR_PHASE environment variable not set and "
-        ".sage/current-phase.txt does not exist."
-    )
-
+def get_phase_dir(session_root: Path, phase_id: str) -> Path:
+    """Return session_root / f'phase-{phase_id}'."""
 
 def read_manifest(session_root: Path) -> dict:
     """
-    Read and parse session-manifest.md as structured data.
-    The manifest uses a defined YAML-like header block for machine-readable
-    fields, followed by human-readable content.
-    Returns the parsed header dict.
+    Parse ```json ... ``` block from session-manifest.md.
+    Raises SessionIntegrityError if file exists but JSON is malformed.
     """
-    manifest_path = session_root / "session-manifest.md"
-    if not manifest_path.exists():
-        raise RuntimeError(
-            f"HOOK ERROR: Session manifest not found at {manifest_path}.\n"
-            "The manifest must be created at kick-off before phase work begins."
-        )
-    # Parse the machine-readable JSON block embedded in the manifest
-    # (delimited by ```json ... ``` at the top of the file)
-    content = manifest_path.read_text(encoding="utf-8")
-    import re
-    match = re.search(r"```json\n(.*?)\n```", content, re.DOTALL)
-    if not match:
-        raise RuntimeError(
-            "HOOK ERROR: Session manifest does not contain a valid JSON "
-            "machine-readable block. Re-generate the manifest at kick-off."
-        )
-    return json.loads(match.group(1))
 
 
-def get_phase_dir(session_root: Path, phase_id: str) -> Path:
-    """Return the phase directory path for a given phase ID."""
-    return session_root / f"phase-{phase_id}"
+# ── Anchored line parsing ────────────────────────────────────────
 
-
-def get_telemetry_path(session_root: Path, phase_id: str) -> Path:
-    """Return the telemetry file path for a phase lane."""
-    return get_phase_dir(session_root, phase_id) / "telemetry.jsonl"
-
-
-def write_telemetry_event(
-    session_root: Path,
-    phase_id: str,
-    event_name: str,
-    data: dict
-) -> None:
+def find_marker_value(content: str, prefix: str) -> int | None:
     """
-    Append a telemetry event record to the phase lane's telemetry.jsonl.
-    Creates the file and directory if they do not exist.
-    Never raises — telemetry write failures are logged to stderr only,
-    and do not affect hook exit codes.
+    Search for a line matching `<prefix>: <integer>` anchored at start-of-line.
+    Returns the integer value, or None if no matching line is found.
     """
-    try:
-        telemetry_path = get_telemetry_path(session_root, phase_id)
-        telemetry_path.parent.mkdir(parents=True, exist_ok=True)
-        record = {
-            "hook_event_name": event_name,
-            "recorded_at": datetime.now(timezone.utc).isoformat(),
-            "phase": phase_id,
-            "step": data.get("step", "unknown"),
-            "active_agent": os.environ.get("CURSOR_AGENT", "unknown"),
-            "conversation_id": os.environ.get("CURSOR_CONVERSATION_ID", "unknown"),
-            **data
-        }
-        with open(telemetry_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record) + "\n")
-    except Exception as e:
-        print(f"[telemetry] WARNING: Failed to write telemetry event: {e}",
-              file=sys.stderr)
+
+def has_status_marker(content: str, marker: str) -> bool:
+    """
+    Return True if `marker` appears as a standalone line (anchored at start-of-line).
+    Prevents false matches inside narrative text.
+    """
 
 
-def block(message: str, telemetry_data: dict = None,
-          session_root: Path = None, phase_id: str = None) -> None:
-    """
-    Block the hook with a clear error message and optionally write a
-    hook_rejection telemetry event. Exits with code 1.
-    """
-    if session_root and phase_id and telemetry_data:
-        write_telemetry_event(
-            session_root, phase_id, "hook_rejection",
-            {**telemetry_data, "rejection_message": message}
-        )
-    print(f"\n🔴 GATE BLOCKED\n{message}\n", file=sys.stderr)
-    sys.exit(1)
+# ── Gate outcomes ─────────────────────────────────────────────────
 
+def block(message: str, phase_id: str | None = None) -> None:
+    """Print message to stderr, exit code 1 (block)."""
 
 def permit() -> None:
-    """Permit the hook. Exits with code 0."""
-    sys.exit(0)
+    """Exit code 0 (permit)."""
+
+
+# ── Telemetry ─────────────────────────────────────────────────────
+
+def write_telemetry_event(session_root: Path, event: dict) -> None:
+    """
+    Append event to workflow-telemetry.jsonl in session_root.
+    Silently no-ops on failure.
+    Signature: (session_root, event_dict) — 2 parameters.
+    """
 ```
+
+**Important notes on spec vs. actual implementation:**
+
+- **Phase ID env var:** The actual implementation uses `SAGE_PHASE_ID`, not `CURSOR_PHASE`.
+- **`write_telemetry_event` signature:** The actual implementation takes 2 parameters `(session_root, event_dict)`, not 4. Telemetry writes to a session-level `workflow-telemetry.jsonl`, not per-phase files.
+- **`block` signature:** The actual implementation takes `(message, phase_id=None)` — 2 parameters. Telemetry for rejections is written separately before calling `block()`.
+- **`manifest.lock` / `fcntl` locking:** Planned but not yet implemented. See session-manifest-schema.md.
+- **`stepTimestamps`, `hookRejectionCount`, `findingSummary`:** Documented in schema but no hook currently writes these fields. Planned for a future enhancement.
+- **All gate scripts** use typed exceptions: `except NoSessionError: permit()` (fail-open) and `except SessionIntegrityError as e: block(...)` (fail-closed).
 
 ---
 
@@ -1468,7 +1407,8 @@ phase-N/
 ├── phase-N-batch-1-review.md            — checkpoint mode only, one per batch
 ├── phase-N-batch-2-review.md
 ├── phase-N-batch-3-review.md
-├── phase-N-tdd-results.md               — full suite after all batches complete
+├── phase-N-red-results.md               — S5a RED test confirmation (STATUS: RED CONFIRMED)
+├── phase-N-tdd-results.md               — S5b GREEN-REFACTOR results (STATUS: PASS)
 ├── phase-N-code-review.md
 ├── phase-N-test-results.md
 ├── phase-N-completion-report.md
@@ -1519,20 +1459,22 @@ in the session manifest: [SESSION_ROOT]/session-manifest.md
 The batch_confirmation_gate.py hook will block the next batch
 until this field is set.
 ```
-        ├── hooks_utils.py                    ← shared utilities
+        ├── hooks_utils.py                    ← shared utilities (NoSessionError, SessionIntegrityError, find_marker_value, has_status_marker)
         ├── telemetry_logger.py               ← logging (non-blocking)
         ├── prd_telemetry_append.py           ← PRD interview telemetry helper
-        ├── plan_mode_enforcer.py             ← S1 Plan mode gate
-        ├── manifest_step_gate.py             ← S2-S8 step progression
+        ├── plan_mode_enforcer.py             ← S1 Plan mode gate (allows dev-interview summary write)
+        ├── manifest_step_gate.py             ← S2-S8 step progression (anchored blocker parsing)
         ├── required_references_gate.py       ← S5 reference files gate
         ├── validation_confirmed_gate.py      ← S5 validation gate
         ├── phase_approval_gate.py            ← S1 Linear approval gate
         ├── foundation_verified_gate.py       ← S5 foundation gate (Dependent phases)
         ├── batch_confirmation_gate.py        ← S5 checkpoint batch gate
+        ├── protected_manifest_fields_gate.py ← protected field guard (validationConfirmed, batches[*].confirmed, foundationVerified)
+        ├── red_results_gate.py               ← S5b production write gate (requires STATUS: RED CONFIRMED)
         ├── completion_report_stop_gate.py    ← S8 stop hook (hardest gate)
-        ├── tdd_results_gate.py               ← S6 TDD results gate
-        ├── code_review_gate.py               ← S7 code review gate
-        └── skill_update_trigger_watcher.py   ← skill update watcher
+        ├── tdd_results_gate.py               ← S6 TDD results gate (anchored status parsing)
+        ├── code_review_gate.py               ← S7 code review gate (anchored finding parsing)
+        └── skill_update_trigger_watcher.py   ← skill update watcher (notification-only, no git ops)
 
 .sage/
 ├── sessions/

@@ -26,7 +26,8 @@ import sys
 import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit, write_telemetry_event
+    read_manifest, block, permit, write_telemetry_event,
+    NoSessionError, SessionIntegrityError
 )
 
 BUILD_TOOLS = {
@@ -41,8 +42,11 @@ def main():
         session_root = get_session_root(repo_root)
         phase_id = get_phase_id()
         manifest = read_manifest(session_root)
-    except RuntimeError:
+    except NoSessionError:
         permit()
+        return
+    except SessionIntegrityError as e:
+        block(message=f"SESSION INTEGRITY ERROR — {e}")
         return
 
     if not phase_id:

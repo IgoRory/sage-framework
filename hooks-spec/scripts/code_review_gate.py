@@ -14,7 +14,8 @@ import sys
 import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, get_phase_dir, block, permit, write_telemetry_event
+    read_manifest, get_phase_dir, block, permit, write_telemetry_event,
+    find_marker_value, NoSessionError, SessionIntegrityError
 )
 
 TESTING_INITIATING_TOOLS = {
@@ -23,7 +24,6 @@ TESTING_INITIATING_TOOLS = {
 }
 
 CODE_REVIEW_FILENAME = "phase-{N}-code-review.md"
-PASS_MARKER = "Critical findings: 0"
 
 
 def main():
@@ -32,8 +32,11 @@ def main():
         session_root = get_session_root(repo_root)
         phase_id = get_phase_id()
         manifest = read_manifest(session_root)
-    except RuntimeError:
+    except NoSessionError:
         permit()
+        return
+    except SessionIntegrityError as e:
+        block(message=f"SESSION INTEGRITY ERROR — {e}")
         return
 
     if not phase_id:
@@ -82,7 +85,7 @@ def main():
         )
 
     content = review_path.read_text(encoding="utf-8")
-    if PASS_MARKER not in content:
+    if find_marker_value(content, "Critical findings") != 0:
         write_telemetry_event(session_root, {
             "event": "hook_rejection",
             "hook": "code-review-gate",

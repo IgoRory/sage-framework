@@ -48,6 +48,7 @@
         "linearIssueStatus": "Pending Approval",
         "currentStep": "dev-interview",
         "buildMode": "autonomous",
+        "buildSubStep": null,
         "validationConfirmed": false,
         "currentBatchId": null,
         "startedAt": null,

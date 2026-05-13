@@ -97,6 +97,6 @@ Issue format:
 
 ## Constraints
 
-- Read only (except writing the performance report and creating Linear issues)
+- Artifact-write only — no product/source/config edits; writes only `performance-report-cycle-[N].md` to the session root and creates Linear issues for violations
 - Never modifies telemetry, manifests, skill files, or source code
 - Performance thresholds are guidance - flag, do not auto-remediate

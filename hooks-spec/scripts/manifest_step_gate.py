@@ -27,7 +27,8 @@ from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, get_phase_dir, block, permit,
-    write_telemetry_event
+    write_telemetry_event, find_marker_value,
+    NoSessionError, SessionIntegrityError
 )
 
 # Map: the step being initiated → artifact that must exist from the prior step
@@ -55,8 +56,11 @@ def main():
         session_root = get_session_root(repo_root)
         phase_id = get_phase_id()
         manifest = read_manifest(session_root)
-    except RuntimeError:
+    except NoSessionError:
         permit()
+        return
+    except SessionIntegrityError as e:
+        block(message=f"SESSION INTEGRITY ERROR — {e}")
         return
 
     if not phase_id:
@@ -88,35 +92,55 @@ def main():
     artifact_name = resolve_artifact_name(required_artifact_template, phase_id)
     artifact_path = phase_dir / artifact_name
 
-    if artifact_path.exists():
+    # plan-validation: check artifact exists AND Blocker findings == 0 before permitting
+    if current_step == "plan-validation":
+        if not artifact_path.exists():
+            write_telemetry_event(session_root, {
+                "event": "hook_rejection",
+                "hook": "manifest-step-gate",
+                "phaseId": phase_id,
+                "step": current_step,
+                "missingArtifact": str(artifact_path),
+                "reason": f"Required artifact missing for step '{current_step}'"
+            })
+            block(
+                message=(
+                    f"STEP GATE — Cannot begin '{current_step}' for phase {phase_id}.\n\n"
+                    f"Required artifact not found:\n  {artifact_path}\n\n"
+                    f"Complete the traceability review (S3) before proceeding."
+                ),
+                phase_id=phase_id
+            )
+            return
+
+        content = artifact_path.read_text(encoding="utf-8")
+        if find_marker_value(content, "Blocker findings") != 0:
+            write_telemetry_event(session_root, {
+                "event": "hook_rejection",
+                "hook": "manifest-step-gate",
+                "phaseId": phase_id,
+                "step": current_step,
+                "reason": "Traceability review has Blocker findings — cannot advance to plan-validation"
+            })
+            block(
+                message=(
+                    f"STEP GATE — Cannot advance to plan-validation.\n\n"
+                    f"The traceability review for phase {phase_id} contains Blocker findings.\n"
+                    f"All Blocker findings must be resolved before plan validation can proceed.\n\n"
+                    f"Review: {artifact_path}\n"
+                    f"Required: 'Blocker findings: 0' in the document."
+                ),
+                phase_id=phase_id
+            )
+            return
+
         permit()
         return
 
-    # Special case: traceability-review gate also checks Blocker findings
-    if current_step == "plan-validation":
-        traceability_path = phase_dir / resolve_artifact_name(
-            "phase-{N}-traceability-review.md", phase_id
-        )
-        if traceability_path.exists():
-            content = traceability_path.read_text(encoding="utf-8")
-            if "Blocker findings: 0" not in content:
-                write_telemetry_event(session_root, {
-                    "event": "hook_rejection",
-                    "hook": "manifest-step-gate",
-                    "phaseId": phase_id,
-                    "step": current_step,
-                    "reason": "Traceability review has Blocker findings — cannot advance to plan-validation"
-                })
-                block(
-                    message=(
-                        f"STEP GATE — Cannot advance to plan-validation.\n\n"
-                        f"The traceability review for phase {phase_id} contains Blocker findings.\n"
-                        f"All Blocker findings must be resolved before plan validation can proceed.\n\n"
-                        f"Review: {traceability_path}\n"
-                        f"Required: 'Blocker findings: 0' in the document."
-                    ),
-                    phase_id=phase_id
-                )
+    # All other steps: artifact existence check only
+    if artifact_path.exists():
+        permit()
+        return
 
     write_telemetry_event(session_root, {
         "event": "hook_rejection",
