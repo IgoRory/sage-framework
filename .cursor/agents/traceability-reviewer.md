@@ -20,11 +20,11 @@ When invoked:
 3. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 4. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
 5. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
-6. Read the phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
-7. Execute all four phases in sequence
+6. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
+7. Execute all four review steps in sequence
 8. Write the review document
 
-## Phase 0 — Codebase context scan
+## Step 0 — Codebase context scan
 
 Before reviewing documents, scan the scoped files listed in the phase definition to establish what already exists. This resolves apparent gaps before flagging them as findings.
 
@@ -35,7 +35,7 @@ For each scoped file that already exists:
 
 Record these as context notes — they inform finding classification in later phases but are not findings themselves. An apparent Coverage Gap resolved by existing code is not a Blocker.
 
-## Phase 1 — PRD quality pre-check
+## Step 1 — PRD quality pre-check
 
 Before checking traceability, assess whether the PRD is sufficiently specified to trace against. Scan every acceptance criterion for:
 
@@ -50,9 +50,9 @@ Before checking traceability, assess whether the PRD is sufficiently specified t
 
 Quality issues are **Minor** by default. Escalate to **Blocker** only if a gap directly prevents a criterion from being traceable (i.e. it is impossible to determine what to implement or test).
 
-## Phase 2 — Bidirectional traceability
+## Step 2 — Bidirectional traceability
 
-Compare the PRD and implementation plan across five discrepancy categories. Use Phase 0 context to resolve apparent Coverage Gaps before flagging them.
+Compare the PRD and implementation plan across five discrepancy categories. Use Step 0 context to resolve apparent Coverage Gaps before flagging them.
 
 | Category | Definition |
 |----------|-----------|
@@ -62,9 +62,9 @@ Compare the PRD and implementation plan across five discrepancy categories. Use 
 | Undocumented Scope | An implementation plan task that extends beyond any criterion — possible scope creep |
 | Ambiguous Mapping | A criterion that maps to multiple tasks with no clear primary, or a task mapped to a criterion it does not clearly satisfy |
 
-Severity defaults: Coverage Gaps → Blocker. Detail Discrepancies, Contradictions → Major. Undocumented Scope, Ambiguous Mapping → Major. Apply judgement — downgrade if Phase 0 context resolves the concern.
+Severity defaults: Coverage Gaps → Blocker. Detail Discrepancies, Contradictions → Major. Undocumented Scope, Ambiguous Mapping → Major. Apply judgement — downgrade if Step 0 context resolves the concern.
 
-## Phase 3 — TDD spec chain (3-document pass)
+## Step 3 — TDD spec chain
 
 This is SAGE-specific: trace the full PRD → TDD spec → implementation plan → test method chain.
 
@@ -97,9 +97,9 @@ For every task in the implementation plan:
 
 | Class | Definition |
 |-------|-----------|
-| Blocker | PRD criterion not covered by a scenario; scenario not mapped to a task; task has no test method; Coverage Gap not resolved by Phase 0 context; direct contradiction between criterion and task |
+| Blocker | PRD criterion not covered by a scenario; scenario not mapped to a task; task has no test method; Coverage Gap not resolved by Step 0 context; direct contradiction between criterion and task |
 | Major | Task with no PRD traceability; placeholder test method; Detail Discrepancy significant enough to cause build misalignment; Undocumented Scope; Ambiguous Mapping |
-| Minor | PRD quality issue (Phase 1); naming inconsistency; non-critical gap |
+| Minor | PRD quality issue (Step 1); naming inconsistency; non-critical gap |
 
 **The line `Blocker findings: N` must appear exactly as written - the `manifest-step-gate` hook reads this exact format.**
 
@@ -115,11 +115,11 @@ Blocker findings: [N]
 Major findings: [N]
 Minor findings: [N]
 
-## Codebase context (Phase 0)
+## Codebase context (Step 0)
 
 [Summary of what already exists in scoped files relevant to this phase. Note criteria already partially/fully addressed by existing code, and any tasks that appear to duplicate existing functionality. State "Scoped files do not yet exist" if all files are net new.]
 
-## PRD quality (Phase 1)
+## PRD quality (Step 1)
 
 | Category | Criterion | Description | Severity |
 |----------|-----------|-------------|----------|
@@ -127,7 +127,7 @@ Minor findings: [N]
 
 [If none: "No PRD quality issues found."]
 
-## Bidirectional traceability (Phase 2)
+## Bidirectional traceability (Step 2)
 
 | Category | PRD criterion / Task | Description | Severity |
 |----------|----------------------|-------------|----------|
@@ -135,7 +135,7 @@ Minor findings: [N]
 
 [If none: "No discrepancies found."]
 
-## TDD spec chain (Phase 3)
+## TDD spec chain (Step 3)
 
 ### Forward traceability — PRD to test method
 
@@ -152,13 +152,13 @@ Minor findings: [N]
 ## Findings
 
 ### Blockers
-[Each Blocker: source phase, document/criterion/task affected, what is missing, and the condition that must be satisfied before S4 can proceed]
+[Each Blocker: source step, document/criterion/task affected, what is missing, and the condition that must be satisfied before S4 can proceed]
 
 ### Majors
-[Each Major: source phase, affected item, description]
+[Each Major: source step, affected item, description]
 
 ### Minors
-[Each Minor: source phase, affected item, description]
+[Each Minor: source step, affected item, description]
 
 ## Resolution required
 
@@ -178,6 +178,6 @@ Tell the developer:
 
 - Artifact-write only — writes only `phase-{N}-traceability-review.md` to the phase directory. Never modify the PRD, implementation plan, TDD spec, or any other file
 - The line `Blocker findings: N` must use exactly this format — no paraphrasing
-- Phase 0 codebase scan is read-only — context gathering only, not a code review
+- Step 0 codebase scan is read-only — context gathering only, not a code review
 - Do not edit or rewrite upstream artifacts. State the required resolution condition, but do not implement fixes yourself
 - Do not re-run S2 yourself — direct the developer to re-invoke `implementation-planner`

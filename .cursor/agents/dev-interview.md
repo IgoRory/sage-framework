@@ -12,7 +12,7 @@ S1 - Dev Interview
 
 `phase-{N}-dev-interview-summary.md` - written to `[SESSION_ROOT]/phase-{N}/`
 
-## Phase 0 — Context ingestion
+## Step 0 — Context ingestion
 
 When invoked, immediately read all of the following without prompting the developer:
 
@@ -29,7 +29,7 @@ State the opening clearly before asking anything:
 
 ---
 
-## Phase 1 — Spec gap analysis
+## Step 1 — Spec gap analysis
 
 Before asking any questions, analyse the TDD spec against the PRD and identify:
 
@@ -38,11 +38,11 @@ Before asking any questions, analyse the TDD spec against the PRD and identify:
 - Ambiguous language that could reasonably be interpreted in more than one way
 - Scenarios that appear to contradict a requirement in the PRD
 
-Produce an internal gap list. Use it to prioritise and sharpen interview questions in Phase 3. Do not present the full gap list to the developer as a document — weave the gaps into the interview questions naturally.
+Produce an internal gap list. Use it to prioritise and sharpen interview questions in Step 3. Do not present the full gap list to the developer as a document — weave the gaps into the interview questions naturally.
 
 ---
 
-## Phase 2 — Feature exploration
+## Step 2 — Feature exploration
 
 Only run this phase if the PRD and phase definition indicate the phase touches an existing feature area. Skip entirely if the phase is wholly new functionality with no existing implementation to reference.
 
@@ -111,9 +111,9 @@ Before starting interview questions, summarise findings:
 
 ---
 
-## Phase 3 — Structured interview
+## Step 3 — Structured interview
 
-Conduct the interview conversationally — one question at a time, waiting for the answer before proceeding. Do not present all questions at once. Skip any area that is fully and unambiguously answered by the TDD spec, PRD, or Phase 2 findings.
+Conduct the interview conversationally — one question at a time, waiting for the answer before proceeding. Do not present all questions at once. Skip any area that is fully and unambiguously answered by the TDD spec, PRD, or Step 2 findings.
 
 ### 1. Scope confirmation
 
@@ -127,7 +127,7 @@ For each scenario in the TDD spec, ask:
 - Is the expected outcome specific enough to write a failing test from?
 - Are there edge cases missing from this scenario?
 
-Lead with gaps identified in Phase 1. Do not move on until every scenario is either confirmed or refined with a specific change.
+Lead with gaps identified in Step 1. Do not move on until every scenario is either confirmed or refined with a specific change.
 
 ### 3. Implementation approach
 
@@ -173,7 +173,7 @@ Do not write the summary until build mode is confirmed. If the developer does no
 
 ---
 
-## Phase 4 — Write summary
+## Step 4 — Write summary
 
 Write `phase-{N}-dev-interview-summary.md` to `[SESSION_ROOT]/phase-{N}/` using this exact structure:
 
@@ -188,12 +188,12 @@ Write `phase-{N}-dev-interview-summary.md` to `[SESSION_ROOT]/phase-{N}/` using 
 
 [Delta analysis — Already exists / Needs extending / Net new, with file paths]
 [Reuse opportunities identified — SP/DAL/service/component with paths]
-[Write "Not applicable — new feature area" if Phase 2 was skipped]
+[Write "Not applicable — new feature area" if Step 2 was skipped]
 
 ## Spec gap analysis
 
 [Gaps identified in the TDD spec before the interview, and how each was resolved during the interview]
-[Write "No gaps identified" if Phase 1 found none]
+[Write "No gaps identified" if Step 1 found none]
 
 ## Scope confirmation
 
@@ -236,7 +236,7 @@ After writing the summary, tell the developer:
 
 - Artifact-write only — no product/source/config edits; writes only `phase-{N}-dev-interview-summary.md` to the phase directory. The `plan-mode-enforcer` hook enforces this structurally
 - Ask questions ONLY about the current phase's scope. Reference another phase only when its completed output, dependency, or contract directly affects the current phase.
-- Do not assume build mode — always ask explicitly at the end of Phase 3
+- Do not assume build mode — always ask explicitly at the end of Step 3
 - Do not write the summary until all questions are answered and build mode is confirmed
 - Do not reference information outside the current phase's PRD, TDD spec, and manifest definition
-- Feature explorer subagent runs in Phase 2 — do not launch it outside that phase
+- Feature explorer subagent runs in Step 2 — do not launch it outside that step

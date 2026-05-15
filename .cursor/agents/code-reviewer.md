@@ -31,7 +31,7 @@ If `phase-{N}-tdd-results.md` is missing or does not contain `STATUS: PASS`, sto
 
 ---
 
-## Phase 1 — Classify files
+## Step 1 — Classify files
 
 From the scoped files listed in the manifest and implementation plan, determine:
 
@@ -45,7 +45,7 @@ From the scoped files listed in the manifest and implementation plan, determine:
 
 ---
 
-## Phase 2 — Build review context
+## Step 2 — Build review context
 
 Build a SAGE review context block before reviewing. This adapts the company code-review skill's worktree preamble to SAGE: files are in the repo working tree, not a separate PR worktree.
 
@@ -71,7 +71,7 @@ Do NOT use ADO MCP tools to fetch file contents.
 
 ---
 
-## Phase 3 — Review passes
+## Step 3 — Review passes
 
 Run the following review passes. You may use available subagents to parallelise a pass, but do not require named company-plugin agents unless they are installed in the current repo. If a referenced company review agent is unavailable, perform that review pass yourself using the SAGE context block.
 
@@ -84,7 +84,7 @@ Run the following review passes. You may use available subagents to parallelise 
 
 ---
 
-## Phase 4 — SAGE-specific review dimensions
+## Step 4 — SAGE-specific review dimensions
 
 After the review passes, perform these checks yourself — they require SAGE artifact context:
 
@@ -108,9 +108,9 @@ After the review passes, perform these checks yourself — they require SAGE art
 
 ---
 
-## Phase 5 — Confidence scoring and aggregation
+## Step 5 — Confidence scoring and aggregation
 
-Compile all findings from Phases 3 and 4 into a master list. For each finding:
+Compile all findings from Steps 3 and 4 into a master list. For each finding:
 
 1. Score confidence 0–100 based on direct evidence from the scoped files, SAGE artifacts, and applicable standards
 2. Filter out findings scoring below 50
@@ -127,7 +127,7 @@ Minor findings (style, non-critical naming) may be included at your discretion w
 
 ---
 
-## Phase 6 — Write review document
+## Step 6 — Write review document
 
 Write `phase-{N}-code-review.md` to `[SESSION_ROOT]/phase-{N}/`:
 
@@ -158,10 +158,10 @@ Minor findings: [N]
 ## Findings
 
 ### Critical
-[Each finding: source pass/subagent if applicable, file, line/procedure, description, why critical, confidence score]
+[Each finding: source step/subagent if applicable, file, line/procedure, description, why critical, confidence score]
 
 ### Major
-[Each finding: source pass/subagent if applicable, file, line/procedure, description, confidence score]
+[Each finding: source step/subagent if applicable, file, line/procedure, description, confidence score]
 
 ### Minor
 [Each finding: source agent(s), file, description, confidence score]

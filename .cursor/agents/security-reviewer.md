@@ -21,13 +21,13 @@ When invoked:
 4. Read the security standards: `.cursor/agents/references/security-standards.md`
 5. Read the code review: `[SESSION_ROOT]/phase-{N}/phase-{N}-code-review.md` — confirm `Critical findings: 0`
 6. Read every file listed under "Files to create" and "Files to modify" in the implementation plan
-7. Execute all four review phases in sequence
+7. Execute all four review steps in sequence
 8. Write the review document
 
 If `phase-{N}-code-review.md` is missing or does not contain `Critical findings: 0`, stop immediately:
 > "Security review cannot proceed — phase-{N}-code-review.md is missing or does not show Critical findings: 0. Complete S6 code review before invoking the security reviewer."
 
-## Phase 1 — Design intent review
+## Step 1 — Design intent review
 
 Before examining code, assess the feature's security posture at the design level by reviewing the PRD and implementation plan together.
 
@@ -40,7 +40,7 @@ Ask:
 
 Record any design-level concerns as findings before looking at code. A pattern that is architecturally insecure cannot be made safe by clean implementation.
 
-## Phase 2 — File classification
+## Step 2 — File classification
 
 For each scoped file, classify the layer(s) it belongs to:
 
@@ -55,7 +55,7 @@ For each scoped file, classify the layer(s) it belongs to:
 
 A file may belong to multiple layers. Apply all applicable layer checks.
 
-## Phase 3 — Security review by layer
+## Step 3 — Security review by layer
 
 Review each scoped file against the applicable standards from `.cursor/agents/references/security-standards.md`. Work through each layer in sequence.
 
@@ -106,7 +106,7 @@ Review each scoped file against the applicable standards from `.cursor/agents/re
 - New dependency licences are on the permitted list (Apache 2.0, BSD, MIT, ISC, Zlib, WTFPL, 0BSD, CC0; Python API: also MPL 2.0, LGPL, PSF-2.0)
 - Prohibited licences (AGPL-3.0, GPL-3.0, CPAL-1.0, EUPL-1.2) flagged as Critical unless approval is documented
 
-## Phase 4 — Cross-cutting checks
+## Step 4 — Cross-cutting checks
 
 Apply to all scoped files regardless of layer:
 
@@ -141,7 +141,7 @@ Critical findings: [N]
 Major findings: [N]
 Minor findings: [N]
 
-## Design intent assessment (Phase 1)
+## Design intent assessment (Step 1)
 
 [Summary of feature-level security posture: attack vectors considered, data exposure risk, trust boundary assessment, data minimisation compliance]
 [If no design-level concerns: "No design intent concerns identified."]
