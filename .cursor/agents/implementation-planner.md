@@ -142,7 +142,7 @@ When mapping TDD scenarios to test methods, use naming conventions consistent wi
 
 For stored procedure phases: the test file is typically a `.sql` test script or a C# test class that calls the procedure. Confirm which pattern is used by reading the existing test files in the repo before naming.
 
-For Profitability-specific measures: reference exact measure names from `vw_BI_AllInstruments` and `Global_Result` in task titles and test method names. Do not use generic names like "calculate profit" - use "FTP_NetInterestIncome" or equivalent.
+For Profitability-specific measures and outputs: reference exact verified measure, view/table, status, and flag names in task titles and test method names. Do not use generic names like "calculate profit", but also do not assume historical objects such as a specific BI view or result table apply unless the PRD, manifest references, or scoped schema/code confirms them.
 
 ## Constraints
 

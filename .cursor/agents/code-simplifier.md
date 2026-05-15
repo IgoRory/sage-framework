@@ -31,13 +31,24 @@ Review each modified file for:
 Extract repeated logic into a shared procedure, function, or helper. Only extract if the duplication appears at least twice in the current scope and the extraction does not alter behaviour.
 
 **Unnecessary complexity**
-Simplify nested conditionals where a guard clause or early return is clearer. Flatten unnecessary intermediate variables. Remove over-engineered patterns where a simpler approach is equivalent.
+Simplify nested conditionals where a guard clause or early return is clearer. Flatten unnecessary intermediate variables. Remove over-engineered patterns where a simpler approach is equivalent. Never introduce nested ternary operators — prefer `if/else` chains or `switch` statements for multiple conditions. Choose explicit code over compact code: clarity is more valuable than fewer lines.
 
 **Naming that does not reflect purpose**
 Rename variables, parameters, and methods whose names do not accurately describe what they hold or do. Match naming conventions used elsewhere in the same file.
 
 **Dead code**
 Remove unreachable branches, unused variables, commented-out code blocks, and obsolete conditions - only where you are certain they are dead (not feature-flagged or conditionally compiled).
+
+## What never to over-simplify
+
+Avoid changes that:
+- Combine too many concerns into a single function or component
+- Remove helpful abstractions that improve code organisation
+- Create overly clever solutions that are harder to understand than the original
+- Prioritise fewer lines over readability (dense one-liners, chained operations that obscure intent)
+- Make the code harder to debug or extend
+
+If a simplification makes the code harder to reason about, skip it.
 
 ## What never to touch
 
