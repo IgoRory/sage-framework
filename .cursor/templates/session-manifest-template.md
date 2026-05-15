@@ -61,6 +61,7 @@
           "plan-validation":     "pending",
           "build":               "pending",
           "code-review":         "pending",
+          "security-review":     "pending",
           "agent-testing":       "pending",
           "completion-report":   "pending"
         },
@@ -71,6 +72,7 @@
           "plan-validation":     { "startedAt": null, "completedAt": null },
           "build":               { "startedAt": null, "completedAt": null },
           "code-review":         { "startedAt": null, "completedAt": null },
+          "security-review":     { "startedAt": null, "completedAt": null },
           "agent-testing":       { "startedAt": null, "completedAt": null },
           "completion-report":   { "startedAt": null, "completedAt": null }
         },

@@ -10,7 +10,7 @@ When working within a phase, the following context applies.
 
 ## Step sequence
 
-Phases progress through 8 steps in strict order:
+Phases progress through 9 steps in strict order:
 
 | Step | Code | What happens |
 |------|------|--------------|
@@ -21,6 +21,7 @@ Phases progress through 8 steps in strict order:
 | S5a | build (red) | test-author writes failing tests; produces red-results.md |
 | S5b | build (green-refactor) | tdd-builder writes production code; produces tdd-results.md |
 | S6 | code-review | Agent reviews code quality |
+| S6.5 | security-review | Agent reviews code against SDLC policy and OWASP practices |
 | S7 | agent-testing | Agent runs full test suite |
 | S8 | completion-report | Agent produces completion report |
 
@@ -41,6 +42,7 @@ Examples:
 - `phase-1-red-results.md`
 - `phase-1-tdd-results.md`
 - `phase-1-code-review.md`
+- `phase-1-security-review.md`
 - `phase-1-test-results.md`
 - `phase-1-completion-report.md`
 
@@ -59,6 +61,7 @@ Examples:
 | red-results-gate | phase-{N}-red-results.md contains 'STATUS: RED CONFIRMED' (S5b only) |
 | tdd-results-gate | phase-{N}-tdd-results.md contains 'STATUS: PASS' |
 | code-review-gate | phase-{N}-code-review.md contains 'Critical findings: 0' |
+| security-review-gate | phase-{N}-security-review.md contains 'Critical findings: 0' |
 | completion-report-stop-gate | phase-{N}-test-results.md contains 'STATUS: PASS' |
 
 ## Domain source verification
