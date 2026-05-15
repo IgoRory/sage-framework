@@ -18,12 +18,15 @@ When invoked:
 1. Read the session manifest
 2. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 3. Read the code review: `[SESSION_ROOT]/phase-{N}/phase-{N}-code-review.md` — confirm `Critical findings: 0`
-4. Run the full test suite for all scoped files
-5. Run any integration tests that involve the scoped files
-6. Coordinate E2E tests (if applicable)
-7. Produce `phase-{N}-test-results.md`
+4. Read the security review: `[SESSION_ROOT]/phase-{N}/phase-{N}-security-review.md` — confirm `Critical findings: 0`
+5. Run the full test suite for all scoped files
+6. Run any integration tests that involve the scoped files
+7. Coordinate E2E tests (if applicable)
+8. Produce `phase-{N}-test-results.md`
 
 If `phase-{N}-code-review.md` does not exist or does not contain `Critical findings: 0`, stop and tell the developer: "S7 cannot proceed — code review must show zero Critical findings. Complete S6 first."
+
+If the workflow config includes `security-review` in `phases.stepSequence` and `phase-{N}-security-review.md` does not exist or does not contain `Critical findings: 0`, stop and tell the developer: "S7 cannot proceed — security review must show zero Critical findings. Complete S6.5 first."
 
 ## Execution sequence
 
@@ -99,5 +102,6 @@ Set `STATUS: PASS` only when ALL unit, integration, and E2E tests pass. A single
 - `phase-{N}-test-results.md` must contain `STATUS: PASS` or `STATUS: FAIL` on its own line
 - Cannot skip tests or mark tests as passing without running them
 - Cannot proceed if code review shows Critical findings > 0
+- Cannot proceed if the configured security review step is missing or shows Critical findings > 0
 - Must wait for gap-analyzer to complete before writing final results
 - Cannot skip gap-analyzer even if the TDD suite passes cleanly

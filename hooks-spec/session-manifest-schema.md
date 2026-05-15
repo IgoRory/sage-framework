@@ -104,7 +104,7 @@ The file has two parts:
       "runtime": {
         "assignedDeveloper": "string — name of developer assigned at planning",
         "linearIssueStatus": "Pending Approval | Approved | In Progress | Build Complete | Done",
-        "currentStep": "dev-interview | implementation-plan | traceability-review | plan-validation | build | code-review | agent-testing | completion-report | complete",
+        "currentStep": "dev-interview | implementation-plan | traceability-review | plan-validation | build | code-review | security-review | agent-testing | completion-report | complete",
         "buildMode": "autonomous | checkpoint",
         "buildSubStep": "red | green-refactor | null — tracks S5a/S5b progression within the build step",
         "validationConfirmed": false,
@@ -118,6 +118,7 @@ The file has two parts:
           "plan-validation":     "pending | in-progress | complete | blocked",
           "build":               "pending | in-progress | complete | blocked",
           "code-review":         "pending | in-progress | complete | blocked",
+          "security-review":     "pending | in-progress | complete | blocked",
           "agent-testing":       "pending | in-progress | complete | blocked",
           "completion-report":   "pending | in-progress | complete | blocked"
         },
@@ -128,6 +129,7 @@ The file has two parts:
           "plan-validation":     { "startedAt": null, "completedAt": null },
           "build":               { "startedAt": null, "completedAt": null },
           "code-review":         { "startedAt": null, "completedAt": null },
+          "security-review":     { "startedAt": null, "completedAt": null },
           "agent-testing":       { "startedAt": null, "completedAt": null },
           "completion-report":   { "startedAt": null, "completedAt": null }
         },
@@ -150,7 +152,10 @@ The file has two parts:
           "traceabilityMinors": 0,
           "codeReviewCriticals": 0,
           "codeReviewMajors": 0,
-          "codeReviewMinors": 0
+          "codeReviewMinors": 0,
+          "securityReviewCriticals": 0,
+          "securityReviewMajors": 0,
+          "securityReviewMinors": 0
         },
         "hookRejectionCount": 0,
         "deferredItems": []
