@@ -209,6 +209,7 @@
       "plan-validation",
       "build",
       "code-review",
+      "security-review",
       "agent-testing",
       "completion-report"
     ],
@@ -219,6 +220,7 @@
       "plan-validation":     "phase-{N}-plan-preview.canvas.tsx",
       "build":               "(source files)",
       "code-review":         "phase-{N}-code-review.md",
+      "security-review":     "phase-{N}-security-review.md",
       "agent-testing":       "phase-{N}-test-results.md",
       "completion-report":   "phase-{N}-completion-report.md"
     }

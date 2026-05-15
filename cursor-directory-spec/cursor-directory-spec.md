@@ -24,6 +24,7 @@
 │   │   ├── tdd-builder.md
 │   │   ├── test-runner.md
 │   │   ├── traceability-reviewer.md
+│   │   ├── security-reviewer.md
 │   │   └── plan-preview-generator.md
 │   ├── hooks/
 │   │   ├── hooks.json                         ← valid JSON; parity with handoff hooks-spec/hooks.json
@@ -42,6 +43,7 @@
 │   │       ├── red_results_gate.py
 │   │       ├── tdd_results_gate.py
 │   │       ├── code_review_gate.py
+│   │       ├── security_review_gate.py
 │   │       ├── completion_report_stop_gate.py
 │   │       └── skill_update_trigger_watcher.py
 │   ├── rules/
@@ -136,6 +138,7 @@
 │           │   ├── phase-1-calculation-proof.md
 │           │   ├── phase-1-tdd-results.md
 │           │   ├── phase-1-code-review.md
+│           │   ├── phase-1-security-review.md
 │           │   ├── phase-1-test-results.md
 │           │   ├── phase-1-completion-report.md
 │           │   ├── phase-1-handoff.md

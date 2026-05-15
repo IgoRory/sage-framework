@@ -14,7 +14,8 @@ Step → required prior artifact:
   plan-validation     → phase-{N}-traceability-review.md  (Blocker findings: 0)
   build               → phase-{N}-plan-preview.canvas.tsx  (via validationConfirmed)
   code-review         → phase-{N}-tdd-results.md with STATUS: PASS (handled by tdd-results-gate)
-  agent-testing       → phase-{N}-code-review.md           (handled by code-review-gate)
+  security-review     → phase-{N}-code-review.md           (handled by code-review-gate)
+  agent-testing       → phase-{N}-security-review.md       (handled by security-review-gate)
   completion-report   → phase-{N}-test-results.md          (handled by stop gate)
 
 This gate checks the artifact existence for steps 2–5.

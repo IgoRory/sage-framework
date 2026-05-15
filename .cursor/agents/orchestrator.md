@@ -110,7 +110,7 @@ For each phase, generate a TDD spec with this structure:
 
 Every scenario must be specific enough that a developer can write a failing test from it without ambiguity. Do not use vague qualifiers like "correct", "valid", or "appropriate" - state the exact expected value or behaviour.
 
-For Profitability-specific scenarios, reference measures by their exact names from `vw_BI_AllInstruments` and `Global_Result`. Include return code handling (-1 through -8) where relevant to the phase scope.
+For Profitability-specific scenarios, reference measures, source views, result tables, return/status codes, and flags by their exact verified names from the PRD, manifest `requiredReferences`, and scoped code/schema. Do not assume historical objects or code ranges apply to the current phase unless they are verified in scope.
 
 ## S8 — Completion Report
 
@@ -168,9 +168,9 @@ The `completion-report-stop-gate` hook blocks the agent from ending its turn at 
 Before referencing specific database objects, measures, data boundaries, return codes, or flags in TDD specs, verify from the PRD, manifest `requiredReferences`, and scoped code/schema. Do not assume domain details from prior knowledge.
 
 As of the current specification — verify before generating TDD scenarios:
-- Output measures may be defined in views such as `vw_BI_AllInstruments` and `Global_Result` — confirm the exact view and measure set from the PRD and scoped schema
-- Data boundary (e.g. Dataverse for GL and reference data) — confirm from the PRD and architecture documentation
-- Return codes (e.g. -1 through -8) — confirm which codes apply from the scoped stored procedures
-- Flags (e.g. `NewInstFlag`, `ClosedInstFlag`, `PlugInstrumentFlag`) — confirm applicability from the scoped code
+- Output measures may be defined in scoped views, result tables, or service DTOs — confirm the exact source and measure set from the PRD and scoped schema
+- Data boundaries — confirm from the PRD and architecture documentation
+- Return/status codes — confirm which codes apply from the scoped stored procedures or service contracts
+- Flags — confirm exact names and applicability from the scoped code
 - Named revision dates — confirm which revision date context applies from the PRD
 - Naming inconsistencies exist in the codebase — always verify against the actual schema before writing specs

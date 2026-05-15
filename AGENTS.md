@@ -25,6 +25,7 @@ scope through instruction alone.
 - [test-author](#test-author)
 - [tdd-builder](#tdd-builder)
 - [code-reviewer](#code-reviewer)
+- [security-reviewer](#security-reviewer)
 - [test-runner](#test-runner)
 - [gap-analyzer](#gap-analyzer)
 - [feature-doc-generator](#feature-doc-generator)
@@ -145,8 +146,8 @@ to the session manifest.
 
 ## traceability-reviewer
 
-**Mode:** Foreground  
-**Access:** Artifact-write only (writes only declared output to phase directory)  
+**Mode:** Foreground
+**Access:** Artifact-write only (writes only declared output to phase directory)
 **Active during:** S3 — Traceability Review
 
 ### Role
@@ -314,6 +315,34 @@ exactly — the code-review-gate hook reads this format.
 - Artifact-write only — no product/source/config edits; writes only `phase-{N}-code-review.md` to the phase directory
 - Must use exact format `Critical findings: N`
 - Does not fix findings — reports only
+
+---
+
+## security-reviewer
+
+**Mode:** Foreground
+**Access:** Artifact-write only (writes only declared output to phase directory)
+**Active during:** S6.5 — Security Review
+
+### Role
+
+Reviews all code written during S5 against the Empyrean Solutions SDLC policy
+and OWASP secure coding practices after code review and before agent testing.
+Classifies findings as Critical, Major, or Minor. The line
+`Critical findings: N` must be preserved exactly — the security-review-gate hook
+reads this format.
+
+### What it produces
+
+- `phase-{N}-security-review.md`
+  - Must contain exactly: `Critical findings: N` (where N is the count)
+
+### Constraints
+
+- Artifact-write only — no product/source/config edits; writes only `phase-{N}-security-review.md` to the phase directory
+- Must use exact format `Critical findings: N`
+- Does not fix findings — reports only
+- Does not proceed unless S6 code review exists and shows `Critical findings: 0`
 
 ---
 

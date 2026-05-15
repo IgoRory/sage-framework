@@ -1,14 +1,13 @@
 """
-code_review_gate.py
-SAGE Framework — Hook: code-review-gate
+security_review_gate.py
+SAGE Framework — Hook: security-review-gate
 Event: preToolUse
 Blocking: True
 
-Blocks S6.5 (security review) and S7 (agent testing) from starting until the
-phase's code-review.md exists in the phase directory AND contains
-'Critical findings: 0'.
+Blocks S7 (agent testing) from starting until the phase's security review exists
+in the phase directory and contains 'Critical findings: 0'.
 
-The code-review.md is written by the code-reviewer agent during S6.
+The security review is written by the security-reviewer agent during S6.5.
 """
 
 import sys
@@ -24,7 +23,18 @@ TESTING_INITIATING_TOOLS = {
     "str_replace_editor", "execute_command", "run_build"
 }
 
-CODE_REVIEW_FILENAME = "phase-{N}-code-review.md"
+SECURITY_REVIEW_FILENAME = "phase-{N}-security-review.md"
+
+
+def security_review_enabled(manifest: dict) -> bool:
+    """Return True when the configured SAGE step sequence includes S6.5."""
+    configured_steps = manifest.get("phases", {}).get("stepSequence")
+    if isinstance(configured_steps, list):
+        return "security-review" in configured_steps
+
+    # Session manifests may not embed workflow-config. Current SAGE config enables
+    # security review, so fail closed unless the manifest explicitly says otherwise.
+    return True
 
 
 def main():
@@ -40,7 +50,7 @@ def main():
         block(message=f"SESSION INTEGRITY ERROR — {e}")
         return
 
-    if not phase_id:
+    if not phase_id or not security_review_enabled(manifest):
         permit()
         return
 
@@ -59,28 +69,28 @@ def main():
     runtime = phase_data.get("runtime", {})
     current_step = runtime.get("currentStep", "")
 
-    if current_step not in {"security-review", "agent-testing"}:
+    if current_step != "agent-testing":
         permit()
         return
 
     phase_dir = get_phase_dir(session_root, phase_id)
-    review_filename = CODE_REVIEW_FILENAME.replace("{N}", phase_id)
+    review_filename = SECURITY_REVIEW_FILENAME.replace("{N}", phase_id)
     review_path = phase_dir / review_filename
 
     if not review_path.exists():
         write_telemetry_event(session_root, {
             "event": "hook_rejection",
-            "hook": "code-review-gate",
+            "hook": "security-review-gate",
             "phaseId": phase_id,
             "reason": f"{review_filename} not found"
         })
         block(
             message=(
-                f"CODE REVIEW GATE — Step '{current_step}' blocked for phase {phase_id}.\n\n"
+                f"SECURITY REVIEW GATE — Agent testing blocked for phase {phase_id}.\n\n"
                 f"{review_filename} not found in phase directory:\n"
                 f"  {phase_dir}\n\n"
-                f"The code-reviewer agent must complete S6 and produce a code review\n"
-                f"document before security review or agent testing can begin."
+                f"The security-reviewer agent must complete S6.5 and produce a security review\n"
+                f"document before agent testing can begin."
             ),
             phase_id=phase_id
         )
@@ -89,17 +99,17 @@ def main():
     if find_marker_value(content, "Critical findings") != 0:
         write_telemetry_event(session_root, {
             "event": "hook_rejection",
-            "hook": "code-review-gate",
+            "hook": "security-review-gate",
             "phaseId": phase_id,
-            "reason": "Code review has Critical findings > 0"
+            "reason": "Security review has Critical findings > 0"
         })
         block(
             message=(
-                f"CODE REVIEW GATE — Step '{current_step}' blocked for phase {phase_id}.\n\n"
-                f"Code review contains Critical findings that must be resolved.\n"
+                f"SECURITY REVIEW GATE — Agent testing blocked for phase {phase_id}.\n\n"
+                f"Security review contains Critical findings that must be resolved.\n"
                 f"  {review_path}\n\n"
-                f"Required: 'Critical findings: 0' in the code review document.\n"
-                f"Address all Critical findings in S5/S6 before proceeding."
+                f"Required: 'Critical findings: 0' in the security review document.\n"
+                f"Address all Critical findings before proceeding to S7."
             ),
             phase_id=phase_id
         )

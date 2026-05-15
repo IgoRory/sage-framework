@@ -291,7 +291,8 @@ tool can run, the prior step must be marked complete in the manifest.
 | traceability-review tool (S3) | S2 implementation-plan = complete |
 | plan-preview tool (S4) | S3 traceability-review = complete, zero Blockers |
 | code-review tool (S6) | S5 build = complete (tdd-results STATUS:PASS) |
-| test-runner tool (S7) | S6 code-review = complete, zero Critical findings |
+| security-reviewer tool (S6.5) | S6 code-review = complete, zero Critical findings |
+| test-runner tool (S7) | S6 code-review and S6.5 security-review = complete, zero Critical findings |
 | completion-report tool (S8) | S7 agent-testing = complete (test-results STATUS:PASS) |
 
 ```python
@@ -1040,8 +1041,9 @@ if __name__ == "__main__":
 
 ## Script 9: `code_review_gate.py`
 
-**Purpose:** Blocks the test-runner tool (S7) from launching unless
-`phase-N-code-review.md` exists with zero open Critical findings.
+**Purpose:** Blocks the security-reviewer tool (S6.5) and test-runner tool
+(S7) from launching unless `phase-N-code-review.md` exists with zero open
+Critical findings.
 
 ```python
 # .cursor/hooks/scripts/code_review_gate.py
@@ -1122,6 +1124,22 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+---
+
+## Script 9b: `security_review_gate.py`
+
+**Purpose:** Blocks the test-runner tool (S7) from launching unless
+`phase-N-security-review.md` exists with zero open Critical findings.
+
+**Gate condition:** Applies when the current manifest step is `agent-testing`.
+The hook reads `[SESSION_ROOT]/phase-{N}/phase-{N}-security-review.md` and
+requires an anchored `Critical findings: 0` marker. Missing markers, missing
+files, or non-zero Critical counts block S7.
+
+**Implementation note:** The script mirrors `code_review_gate.py` and uses
+`find_marker_value(content, "Critical findings")` from `hooks_utils.py` so
+narrative mentions do not satisfy the gate.
 
 ---
 

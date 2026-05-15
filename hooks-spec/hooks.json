@@ -89,9 +89,17 @@
     },
     {
       "id": "code-review-gate",
-      "description": "Blocks S7 agent testing from starting until the phase's code-review.md exists and contains 'Critical findings: 0'.",
+      "description": "Blocks S6.5 security review and S7 agent testing from starting until the phase's code-review.md exists and contains 'Critical findings: 0'.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/code_review_gate.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
+    {
+      "id": "security-review-gate",
+      "description": "Blocks S7 agent testing from starting until the phase's security-review.md exists and contains 'Critical findings: 0'.",
+      "events": ["preToolUse"],
+      "script": ".cursor/hooks/scripts/security_review_gate.py",
       "blocking": true,
       "timeout_ms": 3000
     },
