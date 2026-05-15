@@ -144,6 +144,28 @@ For stored procedure phases: the test file is typically a `.sql` test script or 
 
 For Profitability-specific measures and outputs: reference exact verified measure, view/table, status, and flag names in task titles and test method names. Do not use generic names like "calculate profit", but also do not assume historical objects such as a specific BI view or result table apply unless the PRD, manifest references, or scoped schema/code confirms them.
 
+## ProfitabilityAPI.V2 and test-layer guidance
+
+If the scoped files touch `ProfitabilityAPI.V2` or `ProfitabilityWeb` and `.cursor/skills/write-tests/SKILL.md` is available in the active product repo, read it before mapping tests. If the skill is unavailable, use the fallback guidance below.
+
+Map every TDD scenario to the lowest test layer that proves the behaviour, and add higher-level tests when the behaviour crosses boundaries:
+
+| Behaviour under test | Preferred test layer |
+|---|---|
+| Domain rule, invariant, policy, value object, pure calculation | Unit test against Domain types |
+| Application handler, validator, port orchestration, transaction workflow, Application DTO/read model | Integration test through Application/MediatR or the established Application test harness |
+| Public HTTP route, endpoint binding, auth/routing, serialization, public Contract shape, real SQL persistence | E2E/API test |
+| Layer dependency rule or clean architecture convention | Architecture guard test |
+| Angular component/service state, mapping, signals, RxJS, template behaviour | Vitest unit/component test |
+| Browser routing, dialogs, cross-component user flow, auth-gated smoke path | Playwright E2E test when `featureFlags.playwrightE2E` allows it |
+
+Planning rules:
+- Do not assert public `Contracts` from Application/MediatR integration tests unless the test goes through Presentation/HTTP or explicit contract serialization.
+- Use Application DTO/read-model names for handler-level assertions; reserve Contract assertions for E2E/API or contract serialization tests.
+- Do not skip a test layer because another layer exists. Skip only when there is genuinely no logic at that layer, and note why in the plan.
+- For transaction or SQL ownership behaviour, prefer SQL Server-backed E2E/API coverage over EF InMemory proof.
+- Include architecture guard tasks when a phase adds or changes V2 layer references, boundary rules, or test-presence conventions.
+
 ## Constraints
 
 - Every TDD scenario must map to exactly one task - no unmapped scenarios

@@ -53,19 +53,29 @@ Launch a `feature-explorer` subagent with the following prompt, substituting the
 ```
 Explore the feature area related to: [phase title / PRD feature name]
 
-Trace the full implementation path from stored procedures through to the Angular frontend.
+First classify the scoped implementation shape:
+- API V1 / legacy Profitability stack
+- ProfitabilityAPI.V2 / Clean Architecture
+- Angular frontend
+- SQL-only or stored-procedure-heavy
+- Mixed V1/V2/frontend/data scope
+
+Trace only the layers that apply to the scoped files and PRD. Do not assume the V1 DAL/service/controller architecture when the phase touches ProfitabilityAPI.V2.
 
 For each layer, identify:
-- Stored procedures: all SPs related to this feature area (search Database/**/*.prc)
-- DAL layer: DAL classes and methods that call those SPs (search Libraries/Empyrean.Data/**/*DAL.cs)
-- Service layer: services consuming those DAL methods (search Services/ProfitabilityAPI/**/*Service.cs)
-- API controllers: endpoints exposing this functionality (search Services/ProfitabilityAPI/**/Controllers/)
-- Angular components: components consuming those endpoints (search Web/ProfitabilityWeb/src/**/*.ts)
+- SQL / stored procedures: all SPs, functions, tables, views, or seed scripts related to this feature area
+- API V1 / legacy architecture: DAL classes, service classes, and controllers consuming or exposing the feature
+- ProfitabilityAPI.V2 / Clean Architecture: Domain entities/value objects/policies, Application commands/queries/handlers/ports, Infrastructure repositories/EF/Dapper implementations, Presentation endpoints, Contracts wire models, and Shared utilities
+- Angular frontend: components, services, routes, state, templates, styles, and tests consuming the relevant endpoints
 
 Also identify:
 - Configuration or settings objects related to this feature
 - Shared utilities or helpers used across the feature area
 - Any existing patterns or conventions specific to this domain
+
+For ProfitabilityAPI.V2 scope, apply the clean architecture guidance used by the Profitability repo:
+- If `.cursor/skills/clean-arch-guide/SKILL.md` is available in the active product repo, read it before evaluating V2 layer placement.
+- If the skill is unavailable, use this fallback summary: business rules belong in Domain; Application orchestrates use cases, transactions, ports, and mapping to Application DTO/read models; Infrastructure owns EF Core, Dapper, SQL, repositories, persistence mapping, and external adapters; Presentation owns endpoint registration, HTTP concerns, auth, binding, OpenAPI, and Contracts mapping; Contracts are public wire models and should not leak into Domain or Application internals.
 
 Output a layer-by-layer table: file path | class/method/component name | what it does
 ```

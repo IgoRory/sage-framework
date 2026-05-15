@@ -30,11 +30,19 @@ If the workflow config includes `security-review` in `phases.stepSequence` and `
 
 ## Execution sequence
 
-1. Run full TDD suite as regression check
-2. Confirm all tests pass across all scoped files
-3. Signal gap-analyzer to generate additional scenarios
-4. Execute all automatable gap scenarios
-5. For Playwright E2E tests (UI phases):
+1. Classify the test suite from the implementation plan: Domain/unit, Application/integration, E2E/API, architecture guards, frontend Vitest, and Playwright.
+2. Run the full TDD suite as a regression check, using the narrowest commands that cover the scoped files first.
+3. If scoped files touch ProfitabilityAPI.V2 or ProfitabilityWeb and `.cursor/skills/write-tests/SKILL.md` is available in the active product repo, read it before choosing commands. If the skill is unavailable, use the fallback layer commands below.
+4. For ProfitabilityAPI.V2 backend phases, run the applicable layers:
+   - Unit tests for Domain rules, policies, value objects, pure calculations, validators, mappers, and helper functions.
+   - Integration tests for Application handlers, validation pipeline, repository/port orchestration, transaction workflows, and Application DTO/read-model results.
+   - E2E/API tests for public HTTP behaviour, endpoint binding, Contracts serialization, auth/routing, and real SQL Server persistence.
+   - Architecture guard tests when the phase adds or changes layer boundaries or dependency rules.
+5. For ProfitabilityWeb phases, run Vitest unit/component tests for scoped services/components and Playwright only when user-visible browser flow coverage is required and enabled.
+6. Confirm all required tests pass across all scoped files and mapped TDD scenarios.
+7. Signal gap-analyzer to generate additional scenarios.
+8. Execute all automatable gap scenarios.
+9. For Playwright E2E tests (UI phases):
    - Run the existing Playwright test suite via shell command:
      ```powershell
      cd Web\ProfitabilityWeb
@@ -45,8 +53,8 @@ If the workflow config includes `security-review` in `phases.stepSequence` and `
      Do NOT run Playwright via MCP directly in this agent.
    - Check `featureFlags.playwrightE2E` in `workflow-config.json` before running any Playwright
      step. If `false`, skip all Playwright steps and note this in the test results.
-6. Compile all results into a single test results document
-7. Write `phase-{N}-test-results.md`
+10. Compile all results into a single test results document
+11. Write `phase-{N}-test-results.md`
 
 ## phase-{N}-test-results.md format
 
@@ -73,6 +81,24 @@ STATUS: [PASS | FAIL]
 | [test name] | PASS / FAIL | [any relevant detail] |
 
 **Integration test summary:** [N] passed, [N] failed
+
+## E2E/API tests (if applicable)
+
+| Test | Result | Notes |
+|------|--------|-------|
+| [test name] | PASS / FAIL | [HTTP/SQL/contract coverage detail] |
+
+## Architecture guards (if applicable)
+
+| Guard | Result | Notes |
+|-------|--------|-------|
+| [guard name] | PASS / FAIL | [layer rule covered] |
+
+## Frontend Vitest tests (if applicable)
+
+| Test | Result | Notes |
+|------|--------|-------|
+| [test name] | PASS / FAIL | [component/service coverage detail] |
 
 ## E2E tests (if applicable)
 

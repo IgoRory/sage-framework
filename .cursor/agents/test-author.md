@@ -31,6 +31,20 @@ For each task in the implementation plan:
 3. If the test passes without implementation: stop and report — the test is not correctly targeting unimplemented behaviour. Revise the test to fail before implementation exists
 4. Record the result in `phase-{N}-red-results.md`
 
+## Test pattern guidance
+
+Follow the test type and layer chosen in the implementation plan. When scoped files touch ProfitabilityAPI.V2 or ProfitabilityWeb and `.cursor/skills/write-tests/SKILL.md` is available in the active product repo, read it before writing tests. If the skill is unavailable, apply this fallback summary:
+
+- **Domain unit tests:** assert Domain rules, entities, value objects, policies, domain services, and pure calculations without HTTP, MediatR, EF, SQL Server, or public API Contracts.
+- **Application integration tests:** assert Application handlers, validators, ports, transaction orchestration, repositories as ports, and Application DTO/read-model results. Do not assert public `Contracts` unless the test goes through Presentation/HTTP or explicit contract serialization.
+- **E2E/API tests:** assert externally observable HTTP behaviour, endpoint binding, public Contract JSON shape, auth/routing, and real SQL Server persistence.
+- **Contract serialization tests:** assert wire compatibility, JSON property names, nullability, route/body compatibility, envelopes, and error contracts.
+- **Architecture guard tests:** assert layer rules such as no Domain upward dependencies, no Application reference to Contracts/Infrastructure/Presentation, and no E2E payload dependency on Application internals.
+- **Frontend Vitest tests:** assert services, mappers, signals, RxJS flows, component state, template bindings, outputs, validation states, and DOM-visible behaviour.
+- **Frontend Playwright tests:** use only for browser routing, dialogs, cross-component flows, protected-route smoke checks, and other user-visible flows that need a real browser.
+
+Prefer the lowest layer that proves the requirement, then add integration or E2E coverage only when the requirement crosses a boundary. A RED test must fail because the behaviour is missing, not because imports, fixtures, Docker, auth, or unrelated setup are broken.
+
 ## phase-{N}-red-results.md format
 
 Keep this file updated after every task's RED phase. The `red-results-gate` hook reads this file.
