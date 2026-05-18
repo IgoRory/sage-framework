@@ -69,26 +69,26 @@ def _build_commit_message(phase_id: str | None, manifest: dict) -> str:
     return f"[sage-sync] Phase {phase_id or '?'}: {prev_step} complete -> {current_step}"
 
 
-def _collect_session_files(session_root: Path, phase_id: str | None) -> dict[str, Path]:
+def _collect_session_files(session_root: Path, phase_id: str | None) -> list[Path]:
     """
-    Returns a dict of {repo-relative-path: absolute-path} for all session
-    files that should be synced.
+    Returns a list of absolute paths for all session files that should
+    be synced to the parent branch.
     """
-    files = {}
+    files: list[Path] = []
     manifest_path = session_root / "session-manifest.md"
     if manifest_path.exists():
-        files[manifest_path] = manifest_path
+        files.append(manifest_path)
 
     telemetry_path = session_root / "workflow-telemetry.jsonl"
     if telemetry_path.exists():
-        files[telemetry_path] = telemetry_path
+        files.append(telemetry_path)
 
     if phase_id:
         phase_dir = session_root / f"phase-{phase_id}"
         if phase_dir.exists():
             for child in phase_dir.rglob("*"):
                 if child.is_file():
-                    files[child] = child
+                    files.append(child)
 
     return files
 
@@ -140,7 +140,7 @@ def _sync_to_parent(
                 env=env_with_alt_index,
             )
 
-            for abs_path in session_files.values():
+            for abs_path in session_files:
                 rel_path = abs_path.relative_to(repo_root)
                 git_path = str(rel_path).replace("\\", "/")
 
