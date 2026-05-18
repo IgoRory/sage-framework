@@ -12,6 +12,7 @@ telemetry_logger.py behaviour.
 """
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,7 +43,10 @@ def resolve_telemetry_path(repo_root: Path) -> Path:
             rel = prd.get("telemetryFile") or DEFAULT_TELEMETRY_REL
         except Exception:
             pass
-    return repo_root / rel
+    resolved = (repo_root / rel).resolve()
+    if not str(resolved).startswith(str(repo_root.resolve()) + os.sep):
+        resolved = repo_root / DEFAULT_TELEMETRY_REL
+    return resolved
 
 
 def main() -> None:

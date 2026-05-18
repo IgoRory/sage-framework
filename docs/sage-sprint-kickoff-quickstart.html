@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAGE Sprint Kick-off — Quick-Start Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg-base: #0d1117;
+    --bg-card: #161b22;
+    --bg-card-hover: #1c2129;
+    --bg-inset: #0d1117;
+    --border-default: #30363d;
+    --border-active: #484f58;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --human-accent: #58a6ff;
+    --human-bg: rgba(88,166,255,0.08);
+    --human-border: rgba(88,166,255,0.35);
+    --agent-accent: #7ee787;
+    --agent-bg: rgba(126,231,135,0.07);
+    --agent-border: rgba(126,231,135,0.30);
+    --gate-accent: #f0883e;
+    --gate-bg: rgba(240,136,62,0.07);
+    --gate-border: rgba(240,136,62,0.30);
+    --info-accent: #a5d6ff;
+    --prompt-bg: #1a1f28;
+    --prompt-border: #3b4252;
+    --step-done: #58a6ff;
+    --step-current: #e6edf3;
+    --step-pending: #484f58;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Header ────────────────────────────── */
+  header {
+    border-bottom: 1px solid var(--border-default);
+    padding: 32px 0 24px;
+    margin-bottom: 8px;
+  }
+  header .container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--human-accent), #a855f7);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+  }
+  header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    line-height: 1.25;
+  }
+  header .subtitle {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 600px;
+  }
+
+  /* ── Legend ─────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    margin: 20px 0 28px;
+    font-size: 13px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-dot.human { background: var(--human-accent); }
+  .legend-dot.agent { background: var(--agent-accent); }
+  .legend-dot.gate  { background: var(--gate-accent); }
+
+  /* ── Progress tracker ──────────────────── */
+  .progress-track {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--border-default);
+    padding: 12px 0;
+    margin-bottom: 16px;
+  }
+  .progress-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .progress-step {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    cursor: pointer;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .progress-step .dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--step-pending);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--step-pending);
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .progress-step .connector {
+    width: 24px;
+    height: 2px;
+    background: var(--step-pending);
+    flex-shrink: 0;
+  }
+  .progress-step:last-child .connector { display: none; }
+  .progress-step .label {
+    display: none;
+  }
+  .progress-step:hover .dot {
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+  }
+
+  /* ── Step card ─────────────────────────── */
+  .step-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .step-card:hover { border-color: var(--border-active); }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 20px 14px;
+  }
+  .step-number {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--human-accent);
+    color: #0d1117;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .step-number.pre { background: var(--text-muted); color: var(--bg-base); }
+  .step-title {
+    font-size: 18px;
+    font-weight: 600;
+    flex: 1;
+  }
+  .step-time {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 3px 10px;
+    border: 1px solid var(--border-default);
+    border-radius: 20px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .step-body { padding: 0 20px 18px; }
+
+  /* ── Action blocks ─────────────────────── */
+  .action {
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  .action:last-child { margin-bottom: 0; }
+
+  .action.human {
+    background: var(--human-bg);
+    border-left: 3px solid var(--human-accent);
+  }
+  .action.agent {
+    background: var(--agent-bg);
+    border-left: 3px solid var(--agent-accent);
+  }
+  .action.gate {
+    background: var(--gate-bg);
+    border-left: 3px solid var(--gate-accent);
+  }
+
+  .action-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .action.human .action-label { color: var(--human-accent); }
+  .action.agent .action-label { color: var(--agent-accent); }
+  .action.gate  .action-label { color: var(--gate-accent); }
+
+  .action-label svg {
+    width: 14px; height: 14px;
+    flex-shrink: 0;
+  }
+
+  .action p { margin-bottom: 8px; }
+  .action p:last-child { margin-bottom: 0; }
+
+  /* ── Prompt block ──────────────────────── */
+  .prompt-block {
+    background: var(--prompt-bg);
+    border: 1px solid var(--prompt-border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--info-accent);
+    position: relative;
+    word-break: break-word;
+  }
+  .prompt-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    display: block;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-default);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover {
+    background: var(--border-default);
+    color: var(--text-primary);
+  }
+
+  /* ── Outputs / details ─────────────────── */
+  .outputs {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .outputs-title {
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .outputs code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg-card);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--info-accent);
+  }
+  .outputs ul {
+    list-style: none;
+    padding: 0;
+  }
+  .outputs li {
+    padding: 3px 0;
+    padding-left: 14px;
+    position: relative;
+    color: var(--text-secondary);
+  }
+  .outputs li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  /* ── Decision box ──────────────────────── */
+  .decision-box {
+    background: var(--bg-inset);
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    padding: 14px 16px;
+    margin: 10px 0;
+  }
+  .decision-box h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+  .decision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .decision-option {
+    padding: 10px 12px;
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
+    background: var(--bg-card);
+  }
+  .decision-option .opt-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+  }
+  .decision-option .opt-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ── Prereq section ────────────────────── */
+  .prereq-banner {
+    background: linear-gradient(135deg, rgba(88,166,255,0.06), rgba(168,85,247,0.06));
+    border: 1px solid rgba(88,166,255,0.2);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+  .prereq-banner h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+  }
+  .prereq-list {
+    list-style: none;
+    padding: 0;
+  }
+  .prereq-list li {
+    padding: 5px 0;
+    padding-left: 22px;
+    position: relative;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .prereq-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--agent-accent);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .prereq-list code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg-card);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--info-accent);
+  }
+
+  /* ── Section dividers ──────────────────── */
+  .phase-divider {
+    text-align: center;
+    padding: 20px 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    position: relative;
+  }
+  .phase-divider::before,
+  .phase-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 30%;
+    height: 1px;
+    background: var(--border-default);
+  }
+  .phase-divider::before { left: 0; }
+  .phase-divider::after { right: 0; }
+
+  /* ── Footer ────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border-default);
+    padding: 24px 0 40px;
+    margin-top: 40px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ── Responsive ────────────────────────── */
+  @media (max-width: 600px) {
+    header h1 { font-size: 22px; }
+    .decision-grid { grid-template-columns: 1fr; }
+    .legend { gap: 12px; }
+    .step-header { gap: 10px; padding: 14px 16px 10px; }
+    .step-body { padding: 0 16px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo-row">
+      <div class="logo-mark">S</div>
+      <span class="logo-text">SAGE Framework</span>
+    </div>
+    <h1>Sprint Kick-off Quick-Start</h1>
+    <p class="subtitle">From opening Cursor to a confirmed manifest with phases assigned. Follow each step on your second screen during the live session.</p>
+  </div>
+</header>
+
+<!-- Progress tracker -->
+<div class="progress-track">
+  <div class="container">
+    <div class="progress-inner">
+      <a class="progress-step" href="#step-0" title="Prerequisites">
+        <div class="dot">0</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-1" title="Open Teams Call">
+        <div class="dot">1</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-2" title="Discuss PRD">
+        <div class="dot">2</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-3" title="Stop Recording">
+        <div class="dot">3</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-4" title="Invoke kickoff-dev-review">
+        <div class="dot">4</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-5" title="Answer Follow-ups">
+        <div class="dot">5</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-6" title="Confirm PRD Updates">
+        <div class="dot">6</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-7" title="Completeness Re-check">
+        <div class="dot">7</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-8" title="Phase Breakdown">
+        <div class="dot">8</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-9" title="Team Review">
+        <div class="dot">9</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-10" title="Confirm Breakdown">
+        <div class="dot">10</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-11" title="Manifest + Issues + Worktrees">
+        <div class="dot">11</div><div class="connector"></div>
+      </a>
+      <a class="progress-step" href="#step-12" title="Phase Approval">
+        <div class="dot">12</div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<main class="container">
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot human"></div> Human action</div>
+  <div class="legend-item"><div class="legend-dot agent"></div> Agent / skill (automated)</div>
+  <div class="legend-item"><div class="legend-dot gate"></div> Gate / enforcement check</div>
+</div>
+
+<!-- Prerequisites -->
+<div class="prereq-banner" id="step-0">
+  <h2>Before Kick-off &mdash; Confirm These Are Done</h2>
+  <ul class="prereq-list">
+    <li>PRD exists at <code>.sage/prds/[FEATURE_ID]/prd.md</code> and has passed <strong>prd-completeness-check</strong> with score &ge; 80/100</li>
+    <li>Component specification exists at <code>.sage/prds/[FEATURE_ID]/component-spec.md</code> (UI features)</li>
+    <li>Linear feature issue is at status <strong>Ready</strong> or <strong>Planned</strong></li>
+    <li>All team members have read the PRD before the call</li>
+    <li>Cursor IDE is open with the Profitability repo workspace</li>
+    <li>Microsoft Teams is ready to start a recorded call</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════ PHASE 1: DEV REVIEW ═══════════════════ -->
+<div class="phase-divider">Step 1 &mdash; Kick-off Dev Review &middot; 35 min</div>
+
+<!-- Step 1 -->
+<div class="step-card" id="step-1">
+  <div class="step-header">
+    <div class="step-number">1</div>
+    <div class="step-title">Start the Teams Call</div>
+    <div class="step-time">~1 min</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You do this
+      </div>
+      <p>Open Microsoft Teams. Start a <strong>recorded</strong> meeting with the full team (2&ndash;3 developers + PM + Lead Dev).</p>
+      <p>Confirm recording has started before moving on.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Step 2 -->
+<div class="step-card" id="step-2">
+  <div class="step-header">
+    <div class="step-number">2</div>
+    <div class="step-title">Discuss the PRD on the Call</div>
+    <div class="step-time">~20 min</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You do this &mdash; whole team participates
+      </div>
+      <p>Walk through the PRD together. Developers raise concerns, flag ambiguities, highlight areas where the PRD conflicts with what they know about the codebase. PM clarifies intent.</p>
+      <p>There is no agent involved at this point. This is a normal team conversation captured by the Teams recording.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Step 3 -->
+<div class="step-card" id="step-3">
+  <div class="step-header">
+    <div class="step-number">3</div>
+    <div class="step-title">Stop the Recording</div>
+    <div class="step-time">~1 min</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You do this
+      </div>
+      <p>Stop the Teams recording. <strong>Do not hang up</strong> &mdash; the team stays on the call. You&rsquo;ll need them for follow-up questions in a few minutes.</p>
+      <p>Copy the Teams meeting link. You will provide this to the agent next.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Step 4 -->
+<div class="step-card" id="step-4">
+  <div class="step-header">
+    <div class="step-number">4</div>
+    <div class="step-title">Invoke kickoff-dev-review</div>
+    <div class="step-time">~3 min (agent processing)</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You type this in Cursor chat
+      </div>
+      <p>Open Cursor. In the chat panel, type:</p>
+      <div class="prompt-block">
+        <span class="prompt-label">Prompt</span>
+        <button class="copy-btn" onclick="copyPrompt(this)">Copy</button>
+        Run the kickoff-dev-review skill for [FEATURE_ID]. Teams meeting link: [paste link]
+      </div>
+    </div>
+
+    <div class="action agent">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        kickoff-dev-review skill runs &mdash; wait and watch
+      </div>
+      <p>The skill fetches the transcript from the Teams meeting via the Microsoft 365 MCP. It then reads the PRD at <code>.sage/prds/[FEATURE_ID]/prd.md</code> and the component specification at <code>.sage/prds/[FEATURE_ID]/component-spec.md</code>.</p>
+      <p>It processes every developer concern from the transcript and categorises each into one of seven types:</p>
+      <div class="outputs">
+        <div class="outputs-title">Concern categories</div>
+        <ul>
+          <li><strong>PRD_UPDATE</strong> &mdash; gap in the PRD that must be fixed</li>
+          <li><strong>PHASE_IMPLICATION</strong> &mdash; affects how phases should be split</li>
+          <li><strong>CODEBASE_CONFLICT</strong> &mdash; contradiction with existing code (highest priority)</li>
+          <li><strong>CLARIFICATION_NEEDED</strong> &mdash; ambiguous, needs follow-up</li>
+          <li><strong>ADDRESSED_IN_PRD</strong> &mdash; PRD already covers this</li>
+          <li><strong>OUT_OF_SCOPE</strong> &mdash; valid but outside feature boundary</li>
+          <li><strong>NO_ACTION</strong> &mdash; resolved in discussion</li>
+        </ul>
+      </div>
+      <p>If the transcript is not yet available (still processing), the skill will pause and tell you. Wait for Teams to finish processing.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Step 5 -->
+<div class="step-card" id="step-5">
+  <div class="step-header">
+    <div class="step-number">5</div>
+    <div class="step-title">Answer Follow-up Questions</div>
+    <div class="step-time">~10 min</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You + team answer in real time
+      </div>
+      <p>The agent presents follow-up questions for concerns categorised as <strong>CLARIFICATION_NEEDED</strong> and <strong>CODEBASE_CONFLICT</strong>. One question per concern, one at a time.</p>
+      <p>Answer in Cursor chat. Relay answers from the team who are still on the Teams call. The agent re-categorises each concern based on your answer.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Step 6 -->
+<div class="step-card" id="step-6">
+  <div class="step-header">
+    <div class="step-number">6</div>
+    <div class="step-title">Confirm PRD Updates</div>
+    <div class="step-time">~5 min</div>
+  </div>
+  <div class="step-body">
+    <div class="action agent">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        kickoff-dev-review proposes updates
+      </div>
+      <p>For each confirmed <strong>PRD_UPDATE</strong> concern, the agent drafts a specific change to the PRD and presents it for your confirmation. Updates are presented <strong>one at a time</strong>, not batched.</p>
+    </div>
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You confirm each update
+      </div>
+      <p>Review each proposed PRD change. Approve or reject individually. Only approved changes are applied to <code>.sage/prds/[FEATURE_ID]/prd.md</code>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Step 7 -->
+<div class="step-card" id="step-7">
+  <div class="step-header">
+    <div class="step-number">7</div>
+    <div class="step-title">Completeness Re-check</div>
+    <div class="step-time">~1 min (automated)</div>
+  </div>
+  <div class="step-body">
+    <div class="action agent">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        prd-completeness-check runs silently
+      </div>
+      <p>After all PRD updates are applied, <strong>kickoff-dev-review</strong> automatically re-runs <strong>prd-completeness-check</strong> against the updated PRD. This happens without you typing anything.</p>
+    </div>
+    <div class="action gate">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a2 2 0 012 2v1h1a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h1V3a2 2 0 012-2zm0 1a1 1 0 00-1 1v1h2V3a1 1 0 00-1-1z"/></svg>
+        Completeness gate
+      </div>
+      <p><strong>Score must remain &ge; 80/100.</strong> If PRD updates introduced a new gap that drops the score, the agent surfaces the finding immediately. You must resolve it before moving to phase breakdown. The phase-splitter will not run against a below-threshold PRD.</p>
+    </div>
+    <div class="outputs">
+      <div class="outputs-title">Outputs from Dev Review</div>
+      <ul>
+        <li><code>[SESSION_ROOT]/kickoff-dev-review-log.md</code> &mdash; all concerns with categories and resolutions</li>
+        <li><code>[SESSION_ROOT]/phase-splitter-briefing.md</code> &mdash; phase implications, codebase conflicts, PRD updates, updated completeness score</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ PHASE 2: BREAKDOWN ═══════════════════ -->
+<div class="phase-divider">Step 2 &mdash; Phase Breakdown &middot; 30 min</div>
+
+<!-- Step 8 -->
+<div class="step-card" id="step-8">
+  <div class="step-header">
+    <div class="step-number">8</div>
+    <div class="step-title">Invoke phase-splitter</div>
+    <div class="step-time">~5 min (agent processing)</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You type this in Cursor chat
+      </div>
+      <div class="prompt-block">
+        <span class="prompt-label">Prompt</span>
+        <button class="copy-btn" onclick="copyPrompt(this)">Copy</button>
+        Run the phase-splitter skill for [FEATURE_ID]
+      </div>
+    </div>
+    <div class="action agent">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        phase-splitter skill runs &mdash; wait and watch
+      </div>
+      <p>The skill reads the PRD, component spec, and the phase-splitter briefing produced in Step 7. It then scans the codebase to identify every file this feature will touch.</p>
+      <p>It generates candidate phases by applying splitting heuristics. Each phase must have:</p>
+      <div class="outputs">
+        <div class="outputs-title">Phase requirements</div>
+        <ul>
+          <li>Single objective &mdash; one verb phrase describes the entire phase</li>
+          <li>Exclusive file ownership &mdash; no file appears in two phases</li>
+          <li>At least one independently runnable test</li>
+          <li>Effort in the 2&ndash;8 hour range</li>
+        </ul>
+      </div>
+      <p>Each phase is scored for independence (0&ndash;100). Phases below 60 are flagged. A dependency map is built and each phase is assigned a type:</p>
+      <div class="outputs">
+        <div class="outputs-title">Phase types</div>
+        <ul>
+          <li><strong>Foundation</strong> &mdash; no upstream deps, has downstream consumers. Merges first.</li>
+          <li><strong>Independent</strong> &mdash; no upstream or downstream deps. Starts in parallel with Foundation.</li>
+          <li><strong>Dependent</strong> &mdash; has upstream deps. S1&ndash;S4 run in parallel; S5 build is blocked until Foundation is verified.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Step 9 -->
+<div class="step-card" id="step-9">
+  <div class="step-header">
+    <div class="step-number">9</div>
+    <div class="step-title">Review Phase Breakdown with Team</div>
+    <div class="step-time">~15 min</div>
+  </div>
+  <div class="step-body">
+    <div class="action agent">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        phase-splitter presents the breakdown
+      </div>
+      <p>The agent walks through the proposed phases one by one:</p>
+      <div class="outputs">
+        <ul>
+          <li>Phase count and overall structure</li>
+          <li>Tier structure (Foundation / Independent / Dependent)</li>
+          <li>Independence flags for any phase scoring below 60</li>
+          <li>Effort ranges per phase (low&ndash;high hours)</li>
+          <li>Developer profile recommendations (UI-heavy, Backend-heavy, Database, Full-stack, Any)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        Team discusses adjustments
+      </div>
+      <p>Propose any changes &mdash; merging phases, splitting further, reassigning types. For each proposed adjustment, the agent checks for file ownership conflicts, independence score impact, and tier impact.</p>
+      <p><strong>Developer profiles only</strong> &mdash; no named developers are assigned at this point. Assignment happens during the planning cycle.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Step 10 -->
+<div class="step-card" id="step-10">
+  <div class="step-header">
+    <div class="step-number">10</div>
+    <div class="step-title">Confirm the Breakdown</div>
+    <div class="step-time">~2 min</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        You confirm
+      </div>
+      <p>When the team is satisfied, confirm the breakdown in chat. The agent will not finalise until you explicitly confirm.</p>
+      <div class="prompt-block">
+        <span class="prompt-label">Prompt</span>
+        <button class="copy-btn" onclick="copyPrompt(this)">Copy</button>
+        Confirmed. Finalise the phase breakdown.
+      </div>
+    </div>
+    <div class="action gate">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a2 2 0 012 2v1h1a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h1V3a2 2 0 012-2zm0 1a1 1 0 00-1 1v1h2V3a1 1 0 00-1-1z"/></svg>
+        Path validation gate
+      </div>
+      <p>All <code>scopedFiles</code> and <code>requiredReferences</code> in the manifest are validated against the codebase. Files must resolve to <strong>EXISTS</strong> or <strong>NEW</strong> (to be created). Any path resolving to <strong>MISSING</strong> blocks manifest finalisation until you correct or declare it NEW.</p>
+    </div>
+    <div class="outputs">
+      <div class="outputs-title">Output</div>
+      <ul>
+        <li><code>[SESSION_ROOT]/phase-breakdown.md</code> &mdash; final agreed phases with scores, types, effort, and profiles</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ PHASE 3: MANIFEST ═══════════════════ -->
+<div class="phase-divider">Step 3 &mdash; Manifest Generation &middot; 10 min</div>
+
+<!-- Step 11 -->
+<div class="step-card" id="step-11">
+  <div class="step-header">
+    <div class="step-number">11</div>
+    <div class="step-title">Session Manifest, Linear Issues, and Worktrees</div>
+    <div class="step-time">~10 min (automated)</div>
+  </div>
+  <div class="step-body">
+    <div class="action agent">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        phase-splitter + orchestrator &mdash; fully automated
+      </div>
+      <p>Once you confirmed in Step 10, the following happens automatically. You are watching, not acting.</p>
+    </div>
+
+    <div class="outputs" style="margin-bottom:12px">
+      <div class="outputs-title">1. Session manifest created</div>
+      <ul>
+        <li>Written to <code>.sage/sessions/[session-id]/session-manifest.md</code></li>
+        <li>Session ID = Linear feature issue ID (e.g. <code>PROF-7</code>)</li>
+        <li>Active session pointer written to <code>.sage/sessions/active-session.txt</code></li>
+        <li>Each phase starts at: <code>currentStep: "dev-interview"</code>, <code>buildMode: "autonomous"</code>, <code>validationConfirmed: false</code>, all step statuses: <code>"pending"</code></li>
+      </ul>
+    </div>
+
+    <div class="outputs" style="margin-bottom:12px">
+      <div class="outputs-title">2. Linear phase issues created (via Linear MCP)</div>
+      <ul>
+        <li>One issue per phase</li>
+        <li>Title format: <code>[Feature title] -- Phase N: [objective]</code></li>
+        <li>Status: <strong>Pending Approval</strong></li>
+        <li>Upstream dependencies linked between phase issues</li>
+        <li>Mode label applied: <code>mode:sprint</code></li>
+      </ul>
+    </div>
+
+    <div class="outputs" style="margin-bottom:12px">
+      <div class="outputs-title">3. Git worktrees created (Sprint mode only)</div>
+      <ul>
+        <li>One worktree per phase at <code>C:\Sage\worktrees\[FEATURE_ID]\phase-[N]\</code></li>
+        <li>Branch naming: <code>LIN-[phase-issue-id]-phase-[N]-[kebab-objective]</code></li>
+      </ul>
+    </div>
+
+    <div class="outputs">
+      <div class="outputs-title">4. TDD specifications generated</div>
+      <ul>
+        <li>One TDD spec per phase written to <code>[SESSION_ROOT]/phase-[N]/phase-[N]-tdd-spec.md</code></li>
+        <li>Every scenario mapped from PRD acceptance criteria in Given/When/Then format</li>
+        <li>Generated by the <strong>orchestrator</strong> agent</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ PHASE 4: APPROVAL ═══════════════════ -->
+<div class="phase-divider">After kick-off &mdash; Phase Approval</div>
+
+<!-- Step 12 -->
+<div class="step-card" id="step-12">
+  <div class="step-header">
+    <div class="step-number">12</div>
+    <div class="step-title">Approve Phases in Linear</div>
+    <div class="step-time">Async &mdash; PM + Lead Dev</div>
+  </div>
+  <div class="step-body">
+    <div class="action human">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zM6.5 11.5l-3-3 1-1L6.5 9.5l5-5 1 1-6 6z"/></svg>
+        PM + Lead Dev do this in Linear
+      </div>
+      <p>Every phase issue is now at <strong>Pending Approval</strong> in Linear. Both the Product Manager and Lead Dev review each phase&rsquo;s scope, scoped files, effort estimate, and dependency mapping.</p>
+      <p>When satisfied, set each phase issue status from <strong>Pending Approval</strong> &rarr; <strong>Approved</strong> in Linear.</p>
+    </div>
+
+    <div class="action gate">
+      <div class="action-label">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a2 2 0 012 2v1h1a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h1V3a2 2 0 012-2zm0 1a1 1 0 00-1 1v1h2V3a1 1 0 00-1-1z"/></svg>
+        phase-approval-gate &mdash; enforced by hook
+      </div>
+      <p>The <code>phase-approval-gate</code> hook blocks the dev-interview agent (S1) from starting on any phase until that phase&rsquo;s Linear issue status is <strong>Approved</strong>.</p>
+      <p><strong>Hook ID:</strong> <code>phase-approval-gate</code><br>
+      <strong>Event:</strong> <code>preToolUse</code><br>
+      <strong>Script:</strong> <code>.cursor/hooks/scripts/phase_approval_gate.py</code></p>
+      <p>If a developer tries to invoke the dev-interview before approval, the hook blocks with: <em>&ldquo;The Product Manager and Lead Dev must approve this phase issue in Linear before build work can begin.&rdquo;</em></p>
+    </div>
+
+    <div class="decision-box">
+      <h4>After approval &mdash; developers begin S1</h4>
+      <p style="font-size:14px; color:var(--text-secondary); margin-bottom:10px;">Each developer opens their phase worktree in Cursor and invokes the dev-interview agent. During S1, the developer will choose a <strong>build mode</strong>:</p>
+      <div class="decision-grid">
+        <div class="decision-option">
+          <div class="opt-name">Autonomous</div>
+          <div class="opt-desc">The agent builds the full phase in one continuous pass. Fewer interruptions. You review at the end. This is the default mode.</div>
+        </div>
+        <div class="decision-option">
+          <div class="opt-name">Checkpoint</div>
+          <div class="opt-desc">The build is divided into batches. After each batch, the agent pauses and writes a review document. You must confirm each batch before the next can start. More oversight, more frequent review points.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ Hooks reference ═══════════════════ -->
+<div class="phase-divider">Reference &mdash; Hooks Active During Kick-off</div>
+
+<div class="step-card">
+  <div class="step-header">
+    <div class="step-number pre" style="font-size:11px;">REF</div>
+    <div class="step-title" style="font-size:16px;">Hook &amp; Gate Summary</div>
+  </div>
+  <div class="step-body">
+    <div class="outputs" style="font-size:13px;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-default); text-align:left;">
+            <th style="padding:6px 8px; color:var(--text-muted); font-weight:600; font-size:11px; letter-spacing:0.5px;">HOOK</th>
+            <th style="padding:6px 8px; color:var(--text-muted); font-weight:600; font-size:11px; letter-spacing:0.5px;">WHEN</th>
+            <th style="padding:6px 8px; color:var(--text-muted); font-weight:600; font-size:11px; letter-spacing:0.5px;">WHAT IT CHECKS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border-default);">
+            <td style="padding:6px 8px;"><code style="font-size:12px;">telemetry-logger</code></td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">Always</td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">Logs every hook event to <code style="font-size:11px;">workflow-telemetry.jsonl</code>. Never blocks.</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-default);">
+            <td style="padding:6px 8px;"><code style="font-size:12px;">phase-approval-gate</code></td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">S1 entry</td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">Linear phase issue status = Approved. Blocks dev-interview if not approved.</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-default);">
+            <td style="padding:6px 8px;"><code style="font-size:12px;">plan-mode-enforcer</code></td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">During S1</td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">Blocks all file-write tool calls while <code style="font-size:11px;">currentStep = "dev-interview"</code>. Enforces Plan (read-only) mode.</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-default);">
+            <td style="padding:6px 8px;"><code style="font-size:12px;">protected-manifest-fields-gate</code></td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">Always</td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">Guards <code style="font-size:11px;">validationConfirmed</code>, <code style="font-size:11px;">batches[*].confirmed</code>, <code style="font-size:11px;">foundationVerified</code>. Only humans can set these.</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 8px;"><code style="font-size:12px;">manifest-step-gate</code></td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">S2&ndash;S8</td>
+            <td style="padding:6px 8px; color:var(--text-secondary);">Enforces sequential step progression. Each step requires prior step&rsquo;s artifact to exist.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+</main>
+
+<footer>
+  <div class="container">
+    SAGE Framework v1.0.0 &middot; Sprint kick-off: 75 minutes total &middot; Guide verified against repository
+  </div>
+</footer>
+
+<script>
+function copyPrompt(btn) {
+  const block = btn.parentElement;
+  const text = block.textContent
+    .replace('Copy', '')
+    .replace(block.querySelector('.prompt-label')?.textContent || '', '')
+    .trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+// Intersection observer for progress tracker highlighting
+document.addEventListener('DOMContentLoaded', () => {
+  const steps = document.querySelectorAll('[id^="step-"]');
+  const dots = document.querySelectorAll('.progress-step .dot');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        const idx = parseInt(id.replace('step-', ''));
+        dots.forEach((dot, i) => {
+          if (i < idx) {
+            dot.style.borderColor = 'var(--step-done)';
+            dot.style.color = 'var(--step-done)';
+            dot.style.background = 'rgba(88,166,255,0.15)';
+          } else if (i === idx) {
+            dot.style.borderColor = 'var(--step-current)';
+            dot.style.color = 'var(--step-current)';
+            dot.style.background = 'rgba(230,237,243,0.1)';
+          } else {
+            dot.style.borderColor = 'var(--step-pending)';
+            dot.style.color = 'var(--step-pending)';
+            dot.style.background = 'transparent';
+          }
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  steps.forEach(s => observer.observe(s));
+});
+</script>
+
+</body>
+</html>

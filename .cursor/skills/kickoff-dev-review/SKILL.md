@@ -193,6 +193,30 @@ Foundation type."]
 
 ---
 
+## Telemetry
+
+Emit two telemetry events per dev review using `prd_telemetry_append.py`.
+All events use `workflowKind: "kickoff_dev_review"`.
+
+**At the start of Step 1** (after fetching the transcript, before
+processing), emit:
+
+```
+python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"kickoff_dev_review_started","workflowKind":"kickoff_dev_review","linearIssueId":"[FEATURE_ID]","transcriptDurationSeconds":[duration from transcript metadata or null],"participantCount":[N]}'
+```
+
+**At the end of Step 7** (after writing all outputs), emit:
+
+```
+python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"kickoff_dev_review_completed","workflowKind":"kickoff_dev_review","linearIssueId":"[FEATURE_ID]","concernCount":[total],"concernsByCategory":{"PRD_UPDATE":[N],"CODEBASE_CONFLICT":[N],"PHASE_IMPLICATION":[N],"CLARIFICATION_NEEDED":[N],"ADDRESSED_IN_PRD":[N],"OUT_OF_SCOPE":[N],"NO_ACTION":[N]},"prdUpdatesApplied":[N],"reScoreResult":{"score":[N],"passed":[true|false]}}'
+```
+
+Both events are appended to the PRD telemetry file configured in
+`workflow-config.json` (default: `.sage/prd-interview-telemetry.jsonl`).
+Failures are silent and do not affect the dev review workflow.
+
+---
+
 ## Constraints
 
 - Fetch transcript via Microsoft 365 MCP -- do not ask the developer

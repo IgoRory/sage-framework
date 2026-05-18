@@ -158,7 +158,7 @@
     "completenessThreshold": 80,
     "thresholdAutoCalibrated": true,
     "prdDir": ".sage/prds",
-    "requiredInterviewBranch": "dev-main",
+    "requiredInterviewBranch": "develop",
     "remoteName": "origin",
     "telemetryFile": ".sage/prd-interview-telemetry.jsonl"
   },
@@ -224,6 +224,12 @@
       "agent-testing":       "phase-{N}-test-results.md",
       "completion-report":   "phase-{N}-completion-report.md"
     }
+  },
+
+  "skillUpdate": {
+    "pollIntervalSeconds": 60,
+    "triggerDir": ".skill-update-triggers",
+    "pollCursorFile": ".sage/skill-update-poll-cursor.txt"
   },
 
   "featureFlags": {

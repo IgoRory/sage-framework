@@ -50,7 +50,12 @@ def main():
         if not session_id:
             sys.exit(0)
 
-        session_root = repo_root / ".sage" / "sessions" / session_id
+        if "/" in session_id or "\\" in session_id or ".." in session_id:
+            sys.exit(0)
+
+        session_root = (repo_root / ".sage" / "sessions" / session_id).resolve()
+        if not str(session_root).startswith(str(repo_root.resolve()) + os.sep):
+            sys.exit(0)
         if not session_root.exists():
             sys.exit(0)
 

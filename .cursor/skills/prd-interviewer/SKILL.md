@@ -94,7 +94,7 @@ Sections skipped because conditions are false still omit P2/P3/P6 — do not emi
 
 **Configuration:** Read **`.sage/workflow-config.json`** at the repo root. Use:
 
-- `prd.requiredInterviewBranch` — branch that must be checked out (e.g. `dev-main`)
+- `prd.requiredInterviewBranch` — branch that must be checked out (e.g. `develop`)
 - `prd.remoteName` — remote for fetch/compare (e.g. `origin`)
 - `prd.telemetryFile` — JSONL path (default `.sage/prd-interview-telemetry.jsonl`)
 

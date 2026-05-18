@@ -24,6 +24,7 @@ that require human attention.
 | Input | Source | Required |
 |-------|--------|----------|
 | workflow-telemetry.jsonl | [SESSION_ROOT]/ | Yes |
+| prd-interview-telemetry.jsonl | `.sage/prd-interview-telemetry.jsonl` (path from `workflow-config.json`) | Yes |
 | Phase artifacts (S1-S8) | [SESSION_ROOT]/phase-N/ | Yes |
 | Session manifest | [SESSION_ROOT]/session-manifest.md | Yes |
 | Prior performance reports | [SESSION_ROOT]/performance-report-cycle-*.md | No (for trend detection) |
@@ -33,6 +34,10 @@ that require human attention.
 ## Step 1 -- Read all inputs
 
 Read workflow-telemetry.jsonl. Parse all events for the current cycle.
+Read prd-interview-telemetry.jsonl. Filter to events matching the current
+session's `linearIssueId` (from the manifest header). Parse kickoff events
+(`workflowKind` values: `"completeness_check"`, `"kickoff_dev_review"`,
+`"phase_splitter"`).
 Read the session manifest to identify all phases in this cycle.
 For each phase, read:
 - phase-N-dev-interview-summary.md
@@ -50,16 +55,32 @@ For each phase, read:
 ### Dimension A -- Step compliance
 
 Check: all steps S1-S8 executed in correct sequence, all required artifacts
-present, no steps skipped or combined.
+present, no steps skipped or combined. Additionally check that the kickoff
+sequence and TDD spec generation completed before build phases began.
 
-OK: all steps in order, all artifacts present
+Kickoff compliance (from prd-interview-telemetry.jsonl):
+- `completeness_check_completed` event exists with `passed: true`
+- `kickoff_dev_review_completed` event exists (Sprint/Mob modes only)
+- `phase_splitter_completed` event exists with a valid `sessionId`
+
+TDD spec compliance (from workflow-telemetry.jsonl):
+- `session_created` bootstrap event exists
+- `tdd_specs_all_complete` event exists
+- `tdd_spec_generation_completed` event exists for every phase in the manifest
+- All TDD spec events have timestamps before the earliest S1 `dev-interview`
+  step timestamp in any phase
+
+OK: all steps in order, all artifacts present, kickoff and TDD spec events
+  present and correctly sequenced
 Warning: one artifact missing or one anomalous step duration (>2x estimate)
-  but no steps skipped
-Fail: any step skipped, any two steps combined, or step sequence does not
-  match manifest progression
+  but no steps skipped; OR one kickoff event missing but session was
+  created before any build work
+Fail: any step skipped, any two steps combined, step sequence does not
+  match manifest progression, OR TDD specs not generated before S1 began
 
 Solo mode exception: S1 (dev interview) is not required in Solo mode.
 Absence of the dev interview summary is not a compliance failure for Solo.
+Solo and Pair modes do not require kickoff dev review events.
 
 ### Dimension B -- Hook discipline
 

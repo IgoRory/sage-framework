@@ -107,9 +107,9 @@ def write_telemetry_event(session_root: Path, event: dict) -> None:
 
 - **Phase ID env var:** The actual implementation uses `SAGE_PHASE_ID`, not `CURSOR_PHASE`.
 - **`write_telemetry_event` signature:** The actual implementation takes 2 parameters `(session_root, event_dict)`, not 4. Telemetry writes to a session-level `workflow-telemetry.jsonl`, not per-phase files.
-- **`block` signature:** The actual implementation takes `(message, phase_id=None)` — 2 parameters. Telemetry for rejections is written separately before calling `block()`.
-- **`manifest.lock` / `fcntl` locking:** Planned but not yet implemented. See session-manifest-schema.md.
-- **`stepTimestamps`, `hookRejectionCount`, `findingSummary`:** Documented in schema but no hook currently writes these fields. Planned for a future enhancement.
+- **`block` signature:** The actual implementation takes `(message, phase_id=None)` — 2 parameters. When `phase_id` is provided, `block()` auto-increments `hookRejectionCount` in the manifest before exiting.
+- **`manifest.lock`:** Implemented using the `filelock` package (cross-platform). Acquired by `write_manifest_field()`, `write_manifest_fields()`, and `increment_rejection_count()`.
+- **`stepTimestamps`, `hookRejectionCount`:** Written by the `manifest-step-writer` hook (step transitions) and `block()` in `hooks_utils` (rejection count). `findingSummary` is documented in schema but not yet written by any hook.
 - **All gate scripts** use typed exceptions: `except NoSessionError: permit()` (fail-open) and `except SessionIntegrityError as e: block(...)` (fail-closed).
 
 ---
@@ -704,13 +704,19 @@ if __name__ == "__main__":
 
 ## Script 6: `phase_approval_gate.py`
 
-**Purpose:** Blocks phase launch (S1 dev interview) until the Linear
-phase issue for this phase is at status "Approved". Reads Linear
-via MCP. This is the gate enforced by async approvals in Phase 03.
+**Purpose:** Blocks phase launch (S1 dev interview) until the phase's
+`linearIssueStatus` in the session manifest is "Approved" (or a
+downstream status). This is a manifest-local check — it does not query
+Linear directly.
 
-**Only fires once** — when the dev-interview tool is first called.
-After S1 is marked complete in the manifest, this gate does not
-re-check Linear status.
+The phase-splitter skill updates `linearIssueStatus` to "Approved" in
+the manifest during kick-off (Step 11) after the session driver confirms
+approval. This gate acts as a safety net: if the manifest was not updated
+(e.g. the session was interrupted before approval), it blocks S1 entry.
+
+**Only fires at S1 entry** — when `currentStep` is `dev-interview`.
+After the step advances past `dev-interview`, this gate permits all
+subsequent tool calls unconditionally.
 
 **Note on mode:** The workflow mode (mob, sprint, pair, solo) is applied
 to the Linear phase issue as a label from the `SAGE Workflow Mode` label
@@ -723,30 +729,18 @@ session manifest `mode` field — not from Linear.
 
 import sys
 import json
-import subprocess
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit
+    read_manifest, block, permit, write_telemetry_event,
+    NoSessionError, SessionIntegrityError
 )
 
-def get_linear_issue_status(issue_id: str) -> str:
-    """
-    Query Linear for the current status of a phase issue.
-    Uses the Linear MCP via a subprocess call to the Cursor MCP bridge.
-    Returns the status string or raises on failure.
-    """
-    # The Linear MCP is called via the Cursor MCP bridge CLI
-    # which is available as a local command in the Cursor environment
-    result = subprocess.run(
-        ["cursor-mcp", "linear", "get-issue-status", "--id", issue_id],
-        capture_output=True, text=True, timeout=10
-    )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"Failed to query Linear issue {issue_id}: {result.stderr}"
-        )
-    response = json.loads(result.stdout)
-    return response.get("status", "unknown")
+APPROVED_STATUSES = {"Approved", "Foundation Verified", "In Progress", "Build Complete", "Done"}
+
+INTERVIEW_INITIATING_TOOLS = {
+    "read_file", "list_directory", "search_files",
+    "write_file", "create_file", "edit_file"
+}
 
 
 def main():
@@ -755,7 +749,14 @@ def main():
         session_root = get_session_root(repo_root)
         phase_id = get_phase_id()
         manifest = read_manifest(session_root)
-    except RuntimeError:
+    except NoSessionError:
+        permit()
+        return
+    except SessionIntegrityError as e:
+        block(message=f"SESSION INTEGRITY ERROR — {e}")
+        return
+
+    if not phase_id:
         permit()
         return
 
@@ -765,76 +766,36 @@ def main():
         permit()
         return
 
-    tool_name = event_input.get("tool_name", "").lower()
-    if "dev_interview" not in tool_name and "dev-interview" not in tool_name:
-        permit()
-        return
-
-    # If S1 is already complete, no need to re-check
     phase_data = manifest.get("phases", {}).get(phase_id, {})
-    step_status = phase_data.get("stepStatus", {})
-    if step_status.get("dev-interview") == "complete":
+    runtime = phase_data.get("runtime", {})
+    current_step = runtime.get("currentStep", "")
+
+    if current_step != "dev-interview":
         permit()
         return
 
-    # Get Linear issue ID from manifest
-    linear_issue_id = phase_data.get("linearIssueId")
-    if not linear_issue_id:
-        block(
-            message=(
-                f"PHASE LAUNCH BLOCKED — No Linear issue ID\n"
-                f"Phase {phase_id} has no linearIssueId in the session manifest.\n"
-                f"Ensure Linear issues were created at kick-off and the manifest "
-                f"was updated with the issue IDs."
-            ),
-            telemetry_data={
-                "step": "dev-interview",
-                "rejection_reason": "missing_linear_issue_id"
-            },
-            session_root=session_root,
-            phase_id=phase_id
-        )
-
-    try:
-        status = get_linear_issue_status(linear_issue_id)
-    except Exception as e:
-        block(
-            message=(
-                f"PHASE LAUNCH BLOCKED — Linear status check failed\n"
-                f"Could not verify approval status for issue {linear_issue_id}.\n"
-                f"Error: {e}\n\n"
-                f"Resolve the Linear MCP connectivity issue and retry."
-            ),
-            telemetry_data={
-                "step": "dev-interview",
-                "rejection_reason": "linear_check_failed",
-                "linear_issue_id": linear_issue_id
-            },
-            session_root=session_root,
-            phase_id=phase_id
-        )
-
-    if status.lower() == "approved":
+    linear_status = runtime.get("linearIssueStatus", "Pending Approval")
+    if linear_status in APPROVED_STATUSES:
         permit()
         return
+
+    write_telemetry_event(session_root, {
+        "event": "hook_rejection",
+        "hook": "phase-approval-gate",
+        "phaseId": phase_id,
+        "linearIssueStatus": linear_status,
+        "reason": "Phase not yet approved in Linear"
+    })
 
     block(
         message=(
-            f"PHASE LAUNCH BLOCKED — Awaiting approval\n"
-            f"Linear issue {linear_issue_id} is at status '{status}'.\n"
-            f"Phase {phase_id} cannot begin until status is 'Approved'.\n\n"
-            f"the Product Manager and Lead Dev must approve this phase in Linear before the "
-            f"build sprint can start.\n"
-            f"Current status: {status}\n"
-            f"Required status: Approved"
+            f"APPROVAL GATE — Phase {phase_id} has not been approved.\n\n"
+            f"Current Linear status: {linear_status}\n"
+            f"Required status: Approved\n\n"
+            f"The Product Manager and Lead Dev must approve this phase issue in Linear "
+            f"before build work can begin. Once approved, update linearIssueStatus "
+            f"in the session manifest to 'Approved'."
         ),
-        telemetry_data={
-            "step": "dev-interview",
-            "rejection_reason": "phase_not_approved",
-            "linear_issue_id": linear_issue_id,
-            "linear_status": status
-        },
-        session_root=session_root,
         phase_id=phase_id
     )
 
@@ -1414,6 +1375,76 @@ if __name__ == "__main__":
 
 ---
 
+## Script 11: `manifest_step_writer.py`
+
+**Purpose:** Non-blocking hook that detects phase step artifact writes and
+updates `stepStatus`, `stepTimestamps`, and `currentStep` in the session
+manifest in real time. This provides cross-phase visibility in Sprint mode —
+all worktrees share the same `.sage/` directory, so manifest updates are
+instantly visible without git operations.
+
+**Events:** `afterFileEdit`
+**Blocking:** No
+
+**Detection logic:** When a file is written whose name matches
+`phase-N-[artifact-suffix]`, the hook maps the suffix to a step and
+updates the manifest:
+
+| Artifact suffix | Step completed | Auto-advances to |
+|---|---|---|
+| `dev-interview-summary.md` | dev-interview | implementation-plan |
+| `implementation-plan.md` | implementation-plan | traceability-review |
+| `traceability-review.md` | traceability-review | plan-validation |
+| `plan-preview.canvas.tsx` / `plan-preview.md` / `calculation-proof.md` | plan-validation | (no auto-advance — requires `validationConfirmed`) |
+| `red-results.md` | (sub-step only) | Sets `buildSubStep = "green-refactor"` |
+| `tdd-results.md` | build | code-review |
+| `code-review.md` | code-review | security-review |
+| `security-review.md` | security-review | agent-testing |
+| `test-results.md` | agent-testing | completion-report |
+| `completion-report.md` | completion-report | complete (sets `completedAt`) |
+
+For each transition, the hook writes (via `write_manifest_fields()`):
+- `stepStatus.[completed_step] = "complete"`
+- `stepTimestamps.[completed_step].completedAt = now`
+- `currentStep = [next_step]`
+- `stepStatus.[next_step] = "in-progress"`
+- `stepTimestamps.[next_step].startedAt = now`
+
+Uses `write_manifest_fields()` from `hooks_utils.py` for locked batch
+manifest updates. Silently no-ops on any failure.
+
+---
+
+## Shared utilities additions
+
+The following functions were added to `hooks_utils.py` to support
+manifest writing:
+
+### `write_manifest_field(session_root, field_path, value)`
+
+Locked read-modify-write of a single field using dot notation
+(e.g. `"phases.1.runtime.currentStep"`). Uses `filelock` package.
+Updates `header.lastUpdatedAt`. Silently no-ops on failure.
+
+### `write_manifest_fields(session_root, updates)`
+
+Locked batch update of multiple fields in a single lock acquisition.
+`updates` is `{field_path: value}`. More efficient than multiple
+single-field calls.
+
+### `increment_rejection_count(session_root, phase_id)`
+
+Increments `phases[phase_id].runtime.hookRejectionCount` by 1.
+Called automatically by `block()` when `phase_id` is provided.
+
+### `_replace_manifest_json(manifest_path, manifest)`
+
+Internal helper. Replaces the ````json ... ```` block inside
+`session-manifest.md` with the serialised dict. Preserves all
+content outside the block.
+
+---
+
 ## Directory structure
 
 ```
@@ -1492,6 +1523,7 @@ until this field is set.
         ├── completion_report_stop_gate.py    ← S8 stop hook (hardest gate)
         ├── tdd_results_gate.py               ← S6 TDD results gate (anchored status parsing)
         ├── code_review_gate.py               ← S7 code review gate (anchored finding parsing)
+        ├── manifest_step_writer.py           ← step transition writer (non-blocking, real-time manifest updates)
         └── skill_update_trigger_watcher.py   ← skill update watcher (notification-only, no git ops)
 
 .sage/
@@ -1600,14 +1632,66 @@ writing this block correctly.
 
 ---
 
-## PRD interview telemetry (optional helper)
+## PRD and kickoff telemetry (optional helper)
 
-PRD lifecycle lines are **not** emitted by `telemetry_logger.py`. They go to the append-only file configured under **`prd.telemetryFile`** in `.sage/workflow-config.json` (default: `.sage/prd-interview-telemetry.jsonl`).
+PRD and kickoff lifecycle lines are **not** emitted by `telemetry_logger.py`. They go to the append-only file configured under **`prd.telemetryFile`** in `.sage/workflow-config.json` (default: `.sage/prd-interview-telemetry.jsonl`).
 
 **Script:** `prd_telemetry_append.py` (same `hooks-spec/scripts/` catalogue as other hook utilities; product repos mirror into `.cursor/hooks/scripts/`).
 
 **Behaviour:** Resolve repo root, read `prd.telemetryFile`, append one minified JSON line. Adds `timestamp` if missing. **Never raises** — failures exit 0 (same spirit as `telemetry_logger.py`).
 
-**Invocation:** `python prd_telemetry_append.py '<json-object>'` or pipe JSON on stdin. Used by **`prd-interviewer`** instructions and optionally by agents manually.
+**Invocation:** `python prd_telemetry_append.py '<json-object>'` or pipe JSON on stdin. Used by **`prd-interviewer`**, **`prd-completeness-check`**, **`kickoff-dev-review`**, and **`phase-splitter`** skill instructions.
+
+### Event catalogue
+
+All events include `timestamp`, `event`, `workflowKind`, and `linearIssueId`.
+
+**PRD interview events** (`workflowKind: "prd_interview"`):
+
+| Event | Emitted by | Key fields |
+|---|---|---|
+| `prd_preflight` | prd-interviewer | `preflightOutcome`, `override`, `overrideReason` |
+| `prd_investigation_manifest` | prd-interviewer | Investigation details (internal) |
+| `prd_complexity_classified` | prd-interviewer | `tier`, `expectedDuration` |
+| `prd_phase_started` | prd-interviewer | `phaseId` (`P1`–`P9`), `prdRunId` |
+| `prd_phase_completed` | prd-interviewer | `phaseId`, `prdRunId` |
+| `prd_interview_completed` | prd-interviewer | `prdRunId`, `parkedCount` |
+
+**Completeness check events** (`workflowKind: "completeness_check"`):
+
+| Event | Emitted by | Key fields |
+|---|---|---|
+| `completeness_check_started` | prd-completeness-check | `prdRunId`, `prdPath` |
+| `completeness_check_completed` | prd-completeness-check | `prdRunId`, `score`, `passThreshold`, `passed`, `dimensionScores` (`D1`–`D6`), `findingCount`, `linearStatusSet` |
+
+**Kickoff dev review events** (`workflowKind: "kickoff_dev_review"`):
+
+| Event | Emitted by | Key fields |
+|---|---|---|
+| `kickoff_dev_review_started` | kickoff-dev-review | `transcriptDurationSeconds`, `participantCount` |
+| `kickoff_dev_review_completed` | kickoff-dev-review | `concernCount`, `concernsByCategory`, `prdUpdatesApplied`, `reScoreResult` |
+
+**Phase splitter events** (`workflowKind: "phase_splitter"`):
+
+| Event | Emitted by | Key fields |
+|---|---|---|
+| `phase_splitter_started` | phase-splitter | `mode` |
+| `phase_splitter_phases_proposed` | phase-splitter | `phaseCount`, `phases` (array) |
+| `phase_splitter_completed` | phase-splitter | `sessionId`, `phaseCount`, `manifestPath`, `worktreesCreated`, `linearIssuesCreated` |
+
+### Workflow telemetry bootstrap
+
+The phase-splitter also writes a `session_created` event directly to `[SESSION_ROOT]/workflow-telemetry.jsonl` after creating the session manifest and `active-session.txt`. This bootstraps the file so the telemetry-logger hook and the orchestrator's TDD spec generation telemetry have a target from their first tool call.
+
+### TDD spec generation events (workflow-telemetry.jsonl)
+
+These are written by the orchestrator agent directly to `[SESSION_ROOT]/workflow-telemetry.jsonl` using `hooks_utils.write_telemetry_event()`:
+
+| Event | Emitted by | Key fields |
+|---|---|---|
+| `session_created` | phase-splitter | `sessionId`, `featureId`, `mode`, `phaseCount` |
+| `tdd_spec_generation_started` | orchestrator | `sessionId`, `phaseId`, `phaseLane` |
+| `tdd_spec_generation_completed` | orchestrator | `sessionId`, `phaseId`, `phaseLane`, `scenarioCount`, `tddSpecPath` |
+| `tdd_specs_all_complete` | orchestrator | `sessionId`, `phaseCount`, `totalScenarioCount` |
 
 See also `reference-docs/prd-interview-runbook.md` in sage-framework.

@@ -80,6 +80,8 @@
 │   │   │       ├── SKILL.md
 │   │   │       └── references/
 │   │   │           └── notion-metrics-template.md
+│   │   ├── session-status/
+│   │   │   └── SKILL.md
 │   │   ├── session-performance-evaluator/
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
@@ -100,7 +102,7 @@
 │   ├── workflow-config.json                   ← policy: modes, linear, telemetry, phases, featureFlags, intel
 │   ├── current-phase.txt
 │   ├── skill-update-history.jsonl
-│   ├── prd-interview-telemetry.jsonl          ← append-only PRD interview telemetry
+│   ├── prd-interview-telemetry.jsonl          ← append-only PRD interview + kickoff telemetry
 │   ├── prds/                                  ← feature document store (one folder per feature)
 │   │   └── [FEATURE_ID]/                      ← e.g. PROF-7/
 │   │       ├── prd.md                         ← finalized PRD (canonical source of truth)

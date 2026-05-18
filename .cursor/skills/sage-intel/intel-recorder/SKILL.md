@@ -27,6 +27,7 @@ Sprint velocity data is never mixed with Mob or Pair data.
 | Session manifest | [SESSION_ROOT]/session-manifest.md | Yes |
 | Phase artifacts (completion reports, test results, code review) | [SESSION_ROOT]/phase-N/ | Yes |
 | workflow-telemetry.jsonl | [SESSION_ROOT]/ | Yes |
+| prd-interview-telemetry.jsonl | `.sage/prd-interview-telemetry.jsonl` (path from `workflow-config.json`) | Yes |
 | phase-{N}-tdd-results.md per phase | [SESSION_ROOT]/phase-{N}/ | Yes |
 
 ---
@@ -56,12 +57,31 @@ Sprint velocity data is never mixed with Mob or Pair data.
 | S7 test pass rate | phase-N-test-results.md | |
 | Critical findings at S6 | phase-N-code-review.md | |
 | Foundation wait time (minutes) | Telemetry | Dependent phases only: time between S4 complete and S5 start |
+| Completeness check duration (minutes) | prd-interview-telemetry.jsonl | Time between `completeness_check_started` and `completeness_check_completed` |
+| Completeness check score | prd-interview-telemetry.jsonl | `score` from `completeness_check_completed` event |
+| Dev review duration (minutes) | prd-interview-telemetry.jsonl | Time between `kickoff_dev_review_started` and `kickoff_dev_review_completed` |
+| Dev review concern count | prd-interview-telemetry.jsonl | `concernCount` from `kickoff_dev_review_completed` event |
+| Phase splitter duration (minutes) | prd-interview-telemetry.jsonl | Time between `phase_splitter_started` and `phase_splitter_completed` |
+| TDD spec generation duration (minutes) | workflow-telemetry.jsonl | Per phase: time between `tdd_spec_generation_started` and `tdd_spec_generation_completed` |
+| TDD spec total scenario count | workflow-telemetry.jsonl | `totalScenarioCount` from `tdd_specs_all_complete` event |
 
 ---
 
 ## Step 1 -- Collect metrics
 
 Read all required inputs.
+
+Read prd-interview-telemetry.jsonl and filter to events matching the
+current session's `linearIssueId`. Extract kickoff timing from
+`completeness_check_started`/`completed`, `kickoff_dev_review_started`/
+`completed`, and `phase_splitter_started`/`completed` event pairs.
+Calculate duration for each as elapsed minutes between the started and
+completed timestamps.
+
+Read workflow-telemetry.jsonl and extract TDD spec generation timing from
+`tdd_spec_generation_started`/`completed` event pairs (per phase) and
+`tdd_specs_all_complete` for the total scenario count.
+
 For each phase that reached Build Complete in this cycle, collect all
 metrics listed above.
 
@@ -69,6 +89,11 @@ For Dependent phases: calculate foundation wait time as the elapsed
 time between the S4 completion timestamp and the S5 start timestamp.
 Record separately from total actual hours (wait time is not execution
 time).
+
+Kickoff metrics are session-level (not per-phase). Record them in every
+phase record's `kickoff` block so each phase record is self-contained.
+If a kickoff event is missing (e.g., Solo mode has no dev review),
+record null for that field.
 
 ---
 
@@ -103,7 +128,16 @@ Append one record per phase to `.sage/intel/velocity-history.jsonl`
   "refactorCompletionRate": [0.00],
   "s7TestPassRate": [0.00],
   "criticalFindingsAtS6": [N],
-  "foundationWaitMinutes": [N]
+  "foundationWaitMinutes": [N],
+  "kickoff": {
+    "completenessCheckDurationMinutes": [N],
+    "completenessCheckScore": [N],
+    "devReviewDurationMinutes": [N],
+    "devReviewConcernCount": [N],
+    "phaseSplitterDurationMinutes": [N],
+    "tddSpecGenerationDurationMinutes": [N],
+    "tddSpecScenarioCount": [N]
+  }
 }
 ``````
 

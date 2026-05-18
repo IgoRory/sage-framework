@@ -22,8 +22,6 @@ deployed source of truth. The **sage-framework** repo
 | `hooks-spec/hooks.json` | `.cursor/hooks/hooks.json` |
 | `hooks-spec/scripts/*.py` | `.cursor/hooks/scripts/*.py` |
 | `hooks-spec/workflow-config.json` | `.sage/workflow-config.json` |
-| `webhook/webhook_receiver.py` | `.sage/webhook/webhook_receiver.py` |
-| `webhook/setup_webhook_receiver.ps1` | `.sage/webhook/setup_webhook_receiver.ps1` |
 
 ## Required behaviour
 

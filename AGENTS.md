@@ -50,9 +50,13 @@ monitors Foundation phase merges, triggers post-merge regression, and coordinate
 Review & Merge. In Mob mode: automatically opens Phase Chats at phase transitions
 and manages progression via gates.
 
+Phase approval and manifest generation are handled by the phase-splitter skill
+during kick-off. The session transitions directly from kick-off to build-sprint
+when the session driver confirms approval in-session — no separate async-approvals
+waiting period is required.
+
 ### What it produces
 
-- `session-manifest.md` — generated at kick-off
 - TDD specifications per phase lane — generated after kick-off
 - `phase-{N}-completion-report.md` — generated at S8 for each phase
 - Post-merge regression report
@@ -79,9 +83,14 @@ Monitors the Build Phase in Sprint mode in real time. Reads the session manifest
 and per-lane telemetry to surface lane status, bottlenecks, and merge sequencing
 on demand. Never takes action — observes and reports only.
 
+When asked for session status, reads and follows the `session-status` skill
+(`.cursor/skills/session-status/SKILL.md`) to produce a structured progress
+report with step-level checkmarks, blocked-step indicators, and next-action
+guidance.
+
 ### What it produces
 
-- Status reports on demand
+- Status reports on demand (uses `session-status` skill for structured output)
 
 ### Constraints
 

@@ -120,6 +120,14 @@
       "timeout_ms": 3000
     },
     {
+      "id": "manifest-step-writer",
+      "description": "Updates stepStatus, stepTimestamps, and currentStep in the session manifest when a phase step artifact is written. Non-blocking. Provides real-time cross-phase visibility in Sprint mode.",
+      "events": ["afterFileEdit"],
+      "script": ".cursor/hooks/scripts/manifest_step_writer.py",
+      "blocking": false,
+      "timeout_ms": 3000
+    },
+    {
       "id": "skill-update-trigger-watcher",
       "description": "Fires on afterFileEdit. Detects new trigger files in .skill-update-triggers/ from the Linear webhook receiver. Validates the trigger, logs to skill-update-history.jsonl, archives the trigger, and prints manual-apply instructions. Does NOT apply diffs or commit.",
       "events": ["afterFileEdit"],

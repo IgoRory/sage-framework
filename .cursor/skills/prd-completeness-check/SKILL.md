@@ -281,6 +281,30 @@ Still open: [list]
 
 ---
 
+## Telemetry
+
+Emit two telemetry events per assessment using `prd_telemetry_append.py`.
+All events use `workflowKind: "completeness_check"`.
+
+**At the start of Step 1** (before reading any inputs), emit:
+
+```
+python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"completeness_check_started","workflowKind":"completeness_check","linearIssueId":"[FEATURE_ID]","prdRunId":"[prdRunId from prior interview telemetry, or generate a new UUID if not available]","prdPath":".sage/prds/[FEATURE_ID]/prd.md"}'
+```
+
+**At the end of Step 4** (after writing the assessment report and updating
+Linear if applicable), emit:
+
+```
+python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"completeness_check_completed","workflowKind":"completeness_check","linearIssueId":"[FEATURE_ID]","prdRunId":"[same prdRunId as started event]","score":[total],"passThreshold":[threshold],"passed":[true|false],"dimensionScores":{"D1":[N],"D2":[N],"D3":[N],"D4":[N],"D5":[N],"D6":[N]},"findingCount":[N],"linearStatusSet":"[Ready|null]"}'
+```
+
+Both events are appended to the PRD telemetry file configured in
+`workflow-config.json` (default: `.sage/prd-interview-telemetry.jsonl`).
+Failures are silent and do not affect the assessment workflow.
+
+---
+
 ## Reference files
 
 Read references/scoring-rubric.md when you need:

@@ -9,7 +9,7 @@ Operational guide for **`prd-interviewer`**, repo preflight, PRD telemetry, and 
 1. Open the **product repository** in Cursor (the repo where the PRD-driven feature will land).
 2. Confirm **Linear** feature issue id (`LIN-####`) for this PRD.
 3. Ensure **`.sage/workflow-config.json`** contains:
-   - `prd.requiredInterviewBranch` — branch you must use during the interview (default in template: `dev-main`).
+   - `prd.requiredInterviewBranch` — branch you must use during the interview (default in template: `develop`).
    - `prd.remoteName` — usually `origin`.
    - `prd.telemetryFile` — append-only JSONL path (default: `.sage/prd-interview-telemetry.jsonl`).
 

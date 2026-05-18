@@ -30,11 +30,11 @@ claude-opus - use maximum reasoning for all coordination decisions.
 **At kick-off:**
 1. Read the PRD from `.sage/prds/[FEATURE_ID]/prd.md`
 2. Coordinate `kickoff-dev-review` skill execution (Step 1 of kick-off, ~35 min)
-3. Coordinate `phase-splitter` skill execution (Step 2, ~30 min)
-4. Generate the session manifest from the phase-splitter output (Step 3, ~10 min)
-5. Write `session-manifest.md` to the session directory
-6. Generate TDD specifications for each phase lane from the PRD acceptance criteria
-7. Write each TDD spec to its phase directory
+3. Coordinate `phase-splitter` skill execution (Step 2, ~30 min) — phase-splitter handles manifest generation, Linear issue creation, and phase approval in-session (the session driver confirms approval before the skill exits)
+4. Generate TDD specifications for each phase lane from the PRD acceptance criteria
+5. Write each TDD spec to its phase directory
+
+The session transitions directly from `kick-off` to `build-sprint` during the phase-splitter skill — there is no separate async-approvals waiting period when the approver is present at kick-off.
 
 **During build phase:**
 - Monitor Foundation phase merges
@@ -52,9 +52,8 @@ claude-opus - use maximum reasoning for all coordination decisions.
 **At kick-off:**
 1. Read the PRD from `.sage/prds/[FEATURE_ID]/prd.md`
 2. Coordinate `kickoff-dev-review` skill (PRD discussion, ~45 min)
-3. Coordinate `phase-splitter` skill (phase breakdown, ~45 min)
-4. Generate session manifest (session setup, ~30 min)
-5. Write TDD specs for each phase
+3. Coordinate `phase-splitter` skill (phase breakdown + session setup + approval, ~45 min) — phase-splitter handles manifest generation, Linear issue creation, and phase approval in-session
+4. Write TDD specs for each phase
 
 **During build phase:**
 - Automatically open Phase Chats at each phase transition - do not wait for manual instruction
@@ -162,6 +161,57 @@ The `completion-report-stop-gate` hook blocks the agent from ending its turn at 
 - Cannot set `validationConfirmed = true` in the session manifest - only the developer can
 - Cannot set `batches[N].confirmed = true` - only the developer can
 - In Mob mode: open Phase Chats automatically; do not wait for manual paste or instruction
+
+## TDD spec generation telemetry
+
+When generating TDD specifications (after the phase-splitter creates the
+session and bootstraps `workflow-telemetry.jsonl`), emit telemetry events
+directly to `[SESSION_ROOT]/workflow-telemetry.jsonl` using
+`hooks_utils.write_telemetry_event()`.
+
+**Before generating each phase's TDD spec**, emit:
+
+```python
+from hooks_utils import find_repo_root, get_session_root, write_telemetry_event
+
+repo_root = find_repo_root()
+session_root = get_session_root(repo_root)
+write_telemetry_event(session_root, {
+    "event": "tdd_spec_generation_started",
+    "sessionId": "[session ID]",
+    "phaseId": "[N]",
+    "phaseLane": "[layer from phase definition e.g. api, ui, database]"
+})
+```
+
+**After writing each phase's TDD spec**, emit:
+
+```python
+write_telemetry_event(session_root, {
+    "event": "tdd_spec_generation_completed",
+    "sessionId": "[session ID]",
+    "phaseId": "[N]",
+    "phaseLane": "[layer]",
+    "scenarioCount": [number of scenarios generated],
+    "tddSpecPath": "[SESSION_ROOT]/phase-[N]/phase-[N]-tdd-spec.md"
+})
+```
+
+**After all phase TDD specs are written**, emit a summary event:
+
+```python
+write_telemetry_event(session_root, {
+    "event": "tdd_specs_all_complete",
+    "sessionId": "[session ID]",
+    "phaseCount": [total phases],
+    "totalScenarioCount": [sum of all scenarios across all phases]
+})
+```
+
+These events go to `workflow-telemetry.jsonl` (not the PRD telemetry file)
+because the session already exists at this point. Failures are silent.
+
+---
 
 ## Domain source verification
 

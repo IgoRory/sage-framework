@@ -64,7 +64,15 @@ def get_session_root(repo_root: Path) -> Path:
         raise NoSessionError(
             "active-session.txt is empty — no active session."
         )
-    session_root = repo_root / ".sage" / "sessions" / session_id
+    if "/" in session_id or "\\" in session_id or ".." in session_id:
+        raise SessionIntegrityError(
+            f"Session ID contains path separators or traversal: '{session_id}'"
+        )
+    session_root = (repo_root / ".sage" / "sessions" / session_id).resolve()
+    if not str(session_root).startswith(str(repo_root.resolve()) + os.sep):
+        raise SessionIntegrityError(
+            f"Session root escapes repository boundary: {session_root}"
+        )
     if not session_root.exists():
         raise SessionIntegrityError(
             f"Session ID '{session_id}' found in active-session.txt but session "
@@ -156,7 +164,16 @@ def block(message: str, phase_id: str | None = None) -> None:
     """
     Exit with code 1, blocking the tool call.
     Prints the message to stderr so Cursor surfaces it to the developer.
+    When phase_id is provided, increments the phase's hookRejectionCount
+    in the manifest before exiting.
     """
+    if phase_id:
+        try:
+            repo_root = find_repo_root()
+            session_root = get_session_root(repo_root)
+            increment_rejection_count(session_root, phase_id)
+        except Exception:
+            pass  # rejection counting must never prevent the block itself
     print(message, file=sys.stderr)
     sys.exit(1)
 
@@ -166,6 +183,139 @@ def permit() -> None:
     Exit with code 0, allowing the tool call to proceed.
     """
     sys.exit(0)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Manifest writing (locked read-modify-write)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _replace_manifest_json(manifest_path: Path, manifest: dict) -> None:
+    """
+    Replace the ```json ... ``` block inside session-manifest.md with
+    the serialised manifest dict. Preserves all content outside the block.
+    """
+    content = manifest_path.read_text(encoding="utf-8")
+    new_json = json.dumps(manifest, indent=2, ensure_ascii=False)
+    updated = re.sub(
+        r"```json\s*\n.*?\n```",
+        f"```json\n{new_json}\n```",
+        content,
+        count=1,
+        flags=re.DOTALL,
+    )
+    manifest_path.write_text(updated, encoding="utf-8")
+
+
+def write_manifest_field(
+    session_root: Path, field_path: str, value
+) -> None:
+    """
+    Locked read-modify-write of a single field in the manifest JSON block.
+    field_path uses dot notation: e.g. "phases.1.runtime.stepStatus.build"
+
+    Uses the filelock package for cross-platform locking (Unix + Windows).
+    Silently no-ops on any failure — manifest writes must never block agents.
+    """
+    try:
+        from filelock import FileLock, Timeout
+
+        lock_path = session_root / "manifest.lock"
+        lock = FileLock(str(lock_path), timeout=10)
+
+        with lock:
+            manifest = read_manifest(session_root)
+
+            keys = field_path.split(".")
+            target = manifest
+            for key in keys[:-1]:
+                target = target[key]
+            target[keys[-1]] = value
+
+            if "header" in manifest:
+                manifest["header"]["lastUpdatedAt"] = (
+                    datetime.now(timezone.utc).isoformat()
+                )
+
+            manifest_path = session_root / "session-manifest.md"
+            _replace_manifest_json(manifest_path, manifest)
+
+    except ImportError:
+        pass  # filelock not installed — degrade silently
+    except Timeout:
+        pass  # could not acquire lock within 10s
+    except Exception:
+        pass  # all other failures are silent
+
+
+def write_manifest_fields(
+    session_root: Path, updates: dict[str, object]
+) -> None:
+    """
+    Locked batch update of multiple fields in a single lock acquisition.
+    updates is a dict of {field_path: value} where field_path uses dot notation.
+    More efficient than multiple write_manifest_field calls.
+    """
+    try:
+        from filelock import FileLock, Timeout
+
+        lock_path = session_root / "manifest.lock"
+        lock = FileLock(str(lock_path), timeout=10)
+
+        with lock:
+            manifest = read_manifest(session_root)
+
+            for field_path, value in updates.items():
+                keys = field_path.split(".")
+                target = manifest
+                for key in keys[:-1]:
+                    target = target[key]
+                target[keys[-1]] = value
+
+            if "header" in manifest:
+                manifest["header"]["lastUpdatedAt"] = (
+                    datetime.now(timezone.utc).isoformat()
+                )
+
+            manifest_path = session_root / "session-manifest.md"
+            _replace_manifest_json(manifest_path, manifest)
+
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+
+def increment_rejection_count(session_root: Path, phase_id: str) -> None:
+    """
+    Increment phases[phase_id].runtime.hookRejectionCount by 1.
+    Called by gate scripts before block() to track rejection frequency.
+    Silently no-ops on any failure.
+    """
+    try:
+        from filelock import FileLock, Timeout
+
+        lock_path = session_root / "manifest.lock"
+        lock = FileLock(str(lock_path), timeout=10)
+
+        with lock:
+            manifest = read_manifest(session_root)
+            phase = manifest.get("phases", {}).get(phase_id, {})
+            runtime = phase.get("runtime", {})
+            current = runtime.get("hookRejectionCount", 0)
+            runtime["hookRejectionCount"] = current + 1
+
+            if "header" in manifest:
+                manifest["header"]["lastUpdatedAt"] = (
+                    datetime.now(timezone.utc).isoformat()
+                )
+
+            manifest_path = session_root / "session-manifest.md"
+            _replace_manifest_json(manifest_path, manifest)
+
+    except ImportError:
+        pass
+    except Exception:
+        pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────

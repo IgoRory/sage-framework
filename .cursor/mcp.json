@@ -1,13 +1,10 @@
-﻿{
+{
   "mcpServers": {
     "linear": {
       "url": "https://mcp.linear.app/mcp"
     },
     "notion": {
       "url": "https://mcp.notion.com/mcp"
-    },
-    "microsoft365": {
-      "url": "https://microsoft365.mcp.claude.com/mcp"
     }
   }
 }

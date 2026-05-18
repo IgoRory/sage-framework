@@ -5,7 +5,7 @@ Event: afterFileEdit
 Blocking: False
 
 Watches the .skill-update-triggers/ directory. When a new trigger file
-appears (written by the Linear webhook receiver after an approval event),
+appears (written by the skill_update_poller.py polling script),
 this hook validates the trigger JSON, logs it to skill-update-history.jsonl
 with status pending_manual_apply, writes a telemetry event, archives the
 trigger file, and prints a manual-apply instruction to stderr.
@@ -64,7 +64,7 @@ def main():
         sys.exit(0)
 
     file_path = event_input.get("file_path", "")
-    if ".skill-update-triggers" not in file_path:
+    if not file_path:
         sys.exit(0)
 
     try:
@@ -73,6 +73,12 @@ def main():
         sys.exit(0)
 
     trigger_path = Path(file_path)
+    expected_dir = repo_root / ".skill-update-triggers"
+    try:
+        trigger_path.resolve().relative_to(expected_dir.resolve())
+    except ValueError:
+        sys.exit(0)
+
     if not trigger_path.exists() or not trigger_path.suffix == ".json":
         sys.exit(0)
 

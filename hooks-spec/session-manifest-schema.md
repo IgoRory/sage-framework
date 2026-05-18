@@ -279,14 +279,14 @@ NEW path patterns (files expected to be created during build):
 |---|---|---|
 | `header.*` | phase-splitter | Kick-off only |
 | `phases[N].definition.*` | phase-splitter | Kick-off only |
-| `phases[N].runtime.currentStep` | Hook scripts | During build sprint |
-| `phases[N].runtime.stepStatus[step]` | Hook scripts | During build sprint |
+| `phases[N].runtime.currentStep` | `manifest-step-writer` hook | On each step artifact write |
+| `phases[N].runtime.stepStatus[step]` | `manifest-step-writer` hook | On each step artifact write |
 | `phases[N].runtime.validationConfirmed` | Developer (manual) | S4 |
-| `phases[N].runtime.stepTimestamps` | Hook scripts (Planned — not yet implemented) | During build sprint |
+| `phases[N].runtime.stepTimestamps` | `manifest-step-writer` hook | On each step artifact write |
 | `phases[N].runtime.findingSummary` | Agent skills (Planned — not yet implemented) | During build sprint |
-| `phases[N].runtime.hookRejectionCount` | Hook scripts (Planned — not yet implemented) | On each rejection |
+| `phases[N].runtime.hookRejectionCount` | `block()` in hooks_utils (auto-increment) | On each gate rejection |
 | `phases[N].runtime.deferredItems` | Agent skills | During build sprint |
-| `phases[N].runtime.linearIssueStatus` | Hook scripts (afterMCPExecution) | On Linear status change |
+| `phases[N].runtime.linearIssueStatus` | phase-splitter skill (at kick-off approval confirmation) | Kick-off — on session driver confirmation |
 | `sessionState.*` | Hook scripts + orchestrator | Throughout work cycle |
 | `pathValidation.*` | phase-splitter | Kick-off only |
 | `kickoffOutputs.*` | kickoff-dev-review + phase-splitter | Kick-off only |
@@ -309,15 +309,15 @@ phase lanes corrupting the JSON.
 
 ## File lock protocol
 
-> **Status: Planned — not yet implemented.** The `manifest.lock` /
-> `fcntl` locking mechanism described below is not implemented in the
-> current `hooks_utils.py`. It is documented here as the intended
-> design for a future enhancement when concurrent manifest writes
-> become a practical concern.
+> **Status: Implemented.** The `manifest.lock` mechanism is implemented
+> in `hooks_utils.py` using the `filelock` package (cross-platform,
+> works on both Unix and Windows). The functions `write_manifest_field()`,
+> `write_manifest_fields()`, and `increment_rejection_count()` all
+> acquire this lock before writing.
 
 Since three phase lanes may attempt to write to the manifest
 simultaneously (e.g. all three phases completing within seconds
-of each other), a simple file lock is used:
+of each other), a file lock is used:
 
 ```python
 # In hooks_utils.py — manifest write with lock

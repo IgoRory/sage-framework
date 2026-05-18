@@ -1,7 +1,7 @@
 # SAGE Framework — Implementation Tracker
 
 **Codebase:** Profitability (verified clone: `C:\Users\RoryIgo\repos\cursor\Profitability`)  
-**Branch:** `dev-main` (at time of check)  
+**Branch:** `develop` (at time of check)  
 **Last verified:** 2026-05-11  
 **Source plan:** [`reference-docs/implementation-plan.md`](reference-docs/implementation-plan.md)
 
@@ -83,7 +83,7 @@
 | 3.4 | Create Violation issue workflow states: `Needs Review → Closed` | `[x]` | MANUAL | Complete — confirmed by user |
 | 3.5 | Create `SAGE Workflow Mode` label group with labels: `mode:mob`, `mode:sprint`, `mode:pair`, `mode:solo` | `[x]` | MANUAL | Complete — confirmed by user |
 | 3.6 | Configure Linear ↔ GitHub integration (auto-link commits via `LIN-[id]`, auto-link PRs, update status on merge) | `[!]` | MANUAL | Blocked — PM and Lead Dev awaiting Workspace Admin access in Linear |
-| 3.7 | Deploy Linear webhook receiver (`webhook/webhook_receiver.py`) as a Windows Scheduled Task using `webhook/setup_webhook_receiver.ps1` | `[!]` | MANUAL | Blocked — same dependency on Workspace Admin access in Linear. See [`webhook/README.md`](webhook/README.md) |
+| 3.7 | ~~Deploy Linear webhook receiver~~ — Replaced by `skill_update_poller.py` (polling approach, no webhook/ngrok required). Set `LINEAR_API_KEY` env var and run poller manually or on schedule. | `[x]` | MANUAL | Complete — webhook architecture removed in favour of polling |
 
 ---
 
@@ -119,7 +119,7 @@ Scripts **exist** in the Profitability repo; rows below track **runtime validati
 |---|---|---|---|---|
 | 5.1 | Create SAGE Intel metrics dashboard in Notion using [`sage-intel/intel-recorder/references/notion-metrics-template.md`](sage-intel/intel-recorder/) as template; add URL to `workflow-config.json` under `notionMetricsPageUrl` | `[ ]` | FAIL | Not verified — requires Notion UI |
 | 5.2 | Create Release Calendar page in Notion; add URL to `workflow-config.json` under `releaseCalendarUrl` | `[ ]` | FAIL | Not verified |
-| 5.3 | Verify SAGE Hone pipeline: `session-performance-evaluator` runs after test cycle, `skill-effectiveness-evaluator` configured with correct cycle counter, webhook receiver running and receiving Linear approval events | `[ ]` | FAIL | Depends on Phase 3.7 (webhook, blocked) |
+| 5.3 | Verify SAGE Hone pipeline: `session-performance-evaluator` runs after test cycle, `skill-effectiveness-evaluator` configured with correct cycle counter, polling script detects Linear approval events | `[ ]` | FAIL | Depends on Phase 3.7 (now unblocked — verify poller integration) |
 | 5.4 | Configure Playwright MCP per [`playwright-spec/playwright-mcp-spec.md`](playwright-spec/); set `playwrightE2ETesting: true` in `workflow-config.json` | `[-]` | MANUAL | Playwright MCP configuration requires Cursor UI |
 
 ---
@@ -164,7 +164,7 @@ The steps that are blocking everything else — in order:
   └─► 2.2  Set LINEAR_API_KEY, NOTION_API_KEY, M365_ACCESS_TOKEN
   └─► 2.3c Create C:\Sage\worktrees\
        └─► 3.6  Linear ↔ GitHub integration  [BLOCKED — awaiting Linear admin access]
-       └─► 3.7  Deploy webhook receiver       [BLOCKED — awaiting Linear admin access]
+       └─► 3.7  Skill update poller            [COMPLETE — polling replaces webhook]
             └─► 4.1a–4.1l  Validate each hook script in Cursor
                  └─► 4.2  Full S1–S8 dry run
                       └─► 5.1–5.3  SAGE Intel + Hone setup

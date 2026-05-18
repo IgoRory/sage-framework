@@ -211,10 +211,104 @@ Once the team confirms the breakdown:
    - Branch naming: "LIN-[issue-id]-phase-N-[kebab-objective]"
    - Worktree path: C:\Sage\worktrees\[feature-id]\phase-N\
 
-5. Report completion:
-   "[N] phases finalised. Session manifest written. Linear issues and
-   worktrees created. Product Manager and Lead Dev will approve phase
-   issues async -- phases unlock when status moves to Approved."
+5. Report completion of artifact generation (do not end the skill here --
+   proceed to Step 11 for approval).
+
+---
+
+## Step 11 -- Approve phases and transition to build sprint
+
+After Step 10 artifacts are generated, prompt the session driver for
+approval. The approver is whoever is driving the kick-off session
+(Product Manager, Lead Dev, or both).
+
+1. Present a summary of all phases with their objectives, types, and
+   effort estimates. Then ask:
+
+   "The phase breakdown is complete. [N] phases have been created in
+   Linear at Pending Approval. Do you approve all phases to proceed
+   to the build sprint?"
+
+2. Wait for explicit confirmation. Do not proceed without a clear "yes"
+   or equivalent affirmative from the session driver.
+
+3. On confirmation, for each phase issue:
+   - Call Linear MCP to update the phase issue status from
+     "Pending Approval" to "Approved"
+   - Update `linearIssueStatus` to `"Approved"` in the phase's
+     `runtime` block in session-manifest.md
+
+4. Update session-level state in session-manifest.md:
+   - Set `sessionState.status` to `"build-sprint"`
+   - Set `sessionState.allPhasesApproved` to `true`
+
+5. Report final completion:
+   "[N] phases approved. Session manifest updated. Linear issues moved
+   to Approved. Session is now in build-sprint -- TDD spec generation
+   will begin next."
+
+If the session driver declines or requests changes, return to Step 9
+to facilitate further adjustment. Do not approve until confirmation
+is received.
+
+---
+
+## Telemetry
+
+Emit three telemetry events using `prd_telemetry_append.py` (pre-session
+events) and one bootstrap event directly to `workflow-telemetry.jsonl`
+(post-session-creation). Pre-session events use
+`workflowKind: "phase_splitter"`.
+
+**At the start of Step 1** (before loading inputs), emit:
+
+```
+python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"phase_splitter_started","workflowKind":"phase_splitter","linearIssueId":"[FEATURE_ID]","mode":"[mob|sprint|pair]"}'
+```
+
+**At the end of Step 9** (after team confirms the breakdown but before
+artifact generation), emit:
+
+```
+python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"phase_splitter_phases_proposed","workflowKind":"phase_splitter","linearIssueId":"[FEATURE_ID]","phaseCount":[N],"phases":[[{"phaseId":"1","phaseType":"foundation","layer":"api","independenceScore":[N],"effortEstimateHours":{"low":[N],"high":[N]}}, ...]]}'
+```
+
+**At the end of Step 10** (after manifest, Linear issues, and worktrees
+are created), emit the completion event to `prd-interview-telemetry.jsonl`
+and bootstrap `workflow-telemetry.jsonl`:
+
+```
+python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"phase_splitter_completed","workflowKind":"phase_splitter","linearIssueId":"[FEATURE_ID]","sessionId":"[session ID]","phaseCount":[N],"manifestPath":"[SESSION_ROOT]/session-manifest.md","worktreesCreated":[true|false],"linearIssuesCreated":[N]}'
+```
+
+Then immediately write the bootstrap event to `workflow-telemetry.jsonl` so
+the file exists before the orchestrator generates TDD specs and before any
+Cursor hook fires:
+
+```python
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+bootstrap = {
+    "timestamp": datetime.now(timezone.utc).isoformat(),
+    "event": "session_created",
+    "sessionId": "[session ID]",
+    "featureId": "[FEATURE_ID]",
+    "mode": "[mob|sprint|pair]",
+    "phaseCount": [N]
+}
+telemetry_path = Path("[SESSION_ROOT]") / "workflow-telemetry.jsonl"
+telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+with open(telemetry_path, "a", encoding="utf-8") as f:
+    f.write(json.dumps(bootstrap) + "\n")
+```
+
+Pre-session events are appended to the PRD telemetry file configured in
+`workflow-config.json` (default: `.sage/prd-interview-telemetry.jsonl`).
+The bootstrap event is written directly to the session's
+`workflow-telemetry.jsonl`. Failures are silent and do not affect the
+phase-splitter workflow.
 
 ---
 
@@ -224,7 +318,8 @@ Once the team confirms the breakdown:
 - Do not assign named developers -- profile recommendations only
 - Do not finalise the manifest until the team confirms the breakdown
 - Sprint mode only: create worktrees. Pair mode: skip worktree creation.
-- Cannot auto-approve Linear phase issues -- approval is human-only
+- Cannot approve Linear phase issues without explicit confirmation from the
+  session driver (PM or Lead Dev) in the active kick-off session
 
 ---
 
