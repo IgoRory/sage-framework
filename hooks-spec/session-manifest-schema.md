@@ -170,6 +170,7 @@ The file has two parts:
   // ─────────────────────────────────────────────────────────────────
   "sessionState": {
     "status": "kick-off | async-approvals | build-sprint | review-merge | complete",
+    "parentBranch": "string — git branch name for the parent feature branch (e.g. feature/PROF-50-rule-assignment). Used by sage-state-sync hook to push manifest updates for cross-machine visibility. Set once at kick-off by phase-splitter.",
     "allPhasesApproved": false,
     "foundationVerified": false,
     "foundationVerifiedAt": null,

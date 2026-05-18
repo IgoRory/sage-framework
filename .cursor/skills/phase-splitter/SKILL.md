@@ -197,6 +197,9 @@ Once the team confirms the breakdown:
    - One entry per phase with all required fields from the template
    - Validate all file paths in scopedFiles exist in the codebase
    - Record any paths that cannot be validated as NEW (not an error)
+   - Set `sessionState.parentBranch` to the current git branch name
+     (the parent feature branch). This enables the sage-state-sync hook
+     to push manifest updates for cross-machine visibility.
    - Write to [SESSION_ROOT]/session-manifest.md
    - Write session ID to .sage/sessions/active-session.txt
 

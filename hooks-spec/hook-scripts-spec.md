@@ -1415,6 +1415,52 @@ manifest updates. Silently no-ops on any failure.
 
 ---
 
+## Script 12: `sage_state_sync.py`
+
+**Purpose:** Non-blocking hook that pushes `.sage/` session state to the
+parent feature branch after the manifest-step-writer updates
+`session-manifest.md`. Provides cross-machine phase visibility in Sprint
+mode — developers on separate machines can see each other's step progress
+by pulling the parent branch.
+
+**Events:** `afterFileEdit`
+**Blocking:** No
+**Timeout:** 15000ms (accommodates git fetch + push over network)
+
+**Trigger condition:** Fires on every `afterFileEdit` event. Checks if the
+edited file is `session-manifest.md`. Exits immediately if not.
+
+**Execution flow:**
+
+1. Read `sessionState.parentBranch` from the manifest. Exit if not set.
+2. Fetch `origin/{parentBranch}`.
+3. Create a temporary detached worktree from `origin/{parentBranch}`.
+4. Copy the session manifest, workflow telemetry, and current phase
+   directory into the temporary worktree.
+5. Stage, commit with `[sage-sync]` prefix, and push to
+   `origin/{parentBranch}`.
+6. If push fails with non-fast-forward, retry (up to 2 retries) by
+   re-fetching and re-applying.
+7. Clean up the temporary worktree.
+
+**Commit message format:**
+```
+[sage-sync] Phase 2: implementation-plan complete -> traceability-review
+```
+
+**Conflict handling:** Each phase writes to different `phases.{N}.runtime`
+fields, so manifest conflicts between concurrent pushes are rare. The
+retry loop handles the non-fast-forward case by re-fetching the latest
+remote state, copying local session files over it, and pushing again.
+
+**Configuration:** Reads `sessionState.parentBranch` from the manifest.
+This field is set once during kickoff by the phase-splitter skill.
+
+**Dependencies:** Requires `git` CLI, network access to `origin`, and
+push permission to the parent branch. Silently no-ops on any failure.
+
+---
+
 ## Shared utilities additions
 
 The following functions were added to `hooks_utils.py` to support
