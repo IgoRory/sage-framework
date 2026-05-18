@@ -9,17 +9,16 @@ manifest-step-writer updates session-manifest.md. Provides cross-machine
 phase visibility in Sprint mode without requiring developers to manually
 commit and push session state.
 
-Uses a temporary worktree to commit to the parent branch without
-disturbing the developer's current phase branch. Retries on push
-conflicts (up to 2 retries). Silently no-ops on any failure.
+Uses git plumbing commands (hash-object, mktree, commit-tree) to create
+a commit on the parent branch without touching the developer's working
+tree or index. Retries on push conflicts (up to 2 retries). Silently
+no-ops on any failure.
 """
 
 import sys
 import json
 import os
-import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -37,13 +36,17 @@ from hooks_utils import (
 MAX_RETRIES = 2
 
 
-def _run_git(args: list[str], cwd: str | Path, timeout: int = 10) -> subprocess.CompletedProcess:
+def _run_git(args: list[str], cwd: str | Path, timeout: int = 10, stdin_data: str | None = None) -> subprocess.CompletedProcess:
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
     return subprocess.run(
         ["git"] + args,
         cwd=str(cwd),
         capture_output=True,
         text=True,
         timeout=timeout,
+        input=stdin_data,
+        env=env,
     )
 
 
@@ -51,24 +54,7 @@ def _is_manifest_edit(file_path: str) -> bool:
     return Path(file_path).name == "session-manifest.md"
 
 
-def _get_session_dir_name(session_root: Path) -> str:
-    return session_root.name
-
-
-def _sync_to_parent(
-    repo_root: Path,
-    session_root: Path,
-    parent_branch: str,
-    phase_id: str | None,
-    manifest: dict,
-) -> None:
-    """
-    Commits the .sage/ session state to the parent feature branch using
-    a temporary worktree, then pushes to origin.
-    """
-    session_dir_name = _get_session_dir_name(session_root)
-    session_rel = session_root.relative_to(repo_root)
-
+def _build_commit_message(phase_id: str | None, manifest: dict) -> str:
     current_step = "unknown"
     prev_step = "unknown"
     if phase_id:
@@ -80,71 +66,126 @@ def _sync_to_parent(
         if completed:
             prev_step = completed[-1]
 
-    commit_msg = f"[sage-sync] Phase {phase_id or '?'}: {prev_step} complete -> {current_step}"
+    return f"[sage-sync] Phase {phase_id or '?'}: {prev_step} complete -> {current_step}"
 
-    tmp_dir = Path(tempfile.mkdtemp(prefix="sage-sync-"))
-    worktree_path = tmp_dir / "sync-worktree"
 
-    try:
-        for attempt in range(MAX_RETRIES + 1):
-            result = _run_git(
-                ["fetch", "origin", parent_branch],
-                cwd=repo_root,
-                timeout=15,
+def _collect_session_files(session_root: Path, phase_id: str | None) -> dict[str, Path]:
+    """
+    Returns a dict of {repo-relative-path: absolute-path} for all session
+    files that should be synced.
+    """
+    files = {}
+    manifest_path = session_root / "session-manifest.md"
+    if manifest_path.exists():
+        files[manifest_path] = manifest_path
+
+    telemetry_path = session_root / "workflow-telemetry.jsonl"
+    if telemetry_path.exists():
+        files[telemetry_path] = telemetry_path
+
+    if phase_id:
+        phase_dir = session_root / f"phase-{phase_id}"
+        if phase_dir.exists():
+            for child in phase_dir.rglob("*"):
+                if child.is_file():
+                    files[child] = child
+
+    return files
+
+
+def _sync_to_parent(
+    repo_root: Path,
+    session_root: Path,
+    parent_branch: str,
+    phase_id: str | None,
+    manifest: dict,
+) -> None:
+    commit_msg = _build_commit_message(phase_id, manifest)
+    session_files = _collect_session_files(session_root, phase_id)
+
+    if not session_files:
+        return
+
+    for attempt in range(MAX_RETRIES + 1):
+        result = _run_git(
+            ["fetch", "origin", parent_branch],
+            cwd=repo_root,
+            timeout=15,
+        )
+        if result.returncode != 0:
+            return
+
+        parent_ref = f"origin/{parent_branch}"
+        result = _run_git(["rev-parse", parent_ref], cwd=repo_root)
+        if result.returncode != 0:
+            return
+        parent_sha = result.stdout.strip()
+
+        result = _run_git(["rev-parse", f"{parent_ref}^{{tree}}"], cwd=repo_root)
+        if result.returncode != 0:
+            return
+        base_tree = result.stdout.strip()
+
+        env_with_alt_index = os.environ.copy()
+        env_with_alt_index["GIT_TERMINAL_PROMPT"] = "0"
+        alt_index = session_root / ".sage-sync-index"
+        env_with_alt_index["GIT_INDEX_FILE"] = str(alt_index)
+
+        try:
+            subprocess.run(
+                ["git", "read-tree", base_tree],
+                cwd=str(repo_root),
+                capture_output=True,
+                text=True,
+                env=env_with_alt_index,
+            )
+
+            for abs_path in session_files.values():
+                rel_path = abs_path.relative_to(repo_root)
+                git_path = str(rel_path).replace("\\", "/")
+
+                result = _run_git(
+                    ["hash-object", "-w", str(abs_path)],
+                    cwd=repo_root,
+                )
+                if result.returncode != 0:
+                    return
+                blob_sha = result.stdout.strip()
+
+                subprocess.run(
+                    ["git", "update-index", "--add", "--cacheinfo",
+                     f"100644,{blob_sha},{git_path}"],
+                    cwd=str(repo_root),
+                    capture_output=True,
+                    text=True,
+                    env=env_with_alt_index,
+                )
+
+            result = subprocess.run(
+                ["git", "write-tree"],
+                cwd=str(repo_root),
+                capture_output=True,
+                text=True,
+                env=env_with_alt_index,
             )
             if result.returncode != 0:
                 return
+            new_tree = result.stdout.strip()
 
-            if worktree_path.exists():
-                _run_git(["worktree", "remove", str(worktree_path), "--force"], cwd=repo_root)
-                if worktree_path.exists():
-                    shutil.rmtree(worktree_path, ignore_errors=True)
+            if new_tree == base_tree:
+                return
 
             result = _run_git(
-                ["worktree", "add", "--detach", str(worktree_path), f"origin/{parent_branch}"],
+                ["commit-tree", new_tree, "-p", parent_sha, "-m", commit_msg],
                 cwd=repo_root,
             )
             if result.returncode != 0:
                 return
-
-            wt_session_dir = worktree_path / session_rel
-            wt_session_dir.mkdir(parents=True, exist_ok=True)
-
-            manifest_src = session_root / "session-manifest.md"
-            telemetry_src = session_root / "workflow-telemetry.jsonl"
-
-            if manifest_src.exists():
-                shutil.copy2(str(manifest_src), str(wt_session_dir / "session-manifest.md"))
-
-            if telemetry_src.exists():
-                shutil.copy2(str(telemetry_src), str(wt_session_dir / "workflow-telemetry.jsonl"))
-
-            if phase_id:
-                phase_dir_name = f"phase-{phase_id}"
-                src_phase_dir = session_root / phase_dir_name
-                dst_phase_dir = wt_session_dir / phase_dir_name
-                if src_phase_dir.exists():
-                    if dst_phase_dir.exists():
-                        shutil.rmtree(str(dst_phase_dir), ignore_errors=True)
-                    shutil.copytree(str(src_phase_dir), str(dst_phase_dir))
-
-            _run_git(
-                ["add", str(session_rel)],
-                cwd=worktree_path,
-            )
-
-            status = _run_git(["status", "--porcelain"], cwd=worktree_path)
-            if not status.stdout.strip():
-                return
-
-            _run_git(
-                ["commit", "-m", commit_msg],
-                cwd=worktree_path,
-            )
+            new_commit = result.stdout.strip()
 
             result = _run_git(
-                ["push", "origin", f"HEAD:{parent_branch}"],
-                cwd=worktree_path,
+                ["push", "origin", f"{new_commit}:{parent_branch}"],
+                cwd=repo_root,
                 timeout=15,
             )
 
@@ -155,10 +196,9 @@ def _sync_to_parent(
                 continue
             else:
                 return
-    finally:
-        _run_git(["worktree", "remove", str(worktree_path), "--force"], cwd=repo_root)
-        if tmp_dir.exists():
-            shutil.rmtree(str(tmp_dir), ignore_errors=True)
+        finally:
+            if alt_index.exists():
+                alt_index.unlink(missing_ok=True)
 
 
 def main():
