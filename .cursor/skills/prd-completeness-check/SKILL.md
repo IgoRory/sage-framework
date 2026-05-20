@@ -294,16 +294,20 @@ Still open: [list]
 
 ## Demo freshness advisory (non-scoring)
 
-After writing the assessment report, check for an existing demo:
+After writing the assessment report, check for existing demos:
 
-If a demo file exists at `.sage/prds/[FEATURE_ID]/demos/demo-interactive.html`:
+Check both possible demo files:
+- `.sage/prds/[FEATURE_ID]/demos/demo-interactive.html`
+- `.sage/prds/[FEATURE_ID]/demos/calculation-demo.html`
+
+For each demo file that exists:
 1. Read the `prdHash` comment from the HTML file header (first 5 lines)
 2. Compute the SHA-256 of the current `.sage/prds/[FEATURE_ID]/prd.md`
 3. If they differ: append an advisory to the assessment report:
-   "ADVISORY: Demo exists but was generated from a prior PRD version.
+   "ADVISORY: [filename] exists but was generated from a prior PRD version.
    Consider running prd-demo-generator to regenerate."
 
-If no demo file exists: no advisory. Demos are optional.
+If no demo files exist: no advisory. Demos are optional.
 
 This does not affect the score or pass/fail status. It is an informational
 note for the PM.

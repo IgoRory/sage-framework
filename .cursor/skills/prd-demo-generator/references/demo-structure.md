@@ -171,6 +171,13 @@ Include colour coding:
 - Clean, well-structured, readable code
 - Responsive layout (works on screens 1024px and wider)
 - No accessibility violations (proper ARIA labels, keyboard navigation)
+- **HTML escaping (mandatory):** All PRD-derived text (AC names, Given/When/
+  Then content, edge case descriptions, component names) must be HTML-escaped
+  before insertion into the DOM. Replace `<` with `&lt;`, `>` with `&gt;`,
+  `&` with `&amp;`, `"` with `&quot;`, and `'` with `&#x27;`. Use
+  `textContent` assignment rather than `innerHTML` when inserting dynamic
+  text. This prevents PRD content from being interpreted as executable
+  markup or script.
 
 ### HTML Structure Template
 

@@ -47,9 +47,13 @@ Treat this skill as invoked when the PM says any of:
 ## Prerequisites
 
 Before generating, verify:
-1. PRD exists at `.sage/prds/[FEATURE_ID]/prd.md`
-2. PRD contains Section 8 with categorised ACs (AC-REQ, AC-EC, AC-UI, AC-ERR)
-3. If the PRD has no Section 8 ACs: tell the PM the PRD is not ready for
+1. **Linear issue context:** Confirm the FEATURE_ID corresponds to a Linear
+   issue (e.g. `PROF-354`). The FEATURE_ID is derived from the PRD's Linear
+   issue reference in Section 1. If no Linear issue is referenced in the PRD,
+   ask the PM to provide one before proceeding.
+2. PRD exists at `.sage/prds/[FEATURE_ID]/prd.md`
+3. PRD contains Section 8 with categorised ACs (AC-REQ, AC-EC, AC-UI, AC-ERR)
+4. If the PRD has no Section 8 ACs: tell the PM the PRD is not ready for
    demo generation and suggest running prd-completeness-check first
 
 If a component specification exists at `.sage/prds/[FEATURE_ID]/component-spec.md`,
@@ -256,6 +260,11 @@ When invoked and a demo already exists:
 
 ## Constraints
 
+- **Path containment:** FEATURE_ID must be validated before any filesystem
+  write. Reject any FEATURE_ID containing path separators (`/`, `\`),
+  traversal sequences (`..`), or characters outside `[A-Za-z0-9_-]`.
+  Resolve the output path to an absolute path and verify it is within
+  `.sage/prds/` before writing. Abort with an error if validation fails.
 - Read-only access to codebase (SCSS, templates, message text) -- never
   modify application source code
 - Write access only to `.sage/prds/[FEATURE_ID]/demos/`

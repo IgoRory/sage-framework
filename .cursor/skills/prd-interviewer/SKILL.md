@@ -217,13 +217,13 @@ P3  Section 3 -- Allocation Methodology      [SKIPPED -- not applicable]
 P4  Section 4 -- Acceptance Criteria         [DONE]
 P5  Section 5a -- Scope Boundaries           [DONE]
 P6  Section 5b -- UI and UX                  [IN PROGRESS]  <-- current
-    Main Interview Conclusion Gate           [NOT STARTED]
 P7  Section 6 -- Edge Cases                  [NOT STARTED]
 P8  Final Approval                           [NOT STARTED]
 P9  PRD Generation                           [NOT STARTED]
 
 Questions asked: 14 / 23 minimum (Tier 2)
 Deferred items: 2 open
+Next gate: Main Interview Conclusion (after P6 completes)
 ```
 
 Mark each as `[DONE]`, `[IN PROGRESS]`, `[SKIPPED]`, or `[NOT STARTED]`.
@@ -623,10 +623,12 @@ Before concluding the edge-case phase, execute this 6-step protocol:
    thinnest categories.
 
 5. **Review Deferred Items List** -- present ALL deferred items (from both
-   main interview and edge-case phase). For each remaining "Open" item,
-   the PM must: (a) resolve now, (b) accept deferral with reason, or
-   (c) mark out of scope. No items may remain with status "Open" after
-   this step -- they must become "Resolved", "Accepted", or "Out of Scope".
+   main interview and edge-case phase). For each item still with status
+   "Open", the PM must choose one of: (a) resolve now (status → Resolved),
+   (b) accept deferral with documented reason (status → Accepted), or
+   (c) mark out of scope (status → Out of Scope). After this step, no
+   items may remain "Open" -- every item must have a terminal status
+   (Resolved, Accepted, or Out of Scope).
 
 6. **Explicit confirmation** -- only after steps 1-5: "I am satisfied we
    have comprehensive edge-case coverage. Shall I proceed to the final
