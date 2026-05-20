@@ -130,19 +130,73 @@ required behaviour. If not applicable: "No change to return code handling."]
 
 ## 8. Acceptance criteria
 
-[One AC per requirement. Format:
+Generate ACs from **four sources**. Each AC must be agent-evaluable
+(explicit input, explicit action/condition, explicit measurable output).
+No vague qualifiers. Format:
 "Given [precondition], when [action], then [measurable outcome]."
 
-The precondition and outcome must be specific enough that an agent can
-evaluate pass/fail without human judgment.
+Use categorised IDs to trace AC provenance:
 
-Derive from Q4.1 and Q4.2. If parked: TODO.]
+### 8.1 Requirement ACs (AC-REQ-NNN)
 
-### Performance requirements
+One AC per requirement from Section 5. Derive from Q4.1, Q4.2, and the
+requirements list. Each requirement must have at least one AC.
+
+AC-REQ-001: Given [precondition], when [action], then [outcome].
+AC-REQ-002: ...
+
+[If a requirement is deferred: "TODO: [DI-ID] -- [topic]"]
+
+### 8.2 Edge-case ACs (AC-EC-NNN)
+
+One AC per edge case documented in Section 11. Each edge case becomes a
+testable scenario. Cross-reference the edge case condition.
+
+AC-EC-001: Given [precondition], when [edge condition], then [outcome].
+  Edge case: "[condition text from Section 11]"
+AC-EC-002: ...
+
+### 8.3 UI state ACs (AC-UI-NNN)
+
+One AC per non-trivial state transition identified in the component
+specification (Section 5b / component-spec.md). Cover state entries,
+state exits, and inter-component impacts.
+
+AC-UI-001: Given [component] is in [state A], when [trigger], then
+  [component] transitions to [state B] and [observable effect].
+  Component: [component name]
+AC-UI-002: ...
+
+[If no UI components: "Not applicable -- no UI components in scope."]
+
+### 8.4 Error/empty/loading ACs (AC-ERR-NNN)
+
+One AC per error path, empty state, and loading state identified in
+Q5b.7-Q5b.9 and Section 6 (failure and recovery edge cases).
+
+AC-ERR-001: Given [data condition], when [action], then [error behaviour].
+  Recovery: [user recovery path]
+AC-ERR-002: ...
+
+[If no error states applicable: "Not applicable -- backend-only feature."]
+
+### 8.5 Performance requirements
 [From Q4.3. If none: "No performance requirements specified."]
 
-### Test scope
+### 8.6 Test scope
 [From Q4.4. Name specific test files in scope.]
+
+### 8.7 AC coverage summary
+
+| Category | Count | Tier minimum | Status |
+|----------|-------|-------------|--------|
+| AC-REQ | [N] | [from tier] | [Met/Below] |
+| AC-EC | [N] | [from tier] | [Met/Below] |
+| AC-UI + AC-ERR | [N] | [from tier] | [Met/Below] |
+| **Total** | **[N]** | **[from tier]** | |
+
+If any category is below tier minimum, derive additional ACs from
+under-covered areas before finalising the PRD.
 
 ---
 
@@ -193,30 +247,47 @@ The component specification covers: [list component names]."
 
 ## 11. Edge cases and constraints
 
-[From Section 6. Format each as:
-"[Condition]: [required behaviour]."
+[From Section 6. Format each with a cross-reference to its corresponding
+acceptance criterion in Section 8.2:
+
+"[Condition]: [required behaviour]. → AC-EC-[N]"
+
+Each edge case must have a corresponding AC-EC entry in Section 8.2 that
+makes it testable. The cross-reference enables bidirectional tracing.
 
 Examples:
 - "NewInstFlag = 1: instrument must be included in FTP calculation but
-  excluded from prior-period comparison."
+  excluded from prior-period comparison. → AC-EC-001"
 - "Named revision date in effect: FTP rate must be sourced from the
-  rate table effective at the named date, not the current rate table."
+  rate table effective at the named date, not the current rate table.
+  → AC-EC-002"
 - "Naming note: the codebase uses both 'MktRisk' and 'MarketRisk' in
   different files -- build team must verify which is authoritative for
-  this feature before writing tests."
-]
+  this feature before writing tests. → AC-EC-003"
+
+Edge cases from each of the seven categories (interaction sequence,
+cascading behaviour, concurrency, state boundary, cross-component
+dependency, data integrity, failure and recovery) should be grouped
+under subheadings for clarity.]
 
 ---
 
-## 12. Open items (TODOs)
+## 12. Open items (Deferred Items)
 
-[Automatically generated from all parked questions. Format:
-| Question | Topic | Owner |
-|----------|-------|-------|
-| Q[N].[N] | [topic] | Product Manager |
+[Automatically generated from the Unified Deferred Items List. Include all
+items with status "Open" or "Accepted". Format:
+
+| DI ID | Question | Section | Category | PM Reason | Status |
+|-------|----------|---------|----------|-----------|--------|
+| DI-001 | Q2.3 -- current vs new behaviour | P2 | Calculation | "Need to check with finance" | Accepted |
+| DI-002 | Q5b.6 -- component states for grid | P6 | UI | "Will decide during development" | Accepted |
 ]
 
-If no parked questions: "No open items."
+If no deferred items: "No open items -- all questions resolved during
+interview."
+
+Items with status "Accepted" indicate known gaps that must be resolved
+before the PRD can pass prd-completeness-check at full score.
 
 ---
 

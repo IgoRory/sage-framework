@@ -97,15 +97,26 @@ Message text sourcing check:
 ### D2 -- AC specificity (15pts)
 
 For each requirement, verify it has at least one acceptance criterion that
-an agent can evaluate as pass/fail without human interpretation.
+an agent can evaluate as pass/fail without human interpretation. Also
+verify that edge cases have corresponding ACs and that the total AC count
+meets the tier minimum.
 
 PASS condition: the AC states an explicit input, an explicit action or
 condition, and an explicit measurable output.
+
+AC category coverage checks:
+- Every requirement in Section 5 has at least one AC-REQ entry
+- Every edge case in Section 11 has a corresponding AC-EC entry
+- The total AC count meets the tier minimum from
+  prd-interviewer/references/complexity-classifier.md
 
 Deductions:
 - AC that requires human judgment to evaluate (e.g., "looks correct",
   "feels natural"): -3 per AC
 - Requirement with no AC at all: -5 per requirement
+- Edge case in Section 11 with no corresponding AC-EC entry: -2 per
+  missing edge-case AC
+- Total AC count below tier minimum: -3
 
 ### D3 -- Edge/empty/error state coverage (15pts)
 
@@ -278,6 +289,24 @@ Delta: [+N / -N] points
 Resolved since last assessment: [list]
 Still open: [list]
 ``````
+
+---
+
+## Demo freshness advisory (non-scoring)
+
+After writing the assessment report, check for an existing demo:
+
+If a demo file exists at `.sage/prds/[FEATURE_ID]/demos/demo-interactive.html`:
+1. Read the `prdHash` comment from the HTML file header (first 5 lines)
+2. Compute the SHA-256 of the current `.sage/prds/[FEATURE_ID]/prd.md`
+3. If they differ: append an advisory to the assessment report:
+   "ADVISORY: Demo exists but was generated from a prior PRD version.
+   Consider running prd-demo-generator to regenerate."
+
+If no demo file exists: no advisory. Demos are optional.
+
+This does not affect the score or pass/fail status. It is an informational
+note for the PM.
 
 ---
 

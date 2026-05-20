@@ -199,6 +199,61 @@ Tell the PM:
 
 ---
 
+## Interview navigation commands
+
+The PM can interact with interview progress at any time using these commands.
+
+### Status command
+
+**Triggers:** "where are we", "show progress", "what section are we on",
+"interview status", "phase status"
+
+**Response:** Present the section list with completion status:
+
+```
+P1  Section 1 -- Feature Definition         [DONE]
+P2  Section 2 -- Calculation Logic           [SKIPPED -- not applicable]
+P3  Section 3 -- Allocation Methodology      [SKIPPED -- not applicable]
+P4  Section 4 -- Acceptance Criteria         [DONE]
+P5  Section 5a -- Scope Boundaries           [DONE]
+P6  Section 5b -- UI and UX                  [IN PROGRESS]  <-- current
+    Main Interview Conclusion Gate           [NOT STARTED]
+P7  Section 6 -- Edge Cases                  [NOT STARTED]
+P8  Final Approval                           [NOT STARTED]
+P9  PRD Generation                           [NOT STARTED]
+
+Questions asked: 14 / 23 minimum (Tier 2)
+Deferred items: 2 open
+```
+
+Mark each as `[DONE]`, `[IN PROGRESS]`, `[SKIPPED]`, or `[NOT STARTED]`.
+Indicate the current section with `<-- current`.
+
+### Restart command
+
+**Triggers:** "restart this section", "redo Section [N]", "start this
+section over", "restart P[N]"
+
+**Protocol:**
+
+1. **Confirm:** "Restart [Section name]? This discards all answers
+   captured during this section."
+
+2. **Check downstream:** If any sections AFTER the requested section have
+   been started, warn: "Sections [list] were built using context from
+   this section. Would you like to: (a) Reset only this section, (b)
+   Reset this section and all after it, (c) Cancel."
+
+3. **On confirm:** Reset section status to [NOT STARTED], discard that
+   section's answers from the running record, re-enter the section from
+   its first question batch.
+
+4. **Telemetry:** Emit `prd_phase_started` again for the restarted
+   phaseId (the telemetry log shows the restart as a new phase start
+   event).
+
+---
+
 ## Interview structure
 
 The interview has six sections. Sections 1, 4, 5a, and 6 are always asked.
@@ -206,24 +261,53 @@ Sections 2, 3, and 5b are conditional.
 
 **Telemetry:** Before starting Section 1, emit **`prd_phase_started`** with `phaseId: P1`. After finishing Section 1, emit **`prd_phase_completed`** with `phaseId: P1`. Repeat for each section with its **P2–P7** mapping from the table above (emit started/completed only for sections you actually run).
 
-Ask questions one at a time. Wait for the answer before proceeding.
-Do not present a list of questions -- this is a conversation, not a form.
+Ask questions in batches of 2-4, grouped by logical topic within the
+current section. Wait for all answers before proceeding to the next batch.
+If a batch contains a question whose answer determines the next question
+(conditional logic), isolate it as a single-question batch. This is a
+conversation, not a form -- adapt batch size to the PM's engagement level.
+
+**Live question counter:** Track questions asked per section throughout
+the interview. Before each conclusion gate, verify the running total is
+on track to meet the tier minimum (see references/complexity-classifier.md).
+If a section group completes below threshold, ask additional questions in
+under-covered categories before proceeding.
 
 If an answer is vague, probe once with a specific example from the codebase
 before accepting it. Example: if the PM says "it should handle the standard
 FTP calculation", ask "do you mean the existing usp_CalculateFTP logic, or
 is there a change to how named revision dates are applied?"
 
-If the PM cannot answer a question: park it using the pattern below and move on.
+If the PM cannot answer a question: defer it using the Unified Deferred
+Items List (see below) and move on.
 
-### Park-it pattern
+### Unified Deferred Items List
 
-When parking a question:
-"I will note that [question topic] is unresolved and flag it as a gap in
-the PRD draft. You can fill it in before running the completeness check."
+When the PM cannot or chooses not to answer a question, add it to the
+Deferred Items List with structured tracking:
 
-Record the parked question by question ID (e.g. Q2.3 -- parked). Parked
-questions appear as explicit TODO items in the PRD draft.
+| Field | Value |
+|-------|-------|
+| ID | DI-001, DI-002, etc. (sequential across entire interview) |
+| Original question | The question ID and text |
+| Section deferred from | P1-P7 |
+| Category | Feature Definition / Calculation / Allocation / AC / Scope / UI / Edge Case |
+| PM reason | Verbatim reason given (or "No reason given") |
+| Status | Open / Resolved / Accepted / Out of Scope |
+
+When deferring, say:
+"I am recording this as deferred item DI-[N]: [topic]. I will surface it
+again at the conclusion gate. You can resolve it then or accept it as a
+gap in the PRD draft."
+
+Deferred items are surfaced at both conclusion gates (main interview and
+edge-case phase). At each gate, the PM can:
+- (a) Resolve now -- provide the answer
+- (b) Accept deferral with documented reason
+- (c) Mark as out of scope
+
+Deferred items with status "Open" or "Accepted" appear as structured
+entries in PRD Section 12 (Open Items).
 
 ---
 
@@ -315,10 +399,13 @@ test case? (Ask for specific numbers or ratios if possible.)
 
 ## Section 4 -- Acceptance criteria (always ask)
 
-Q4.1 -- What does success look like for this feature? Describe 2-3
-specific scenarios where you would say "this is working correctly."
-(For each scenario, probe: what is the input, what is the action, what
-is the exact expected output?)
+Q4.1 -- What does success look like for this feature? Describe as many
+specific scenarios as you can think of -- happy paths, failure paths, and
+boundary conditions. For each: what is the input, the action, and the
+exact expected output? Aim for at least 5 scenarios for a medium-complexity
+feature.
+(Probe for each scenario: what specific value or condition would tell you
+this has passed?)
 
 Q4.2 -- How will you verify this feature is working in UAT?
 What specific data or steps will you use?
@@ -330,6 +417,12 @@ of 10,000 instruments")
 Q4.4 -- Are there any existing tests that this feature must not break?
 (From your codebase recon, name the test files in the area and ask the
 PM to confirm which test suites are in scope.)
+
+Q4.5 -- For each edge case we identify later (Section 6), I will generate
+a testable acceptance criterion. Are there any scenarios you already know
+will need explicit pass/fail criteria beyond the happy path?
+(e.g., "when the calculation runs with zero instruments, it must return
+an empty result set -- not an error")
 
 ---
 
@@ -392,9 +485,46 @@ Q5b.10 -- Are there any user interactions beyond the standard ones?
 
 Q5b.11 -- Do you have any existing sketches, mockups, or visual references
 for how this should look? If yes, describe what each one shows in words.
-Do not share files or links -- describe it verbally. The
-plan-preview-generator agent will produce visual confirmation artifacts
-from the completed PRD during S4.
+Do not share files or links -- describe it verbally.
+
+Note: After this interview completes, you can invoke **prd-demo-generator**
+to produce an interactive HTML demo from the PRD before running the
+completeness check. The plan-preview-generator agent will also produce
+visual confirmation artifacts from the implementation plan during S4.
+
+---
+
+## Main interview conclusion gate (after Sections 1-5b, before Section 6)
+
+Before proceeding to the edge-case phase, execute this 6-step protocol.
+Emit telemetry between P6 completion and P7 start.
+
+1. **Present structured summary** -- present everything captured during
+   Sections 1-5b, organised by section. Summarise each section in 2-3
+   sentences highlighting the key decisions and requirements captured.
+
+2. **Flag vague answers** -- list every answer that was short, unclear, or
+   accepted without a specific example. Ask the PM if they can elaborate
+   on any of these now.
+
+3. **Open-ended coverage check** -- ask: "Is there anything about this
+   feature's core requirements that concerns you -- anything you are
+   worried we have not covered before we move to edge cases?"
+
+4. **Confirm question count** -- state the complexity tier, the main
+   interview minimum threshold, and the actual count. If below threshold,
+   identify under-covered categories and ask additional questions before
+   concluding.
+
+5. **Review Deferred Items List** -- present all deferred items from
+   Sections 1-5b. For each, ask: resolve now / accept deferral / mark
+   out of scope.
+
+6. **Explicit confirmation** -- only after steps 1-5: "I am satisfied we
+   have comprehensive coverage of the core requirements. Shall I proceed
+   to the edge-case phase?"
+
+The PM must explicitly confirm before Section 6 (P7) starts.
 
 ---
 
@@ -475,10 +605,34 @@ stored procedure call, API request, or data write.
 
 ### Edge-case phase conclusion gate
 
-Before concluding the edge-case phase, verify that all seven edge-case
-categories have been addressed (at least one question asked and answered
-per applicable category). Present the coverage summary to the PM. The PM
-must explicitly confirm coverage is sufficient before proceeding to P8.
+Before concluding the edge-case phase, execute this 6-step protocol:
+
+1. **Present structured summary** -- present all edge cases captured,
+   organised by the seven categories. Show question count per category.
+
+2. **Flag vague answers** -- list any edge-case answers that were short
+   or unclear. Ask the PM if they can elaborate now.
+
+3. **Open-ended coverage check** -- ask: "Is there anything about this
+   feature that keeps you up at night -- any scenario you are worried we
+   have not covered?"
+
+4. **Confirm coverage** -- verify all seven applicable categories have at
+   least one question asked and answered. State the edge-case minimum
+   threshold vs. actual count. If below threshold, expand coverage in the
+   thinnest categories.
+
+5. **Review Deferred Items List** -- present ALL deferred items (from both
+   main interview and edge-case phase). For each remaining "Open" item,
+   the PM must: (a) resolve now, (b) accept deferral with reason, or
+   (c) mark out of scope. No items may remain with status "Open" after
+   this step -- they must become "Resolved", "Accepted", or "Out of Scope".
+
+6. **Explicit confirmation** -- only after steps 1-5: "I am satisfied we
+   have comprehensive edge-case coverage. Shall I proceed to the final
+   approval?"
+
+The PM must explicitly confirm before proceeding to P8.
 
 ---
 
@@ -486,33 +640,24 @@ must explicitly confirm coverage is sufficient before proceeding to P8.
 
 Before **P8** telemetry: ensure **`prd_phase_completed`** has been written for **P7** (Section 6). Emit **`prd_phase_started`** with `phaseId: P8` before reviewing parked questions; **`prd_phase_completed`** for P8 after the PM responds to the APPROVE / REJECT / REDIRECT prompt (or when stopping).
 
-### Step 1 -- Post-interview verification protocol
+### Step 1 -- Final approval gate
 
-Before reviewing parked questions, execute this protocol:
+The main interview and edge-case conclusion gates have already surfaced
+vague answers, confirmed question counts, and resolved deferred items.
+This final gate is a lightweight confirmation before PRD generation.
 
-1. **Present structured summary** — present everything captured during
-   the interview, organised by section. For the edge-case phase, organise
-   by the seven categories.
+1. **Present interview statistics** -- total questions asked (main +
+   edge-case), tier classification, deferred items final status summary
+   (N resolved, N accepted, N out of scope).
 
-2. **Flag vague answers** — list every answer that was short, unclear, or
-   accepted without a specific example. Ask the PM if they can elaborate
-   on any of these now.
+2. **Present Deferred Items final state** -- show the complete list with
+   final statuses. Confirm that no items remain "Open" (all should be
+   Resolved, Accepted, or Out of Scope after the edge-case gate).
 
-3. **Open-ended coverage check** — ask: "Is there anything about this
-   feature that concerns you — anything you are worried we have not
-   covered?"
-
-4. **Confirm minimum question count** — state the complexity tier, the
-   minimum threshold, and the actual count. If the count is below
-   threshold, explain which categories are under-covered and ask
-   additional questions before concluding.
-
-5. **Review parked questions** — present all parked questions. Ask if any
-   can be answered now. For those that remain parked, confirm they will
-   appear as TODO items in the PRD draft.
-
-6. **Explicit confirmation** — only after steps 1–5: ask the PM to
-   confirm with APPROVE / REJECT / REDIRECT.
+3. **Explicit confirmation** -- ask the PM to confirm with:
+   APPROVE -- to proceed to PRD draft generation
+   REJECT: [reason] -- to restart or revise specific answers
+   REDIRECT: [direction] -- to continue the interview in a different direction
 
 ### Step 2 -- Write the answer record
 
@@ -520,9 +665,13 @@ Write a structured JSON answer record to:
 `.sage/prds/[FEATURE_ID]/interview-answers.json`
 
 Create the `.sage/prds/[FEATURE_ID]/` directory if it does not exist.
-The record must use question IDs as keys (Q1.1, Q2.3, etc.) with verbatim
-answers as values. Parked questions are recorded as null with a "parked": true
-flag.
+The record must use question IDs as keys (Q1.1, Q2.3, Q1.DYN-1, etc.)
+with verbatim answers as values. Deferred questions are recorded as null
+with a "deferred": true flag and "deferredId" reference (e.g. "DI-001").
+
+Include a top-level `deferredItems` array containing the full Unified
+Deferred Items List with all fields (ID, question, section, category,
+reason, status).
 
 Do not summarize or interpret answers -- record verbatim.
 
@@ -536,7 +685,7 @@ Print a plain-language summary (not the raw JSON) covering:
 - Measures/procedures in scope (if applicable)
 - Acceptance criteria captured (count and brief description)
 - UI screens and components in scope (if applicable)
-- Parked questions (list by topic)
+- Deferred items (list by DI-ID and topic, with status)
 - Anything flagged as a constraint or edge case
 
 Then say:
@@ -581,13 +730,13 @@ against the PRD to assess readiness for the planning cycle."
 - Append PRD telemetry for **`prd_preflight`**, phase boundaries (**`prd_phase_started` / `prd_phase_completed`** for P1–P9 as applicable), and **`prd_interview_completed`** when the interview ends (after summary or when stopping without draft)
 - Always start from a Linear or ADO work item -- do not begin without one (after preflight)
 - Always conduct codebase recon before the first question
-- Ask questions one at a time -- never present a list
+- Ask questions in batches of 2-4 -- never dump an entire section as a list
 - Record answers verbatim -- never summarize or interpret during interview
 - Never generate the PRD without an explicit APPROVE from the PM
 - Never accept file attachments or external links for visual references (Q5b.11)
 - Never skip Section 6 -- edge cases are always asked regardless of feature type
-- Parked questions must appear as explicit TODO items in the PRD draft,
-  not be silently omitted
+- Deferred items with status "Open" or "Accepted" must appear as
+  structured entries in PRD Section 12 -- never silently omitted
 - All user-facing message text in the PRD draft (toast messages, error
   messages, tooltip text, dialog text, validation messages) must follow the
   three-tier message text sourcing protocol:

@@ -58,6 +58,38 @@ These thresholds are minimums. The skill should ask as many questions as
 needed to fully cover the feature. The thresholds exist to prevent
 under-interviewing, not to cap interview depth.
 
+### Minimum Acceptance Criteria Thresholds
+
+The PRD generation step (P9) must produce at least this many ACs per
+category. If below threshold after the first generation pass, derive
+additional ACs from under-covered areas before finalising.
+
+| Tier | Min AC-REQ | Min AC-EC | Min AC-UI + AC-ERR | Total min |
+|------|-----------|-----------|-------------------|-----------|
+| Tier 1 (Simple) | 5 | 3 | 2 | 10 |
+| Tier 2 (Medium) | 8 | 5 | 5 | 18 |
+| Tier 3 (Complex) | 12 | 8 | 8 | 28 |
+| Tier 4 (Very Complex) | 15 | 12 | 12 | 39 |
+
+For non-UI features (no Section 5b components), the AC-UI + AC-ERR
+column applies only to error/recovery scenarios from Section 6 Category 7.
+
+---
+
+### Mid-interview enforcement
+
+Track questions asked per section throughout the interview. Before
+concluding the main interview (P1-P5b) at the conclusion gate, verify
+the running total meets the tier minimum for the main interview column.
+If the count is below threshold, identify which categories are
+under-covered and ask additional questions before proceeding to the
+edge-case phase.
+
+Similarly, before concluding the edge-case phase (P7), verify the
+edge-case question count meets the tier minimum. If under threshold,
+identify which of the 7 edge-case categories have the fewest questions
+and expand coverage there.
+
 ---
 
 ## Telemetry

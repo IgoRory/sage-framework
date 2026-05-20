@@ -36,20 +36,48 @@ Profitability-specific vague language that fails:
 ## D2 -- AC specificity: agent-evaluable examples
 
 PASSES (agent can evaluate without human judgment):
-- "Given ProcessID = 1001 and instrument type = Loan, when the
-  calculation runs, then FTP_NetInterestIncome = sum of
+- "AC-REQ-001: Given ProcessID = 1001 and instrument type = Loan, when
+  the calculation runs, then FTP_NetInterestIncome = sum of
   FTP_GrossInterestIncome minus FTP_FundingCost for all instruments
   in the portfolio."
-- "When the user selects a date range with no instruments, the
-  result table displays the message 'No instruments found for
+- "AC-ERR-003: When the user selects a date range with no instruments,
+  the result table displays the message 'No instruments found for
   selected period' and the export button is disabled."
-- "When usp_AllocateExpense returns -3, the UI displays 'Allocation
-  blocked: instrument not initialised' in the status panel."
+- "AC-EC-005: When usp_AllocateExpense returns -3, the UI displays
+  'Allocation blocked: instrument not initialised' in the status panel.
+  Edge case: 'Return code -3 handling' (Section 11)"
 
 FAILS (requires human judgment):
 - "The FTP calculation returns the expected result."
 - "The allocation looks correct for the test dataset."
 - "The UI is intuitive."
+
+### Edge-case AC coverage check
+
+For D2, verify that every edge case documented in Section 11 has a
+corresponding AC-EC entry in Section 8.2. The cross-reference arrow
+(→ AC-EC-NNN) in Section 11 must point to an AC that exists in Section 8.
+
+PASSES:
+- Section 11 has 8 edge cases. Section 8.2 has AC-EC-001 through
+  AC-EC-008. All cross-references resolve.
+
+FAILS:
+- Section 11 has 8 edge cases but Section 8.2 only has AC-EC-001 through
+  AC-EC-005. Three edge cases have no testable AC. Deduction: -6 (3 × -2).
+
+### AC count threshold check
+
+Read the feature's complexity tier from the PRD (Section 1 or completeness
+metadata). Look up the minimum AC counts in
+prd-interviewer/references/complexity-classifier.md. Compare actual counts:
+
+PASSES:
+- Tier 3 feature. AC-REQ: 14 (min 12). AC-EC: 9 (min 8).
+  AC-UI + AC-ERR: 10 (min 8). Total: 33 (min 28). All categories met.
+
+FAILS:
+- Tier 3 feature. AC-REQ: 7 (min 12). Below threshold. Deduction: -3.
 
 ---
 

@@ -50,11 +50,16 @@
 │   │   ├── rules.mdc                          ← existing product rules; preserve as applicable
 │   │   ├── sage-session.mdc
 │   │   └── phase-context.mdc
-│   ├── skills/                                ← 7 top-level skill packages
+│   ├── skills/                                ← 8 top-level skill packages
 │   │   ├── prd-completeness-check/
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
 │   │   │       └── scoring-rubric.md
+│   │   ├── prd-demo-generator/
+│   │   │   ├── SKILL.md
+│   │   │   └── references/
+│   │   │       ├── demo-structure.md
+│   │   │       └── styling-tiers.md
 │   │   ├── prd-interviewer/
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
@@ -100,7 +105,7 @@
 │
 ├── .sage/
 │   ├── workflow-config.json                   ← policy: modes, linear, telemetry, phases, featureFlags, intel
-│   ├── current-phase.txt
+│   ├── current-phase.txt                      ← phase ID fallback for hooks (read by get_phase_id())
 │   ├── skill-update-history.jsonl
 │   ├── prd-interview-telemetry.jsonl          ← append-only PRD interview + kickoff telemetry
 │   ├── prds/                                  ← feature document store (one folder per feature)

@@ -21,6 +21,7 @@ scope through instruction alone.
 - [implementation-planner](#implementation-planner)
 - [traceability-reviewer](#traceability-reviewer)
 - [plan-preview-generator](#plan-preview-generator)
+- [prd-demo-generator](#prd-demo-generator)
 - [code-simplifier](#code-simplifier)
 - [test-author](#test-author)
 - [tdd-builder](#tdd-builder)
@@ -217,6 +218,40 @@ confirm: set `validationConfirmed = true` in the session manifest.
 - Canvas files must only import from `cursor/canvas` — no npm packages, no
   relative imports, no network calls
 - Must embed all data inline in canvas files
+
+---
+
+## prd-demo-generator
+
+**Mode:** Foreground 
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/demos/` only) 
+**Active during:** Between prd-interviewer and prd-completeness-check (on PM request)
+
+### Role
+
+Optional skill invoked by the PM to produce interactive HTML demos from a
+completed PRD draft. Reads the PRD's acceptance criteria (AC-REQ, AC-EC,
+AC-UI, AC-ERR) and component specification to generate self-contained HTML
+files that visualise every demoable scenario. Helps the PM visually validate
+requirements before the completeness check scores the PRD.
+
+Can be re-invoked on demand when the PRD is edited to regenerate demos from
+updated requirements. Embeds a PRD hash for drift detection.
+
+### What it produces
+
+- `.sage/prds/[FEATURE_ID]/demos/demo-interactive.html` (UI features)
+- `.sage/prds/[FEATURE_ID]/demos/calculation-demo.html` (calculation features)
+- `.sage/prds/[FEATURE_ID]/demos/demo-coverage.md` (coverage report)
+
+### Constraints
+
+- Read-only access to codebase (SCSS variables, component templates, message text)
+- Write access only to `.sage/prds/[FEATURE_ID]/demos/`
+- Never modifies the PRD or component specification
+- Must read the PRD's Section 8 ACs as the authoritative scenario list
+- All user-facing text follows the 3-tier message text sourcing protocol
+- Demo is optional -- never required for completeness check to pass
 
 ---
 
