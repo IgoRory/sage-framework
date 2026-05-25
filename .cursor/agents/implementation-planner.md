@@ -136,6 +136,20 @@ Each task:
 - Description: the test method name and implementation file path
 - No assignee (left for developer to self-assign)
 
+## Task count guidance
+
+Target 8-15 tasks per phase. If TDD scenarios would produce more than 15
+tasks, consolidate related scenarios into grouped tasks. Each grouped task
+must list all constituent scenarios and their test methods.
+
+- 1-15 scenarios: one task per scenario (default 1:1 mapping)
+- 16-20 scenarios: consolidate into grouped tasks to stay within 15 Linear
+  sub-tasks. Group by shared implementation file or shared test fixture.
+- Over 20 scenarios: flag to the developer before proceeding. Recommend
+  either consolidating into grouped tasks or re-splitting the phase via
+  the phase-splitter. Never exceed 20 Linear sub-tasks per phase without
+  explicit developer approval.
+
 ## Profitability domain guidance
 
 When mapping TDD scenarios to test methods, use naming conventions consistent with the existing codebase. If the codebase uses a specific naming pattern (e.g. `[Entity]_[Condition]_[ExpectedResult]`), match it.
@@ -168,7 +182,7 @@ Planning rules:
 
 ## Constraints
 
-- Every TDD scenario must map to exactly one task - no unmapped scenarios
+- Every TDD scenario must map to exactly one task or task group - no unmapped scenarios
 - Every task must have a specific test file path and method name - no placeholders like `[TBD]`
 - Cannot write to files outside the current phase directory (except the session manifest for batch definitions)
 - Must write batch definitions to the manifest before completing (Checkpoint mode)

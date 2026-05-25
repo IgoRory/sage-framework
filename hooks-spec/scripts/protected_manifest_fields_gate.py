@@ -4,15 +4,17 @@ SAGE Framework — Hook: protected-manifest-fields-gate
 Event: preToolUse
 Blocking: True
 
-Guards against agents modifying protected fields in session-manifest.md.
-Protected fields are those that require explicit developer action:
-  - validationConfirmed
-  - batches[*].confirmed
-  - foundationVerified
+Guards against agents modifying protected fields in session-manifest.md
+and phase-manifest.json files.
 
-On write-tool calls targeting session-manifest.md: parses the proposed
-content, extracts the JSON block, and compares protected fields against
-the current manifest values. Blocks if any protected field changed.
+Protected fields that require explicit developer action:
+  - validationConfirmed (phase-manifest.json)
+  - batches[*].confirmed (phase-manifest.json)
+  - foundationVerified (session-manifest.md)
+
+On write-tool calls targeting either manifest type: parses the proposed
+content, extracts the relevant data, and compares protected fields against
+the current values. Blocks if any protected field changed.
 
 If the proposed content cannot be parsed, permits (fail-open for this guard).
 """
@@ -22,7 +24,7 @@ import json
 import re
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit,
+    read_manifest, read_phase_runtime, block, permit,
     write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
@@ -75,6 +77,73 @@ def check_proposed_has_runtime_fields(proposed_manifest: dict) -> list[str]:
     return violations
 
 
+def _guard_phase_manifest(session_root, target_path: str, proposed_content: str):
+    """Guard validationConfirmed and batches[*].confirmed in phase-manifest.json."""
+    try:
+        proposed = json.loads(proposed_content)
+    except (json.JSONDecodeError, ValueError):
+        permit()
+        return
+
+    phase_id = get_phase_id()
+    current_runtime = {}
+    if phase_id:
+        try:
+            current_runtime = read_phase_runtime(session_root, phase_id)
+        except Exception:
+            pass
+
+    changed_fields = []
+
+    current_vc = current_runtime.get("validationConfirmed", False)
+    proposed_vc = proposed.get("validationConfirmed", current_vc)
+    if proposed_vc != current_vc:
+        changed_fields.append(
+            f"  validationConfirmed: {current_vc} → {proposed_vc}"
+        )
+
+    current_batches = current_runtime.get("batches", [])
+    proposed_batches = proposed.get("batches", [])
+    current_confirmed = {
+        b.get("id"): b.get("confirmed", False) for b in current_batches
+    }
+    for batch in proposed_batches:
+        bid = batch.get("id")
+        cur = current_confirmed.get(bid, False)
+        prop = batch.get("confirmed", cur)
+        if prop != cur:
+            changed_fields.append(
+                f"  batches[{bid}].confirmed: {cur} → {prop}"
+            )
+
+    if not changed_fields:
+        permit()
+        return
+
+    try:
+        write_telemetry_event(session_root, {
+            "event": "hook_rejection",
+            "hook": "protected-manifest-fields-gate",
+            "target": "phase-manifest.json",
+            "changedFields": changed_fields,
+            "reason": "Agent attempted to modify protected phase manifest fields"
+        }, phase_id=phase_id)
+    except Exception:
+        pass
+
+    field_list = "\n".join(changed_fields)
+    block(
+        message=(
+            f"PROTECTED FIELDS GATE — Blocked modification to phase-manifest.json.\n\n"
+            f"The following protected fields were changed in the proposed content:\n"
+            f"{field_list}\n\n"
+            f"These fields can only be set by the developer, not by any agent.\n"
+            f"Remove the protected field changes and retry."
+        ),
+        phase_id=phase_id
+    )
+
+
 def main():
     try:
         repo_root = find_repo_root()
@@ -100,13 +169,21 @@ def main():
 
     tool_input = event_input.get("tool_input", {})
     target_path = tool_input.get("path") or tool_input.get("file_path") or tool_input.get("file") or ""
-    if "session-manifest.md" not in target_path:
+
+    is_session_manifest = "session-manifest.md" in target_path
+    is_phase_manifest = "phase-manifest.json" in target_path
+
+    if not is_session_manifest and not is_phase_manifest:
         permit()
         return
 
     proposed_content = tool_input.get("content") or tool_input.get("new_string") or ""
     if not proposed_content:
         permit()
+        return
+
+    if is_phase_manifest:
+        _guard_phase_manifest(session_root, target_path, proposed_content)
         return
 
     proposed_manifest = extract_json_block(proposed_content)

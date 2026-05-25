@@ -96,9 +96,9 @@ For each data or UI need in the phase, identify whether existing SPs, DAL method
 
 ### Report to developer
 
-Before starting interview questions, summarise findings:
+Before presenting the proposed approach, summarise findings:
 
-> "Before we start the interview, here's what I found in the codebase relevant to this phase:
+> "Before we start, here's what I found in the codebase relevant to this phase:
 >
 > **Delta analysis:**
 > - Already exists: [list]
@@ -106,14 +106,43 @@ Before starting interview questions, summarise findings:
 > - Net new: [list]
 >
 > **Reuse opportunities:** [list any existing code that could be reused or extended]
+
+---
+
+## Step 2.5 — Proposed approach
+
+Synthesize the delta analysis, PRD requirements, TDD spec, and reuse
+opportunities into a concrete implementation proposal. Present it to the
+developer as a plan they can read and validate — not a list of questions.
+
+Structure the proposal as:
+
+> "Based on my codebase investigation and the TDD spec, here is my proposed
+> approach for this phase:
 >
-> Any corrections before we begin?"
+> **Sequencing:**
+> 1. [First task — what changes, which file, which pattern to follow]
+> 2. [Second task — ...]
+> ...
+>
+> **Patterns to follow:** [existing patterns identified in the codebase]
+>
+> **Reuse decisions:** [which existing code to extend vs. create new]
+>
+> **Risks or open questions:** [anything the spec or codebase doesn't answer]
+>
+> Any corrections or concerns before we continue?"
+
+Wait for the developer to respond. Record their feedback (accepted,
+modified, or rejected with alternative). Use their corrections to refine
+the interview questions in Step 3 — skip any topic the proposal already
+resolved.
 
 ---
 
 ## Step 3 — Structured interview
 
-Conduct the interview conversationally — one question at a time, waiting for the answer before proceeding. Do not present all questions at once. Skip any area that is fully and unambiguously answered by the TDD spec, PRD, or Step 2 findings.
+Focus only on areas not resolved by the proposed approach — one question at a time, waiting for the answer before proceeding. Do not present all questions at once. Skip any area that is fully and unambiguously answered by the TDD spec, PRD, Step 2 findings, or the developer's response to the proposed approach.
 
 ### 1. Scope confirmation
 
@@ -194,6 +223,12 @@ Write `phase-{N}-dev-interview-summary.md` to `[SESSION_ROOT]/phase-{N}/` using 
 
 [Gaps identified in the TDD spec before the interview, and how each was resolved during the interview]
 [Write "No gaps identified" if Step 1 found none]
+
+## Proposed approach
+
+[The implementation proposal presented to the developer in Step 2.5]
+**Developer response:** [Accepted / Accepted with modifications / Rejected with alternative]
+[If modified or rejected: describe the developer's corrections]
 
 ## Scope confirmation
 

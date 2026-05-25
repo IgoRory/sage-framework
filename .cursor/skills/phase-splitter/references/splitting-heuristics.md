@@ -8,6 +8,19 @@ document output structure.
 
 ## Splitting rules (apply in order)
 
+Rule 0 -- Shell-first (UI features only)
+If the feature introduces a new page, major UI container, or shared
+layout component, a Foundation-lane phase must be created first
+delivering: routing configuration, layout skeleton/shell component,
+shared state management setup, and stub interfaces for child
+components. This Foundation phase must complete before any Dependent
+UI phase begins. All UI phases that build on the shell are assigned
+Dependent type.
+
+Skip this rule only when the feature modifies existing pages without
+introducing new routing or layout structure. When skipping, record the
+rationale in the phase breakdown document.
+
 Rule 1 -- Layer boundary (primary split)
 Split at the boundary between layers: database, API/service, UI, and
 data-library. One phase per layer by default.

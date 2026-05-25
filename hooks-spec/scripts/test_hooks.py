@@ -687,6 +687,55 @@ def test_session_integrity_error_blocks():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# test_write_guard: blocks test-file writes during GREEN phase
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_test_write_guard_blocks_test_during_green():
+    """Test file write during GREEN/REFACTOR should be blocked."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _create_session_structure(
+            tmp_path, _base_manifest(),
+            phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
+        )
+        result = _run_hook("test_write_guard.py", {
+            "tool_name": "write_file",
+            "tool_input": {"path": str(tmp_path / "src" / "app.spec.ts")}
+        }, tmp_path)
+        assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
+
+
+def test_test_write_guard_permits_production_during_green():
+    """Production file write during GREEN/REFACTOR should be permitted."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _create_session_structure(
+            tmp_path, _base_manifest(),
+            phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
+        )
+        result = _run_hook("test_write_guard.py", {
+            "tool_name": "write_file",
+            "tool_input": {"path": str(tmp_path / "src" / "app.ts")}
+        }, tmp_path)
+        assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
+
+
+def test_test_write_guard_permits_test_during_red():
+    """Test file write during RED phase should be permitted."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _create_session_structure(
+            tmp_path, _base_manifest(),
+            phase_runtime=_base_phase_runtime("build", buildSubStep="red"),
+        )
+        result = _run_hook("test_write_guard.py", {
+            "tool_name": "write_file",
+            "tool_input": {"path": str(tmp_path / "src" / "app.spec.ts")}
+        }, tmp_path)
+        assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # manifest_step_writer: non-blocking step state updates
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -857,6 +906,10 @@ if __name__ == "__main__":
         test_protected_fields_gate_permits_non_protected_change,
         # required_references_gate
         test_required_references_gate_permits_no_refs,
+        # test_write_guard
+        test_test_write_guard_blocks_test_during_green,
+        test_test_write_guard_permits_production_during_green,
+        test_test_write_guard_permits_test_during_red,
         # exception behavior
         test_no_session_permits,
         test_session_integrity_error_blocks,

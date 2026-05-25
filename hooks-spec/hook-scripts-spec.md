@@ -1612,6 +1612,7 @@ until this field is set.
         ├── foundation_verified_gate.py       ← S5 foundation gate (Dependent phases)
         ├── batch_confirmation_gate.py        ← S5 checkpoint batch gate
         ├── protected_manifest_fields_gate.py ← protected field guard (validationConfirmed, batches[*].confirmed, foundationVerified)
+        ├── test_write_guard.py               ← S5b test file write guard (blocks test edits during GREEN/REFACTOR)
         ├── red_results_gate.py               ← S5b production write gate (requires STATUS: RED CONFIRMED)
         ├── completion_report_stop_gate.py    ← S8 stop hook (hardest gate)
         ├── tdd_results_gate.py               ← S6 TDD results gate (anchored status parsing)
