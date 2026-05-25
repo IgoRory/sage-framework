@@ -91,7 +91,7 @@ def _emit_batch_started(
         "batchId": batch_id,
         "batchLabel": batch.get("label", f"Batch {batch_id}"),
         "taskCount": len(task_ids),
-    })
+    }, phase_id=phase_id)
 
     started_batches.append(batch_id)
     phase_state["startedBatches"] = started_batches
@@ -131,7 +131,7 @@ def _emit_batch_confirmed(
         "batchId": batch_id,
         "batchLabel": batch.get("label", f"Batch {batch_id}"),
         "confirmationWaitMinutes": confirmation_wait_minutes,
-    })
+    }, phase_id=phase_id)
 
     confirmed_batches.append(batch_id)
     phase_state["confirmedBatches"] = confirmed_batches
@@ -231,7 +231,7 @@ def main():
             "phaseId": phase_id,
             "currentBatchId": current_batch_id,
             "reason": "Batch not found in manifest — configuration error"
-        })
+        }, phase_id=phase_id)
         block(
             message=(
                 f"CHECKPOINT GATE — Configuration error for phase {phase_id}.\n\n"
@@ -240,6 +240,7 @@ def main():
             ),
             phase_id=phase_id
         )
+        return
 
     if current_batch.get("confirmed", False) is True:
         # Batch confirmed — emit confirmed event for this batch and
@@ -269,7 +270,7 @@ def main():
         "batchId": current_batch_id,
         "batchLabel": batch_label,
         "reason": "Developer has not confirmed batch review"
-    })
+    }, phase_id=phase_id)
 
     block(
         message=(

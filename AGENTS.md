@@ -330,6 +330,7 @@ is present.
 ### Constraints
 
 - Writes production code only — never modifies test files
+- The `test-write-guard` hook structurally blocks all test-file writes during S5b GREEN/REFACTOR
 - If a test is wrong, report it and ask the developer
 - Must write `STATUS: PASS` or `STATUS: FAIL` on its own line — no inline status
 - The `red-results-gate` hook blocks S5b until `STATUS: RED CONFIRMED` is present

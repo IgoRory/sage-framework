@@ -156,19 +156,33 @@ def _update_telemetry_state(
         current_step = updates.get("currentStep")
         if current_step is None:
             return
-        state_path = session_root / ".telemetry-last-event.json"
-        state = {}
-        if state_path.exists():
-            try:
-                state = json.loads(state_path.read_text(encoding="utf-8"))
-            except Exception:
-                state = {}
-        state["currentStep"] = current_step
-        state["phaseId"] = phase_id
-        state["updatedAt"] = datetime.now(timezone.utc).isoformat()
-        state_path.write_text(
-            json.dumps(state, indent=2), encoding="utf-8"
-        )
+
+        try:
+            from filelock import FileLock
+            lock = FileLock(str(session_root / ".telemetry-last-event.lock"), timeout=1)
+        except ImportError:
+            lock = None
+
+        def _do_update():
+            state_path = session_root / ".telemetry-last-event.json"
+            state = {}
+            if state_path.exists():
+                try:
+                    state = json.loads(state_path.read_text(encoding="utf-8"))
+                except Exception:
+                    state = {}
+            state["currentStep"] = current_step
+            state["phaseId"] = phase_id
+            state["updatedAt"] = datetime.now(timezone.utc).isoformat()
+            state_path.write_text(
+                json.dumps(state, indent=2), encoding="utf-8"
+            )
+
+        if lock is not None:
+            with lock:
+                _do_update()
+        else:
+            _do_update()
     except Exception:
         pass
 

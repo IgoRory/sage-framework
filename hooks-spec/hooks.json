@@ -72,6 +72,14 @@
       "timeout_ms": 3000
     },
     {
+      "id": "test-write-guard",
+      "description": "Blocks test-file writes during S5b GREEN/REFACTOR phase. Enforces that only the test-author (S5a RED) may write test files. The tdd-builder must report wrong tests to the developer, not modify them.",
+      "events": ["preToolUse"],
+      "script": ".cursor/hooks/scripts/test_write_guard.py",
+      "blocking": true,
+      "timeout_ms": 3000
+    },
+    {
       "id": "red-results-gate",
       "description": "Blocks S5b production writes until the phase's phase-{N}-red-results.md exists and contains 'STATUS: RED CONFIRMED'. Enforces RED-before-GREEN TDD discipline.",
       "events": ["preToolUse"],

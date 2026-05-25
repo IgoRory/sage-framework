@@ -103,7 +103,8 @@
 │   │       └── references/
 │   │           └── prd-interviewer-signals.md
 │   ├── templates/
-│   │   └── session-manifest-template.md
+│   │   ├── session-manifest-template.md
+│   │   └── contract-template.md
 │   └── mcp.json                               ← MCP server URLs (e.g. Linear, Notion, Microsoft 365)
 │
 ├── .sage/
@@ -1452,3 +1453,12 @@ from `session-manifest-schema.md`). Key structural points:
 
 The template is mirrored in this repo at
 `.cursor/templates/session-manifest-template.md`.
+
+## Cross-phase contract template
+
+`.cursor/templates/contract-template.md` is used by the `phase-splitter`
+skill (Step 4.5) to generate cross-phase contract documents. Each
+contract file lists API shapes, data models, and mock data for
+boundaries that cross phase ownership. Contract files are added to
+`requiredReferences` for consuming phases, enforced by the
+`required-references-gate` hook.

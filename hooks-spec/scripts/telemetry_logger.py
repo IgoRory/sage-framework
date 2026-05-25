@@ -131,54 +131,64 @@ def main():
         if phase_id:
             threshold_min, buffer_min = _read_idle_config(repo_root)
             try:
-                from filelock import FileLock, Timeout
-                lock = FileLock(str(session_root / ".telemetry-last-event.lock"), timeout=1)
-                with lock:
-                    state = _read_last_event_state(session_root)
-                    phases_state = state.get("phases", {})
-                    phase_state = phases_state.get(phase_id)
+                from filelock import FileLock
+            except ImportError:
+                FileLock = None
 
-                    if phase_state and phase_state.get("lastTimestamp"):
-                        try:
-                            last_ts = datetime.fromisoformat(phase_state["lastTimestamp"])
-                            gap = now - last_ts
-                            gap_minutes = gap.total_seconds() / 60
+            def _do_idle_detection():
+                state = _read_last_event_state(session_root)
+                phases_state = state.get("phases", {})
+                phase_state = phases_state.get(phase_id)
 
-                            if gap_minutes > threshold_min:
-                                current_step = (
-                                    phase_state.get("currentStep")
-                                    or _get_current_step_from_state(session_root, phase_id)
-                                )
-                                idle_gap_minutes = round(gap_minutes)
+                if phase_state and phase_state.get("lastTimestamp"):
+                    try:
+                        last_ts = datetime.fromisoformat(phase_state["lastTimestamp"])
+                        gap = now - last_ts
+                        gap_minutes = gap.total_seconds() / 60
 
-                                paused_at = last_ts + timedelta(minutes=buffer_min)
-                                _append_event(telemetry_path, {
-                                    "timestamp": paused_at.isoformat(),
-                                    "event": "step_paused",
-                                    "phaseId": phase_id,
-                                    "sessionId": session_id,
-                                    "step": current_step,
-                                    "idleGapMinutes": idle_gap_minutes,
-                                })
-                                _append_event(telemetry_path, {
-                                    "timestamp": now_iso,
-                                    "event": "step_resumed",
-                                    "phaseId": phase_id,
-                                    "sessionId": session_id,
-                                    "step": current_step,
-                                    "idleGapMinutes": idle_gap_minutes,
-                                })
-                        except Exception:
-                            pass
+                        if gap_minutes > threshold_min:
+                            current_step = (
+                                phase_state.get("currentStep")
+                                or _get_current_step_from_state(session_root, phase_id)
+                            )
+                            idle_gap_minutes = round(gap_minutes)
 
-                    current_step = _get_current_step_from_state(session_root, phase_id)
-                    phases_state[phase_id] = {
-                        "lastTimestamp": now_iso,
-                        "currentStep": current_step,
-                    }
-                    state["phases"] = phases_state
-                    _write_last_event_state(session_root, state)
-            except (ImportError, Timeout):
+                            paused_at = last_ts + timedelta(minutes=buffer_min)
+                            _append_event(telemetry_path, {
+                                "timestamp": paused_at.isoformat(),
+                                "event": "step_paused",
+                                "phaseId": phase_id,
+                                "sessionId": session_id,
+                                "step": current_step,
+                                "idleGapMinutes": idle_gap_minutes,
+                            })
+                            _append_event(telemetry_path, {
+                                "timestamp": now_iso,
+                                "event": "step_resumed",
+                                "phaseId": phase_id,
+                                "sessionId": session_id,
+                                "step": current_step,
+                                "idleGapMinutes": idle_gap_minutes,
+                            })
+                    except Exception:
+                        pass
+
+                current_step = _get_current_step_from_state(session_root, phase_id)
+                phases_state[phase_id] = {
+                    "lastTimestamp": now_iso,
+                    "currentStep": current_step,
+                }
+                state["phases"] = phases_state
+                _write_last_event_state(session_root, state)
+
+            try:
+                if FileLock is not None:
+                    lock = FileLock(str(session_root / ".telemetry-last-event.lock"), timeout=1)
+                    with lock:
+                        _do_idle_detection()
+                else:
+                    _do_idle_detection()
+            except Exception:
                 pass
 
         # Write the normal telemetry event

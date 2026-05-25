@@ -85,6 +85,13 @@ Each candidate phase must satisfy:
 3. At least one independently runnable test
 4. Effort in the 2-8 hour range (phases outside this range need review)
 
+Before layer-based splitting, apply the shell-first rule (Rule 0):
+if any candidate phase introduces a new page or major UI container,
+verify a Foundation-lane phase exists that delivers the routing,
+layout skeleton, and state management shell. If not, create one and
+set all UI phases that depend on it to Dependent. Skip only when the
+feature modifies existing pages without new routing or layout.
+
 Start with a layer-based split (database / API / UI / data-library).
 Sub-split within a layer only if: a single layer has >8 hours of work,
 or two parts of the same layer have zero file overlap and independent
@@ -103,6 +110,34 @@ Record for each phase:
 - Upstream dependencies (phases that must complete before this one)
 - Downstream consumers (phases that depend on this one)
 - Dependency nature (shared data contract, shared file, runtime dependency)
+
+---
+
+## Step 4.5 -- Cross-phase contract generation
+
+Identify all data boundaries that cross phase boundaries:
+- API endpoints consumed by one phase and produced by another
+- Shared state shapes or Angular service interfaces
+- Database schema dependencies (tables/views one phase creates that
+  another phase reads)
+
+For each boundary, generate a contract entry in
+`[SESSION_ROOT]/phase-{N}-contracts.md` for the consuming phase:
+
+- Interface/endpoint name
+- Direction: produces or consumes
+- Data shape (TypeScript interface, SQL result set, or JSON schema)
+- Mock data example (valid sample payload or result row)
+- Owning phase (which phase produces this contract)
+
+Use the contract template at `.cursor/templates/contract-template.md`.
+
+Add each contract file to `requiredReferences` for the consuming phase.
+The existing `required-references-gate` hook enforces that these files
+are read before S5 build begins.
+
+If no cross-phase data boundaries exist, skip this step and record
+"No cross-phase contracts required" in the phase breakdown document.
 
 ---
 

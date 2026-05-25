@@ -114,6 +114,10 @@ def get_phase_dir(session_root: Path, phase_id: str) -> Path:
     and per-phase telemetry.
     Does not check existence — callers should verify as needed.
     """
+    if not re.match(r'^\d+$', phase_id):
+        raise SessionIntegrityError(
+            f"Invalid phase ID format: {phase_id!r} — expected numeric only"
+        )
     return session_root / f"phase-{phase_id}"
 
 
@@ -209,10 +213,32 @@ def write_phase_runtime(
                 keys = field_path.split(".")
                 target = runtime
                 for key in keys[:-1]:
-                    if key not in target or not isinstance(target[key], dict):
-                        target[key] = {}
-                    target = target[key]
-                target[keys[-1]] = value
+                    if isinstance(target, list):
+                        try:
+                            idx = int(key)
+                        except ValueError:
+                            break
+                        if 0 <= idx < len(target):
+                            target = target[idx]
+                        else:
+                            break
+                    else:
+                        if key not in target or not isinstance(
+                            target[key], (dict, list)
+                        ):
+                            target[key] = {}
+                        target = target[key]
+                else:
+                    last_key = keys[-1]
+                    if isinstance(target, list):
+                        try:
+                            idx = int(last_key)
+                        except ValueError:
+                            continue
+                        if 0 <= idx < len(target):
+                            target[idx] = value
+                    else:
+                        target[last_key] = value
 
             runtime["lastUpdatedAt"] = datetime.now(timezone.utc).isoformat()
             manifest_path.write_text(

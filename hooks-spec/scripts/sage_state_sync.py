@@ -81,7 +81,7 @@ def _collect_phase_files(session_root: Path, phase_id: str) -> list[Path]:
     phase_dir = get_phase_dir(session_root, phase_id)
     if not phase_dir.exists():
         return []
-    return [child for child in phase_dir.rglob("*") if child.is_file()]
+    return [child for child in phase_dir.rglob("*") if child.is_file() and not child.is_symlink()]
 
 
 def _sync_to_parent(
