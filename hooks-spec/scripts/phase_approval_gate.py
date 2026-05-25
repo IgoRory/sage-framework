@@ -8,7 +8,7 @@ Blocks S1 (dev-interview) from starting until the phase's Linear issue
 status is 'Approved'. The approval is set by the Product Manager and Lead Dev
 in Linear — it cannot be auto-set by any agent or hook.
 
-Reads the linearIssueStatus from the session manifest runtime block.
+Reads the linearIssueStatus from the per-phase phase-manifest.json.
 """
 
 import sys
