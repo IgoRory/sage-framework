@@ -13,6 +13,7 @@ Permits all non-test writes unconditionally (production code is handled
 by red-results-gate instead).
 """
 
+import os
 import sys
 import json
 from hooks_utils import (
@@ -27,7 +28,23 @@ WRITE_TOOLS = {
     "str_replace_editor", "apply_edit"
 }
 
-TEST_INDICATORS = (".spec.", ".test.", ".Tests.", "_test.", "test_")
+FILENAME_INDICATORS = (".spec.", ".test.", ".Tests.")
+
+FILENAME_SUFFIX_INDICATORS = ("Tests.cs", "Tests.ts", "Tests.js")
+
+
+def _is_test_file(path: str) -> bool:
+    """Detect test files using filename and path-segment checks."""
+    basename = os.path.basename(path)
+    if any(ind in basename for ind in FILENAME_INDICATORS):
+        return True
+    if basename.endswith(tuple(FILENAME_SUFFIX_INDICATORS)):
+        return True
+    if "_test." in basename:
+        return True
+    if basename.startswith("test_"):
+        return True
+    return False
 
 
 def main():
@@ -76,7 +93,7 @@ def main():
     tool_input = event_input.get("tool_input", {})
     target_path = tool_input.get("path") or tool_input.get("file_path") or tool_input.get("file") or ""
 
-    if not any(indicator in target_path for indicator in TEST_INDICATORS):
+    if not _is_test_file(target_path):
         permit()
         return
 

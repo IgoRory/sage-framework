@@ -22,12 +22,21 @@ If the proposed content cannot be parsed, permits (fail-open for this guard).
 import sys
 import json
 import re
+from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, block, permit,
     write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
+
+PROTECTED_PHASE_FIELDS_PATTERN = re.compile(
+    r'"(validationConfirmed|confirmed)"\s*:\s*(true|false)', re.IGNORECASE
+)
+
+FULL_WRITE_TOOLS = {
+    "write_file", "create_file", "overwrite_file"
+}
 
 WRITE_TOOLS = {
     "write_file", "create_file", "edit_file", "str_replace",
@@ -77,15 +86,57 @@ def check_proposed_has_runtime_fields(proposed_manifest: dict) -> list[str]:
     return violations
 
 
-def _guard_phase_manifest(session_root, target_path: str, proposed_content: str):
-    """Guard validationConfirmed and batches[*].confirmed in phase-manifest.json."""
+def _extract_phase_id_from_path(target_path: str) -> str | None:
+    """Extract the phase ID from a path like .../phase-3/phase-manifest.json."""
+    m = re.search(r'phase-(\d+)[/\\]phase-manifest\.json', target_path)
+    return m.group(1) if m else None
+
+
+def _guard_phase_manifest(
+    session_root: Path, target_path: str, proposed_content: str, tool_name: str
+):
+    """Guard validationConfirmed and batches[*].confirmed in phase-manifest.json.
+
+    For full-file writes: parse as JSON and compare fields against current runtime.
+    For partial edits (str_replace etc.): block if the edit text contains any
+    protected field assignment, since we cannot reliably determine the resulting
+    document state from a partial diff.
+    """
+    phase_id = _extract_phase_id_from_path(target_path)
+
+    is_full_write = tool_name in FULL_WRITE_TOOLS
+
+    if not is_full_write:
+        if PROTECTED_PHASE_FIELDS_PATTERN.search(proposed_content):
+            try:
+                write_telemetry_event(session_root, {
+                    "event": "hook_rejection",
+                    "hook": "protected-manifest-fields-gate",
+                    "target": "phase-manifest.json",
+                    "phaseId": phase_id,
+                    "reason": "Partial edit contains protected field assignment"
+                }, phase_id=phase_id)
+            except Exception:
+                pass
+            block(
+                message=(
+                    "PROTECTED FIELDS GATE — Blocked partial edit to phase-manifest.json.\n\n"
+                    "The edit contains a protected field (validationConfirmed or confirmed).\n"
+                    "These fields can only be set by the developer, not by any agent.\n"
+                    "Remove the protected field changes and retry."
+                ),
+                phase_id=phase_id
+            )
+            return
+        permit()
+        return
+
     try:
         proposed = json.loads(proposed_content)
     except (json.JSONDecodeError, ValueError):
         permit()
         return
 
-    phase_id = get_phase_id()
     current_runtime = {}
     if phase_id:
         try:
@@ -183,7 +234,7 @@ def main():
         return
 
     if is_phase_manifest:
-        _guard_phase_manifest(session_root, target_path, proposed_content)
+        _guard_phase_manifest(session_root, target_path, proposed_content, tool_name)
         return
 
     proposed_manifest = extract_json_block(proposed_content)

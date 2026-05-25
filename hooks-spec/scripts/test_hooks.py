@@ -735,6 +735,36 @@ def test_test_write_guard_permits_test_during_red():
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
 
+def test_test_write_guard_permits_contest_file():
+    """Production file with 'test' substring (contest_form.ts) should NOT be blocked."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _create_session_structure(
+            tmp_path, _base_manifest(),
+            phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
+        )
+        result = _run_hook("test_write_guard.py", {
+            "tool_name": "write_file",
+            "tool_input": {"path": str(tmp_path / "src" / "contest_form.ts")}
+        }, tmp_path)
+        assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
+
+
+def test_test_write_guard_blocks_csharp_tests():
+    """C# test file (SomeTests.cs) should be blocked during GREEN."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        _create_session_structure(
+            tmp_path, _base_manifest(),
+            phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
+        )
+        result = _run_hook("test_write_guard.py", {
+            "tool_name": "write_file",
+            "tool_input": {"path": str(tmp_path / "tests" / "FTPCalculationTests.cs")}
+        }, tmp_path)
+        assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # manifest_step_writer: non-blocking step state updates
 # ─────────────────────────────────────────────────────────────────────────────
@@ -910,6 +940,8 @@ if __name__ == "__main__":
         test_test_write_guard_blocks_test_during_green,
         test_test_write_guard_permits_production_during_green,
         test_test_write_guard_permits_test_during_red,
+        test_test_write_guard_permits_contest_file,
+        test_test_write_guard_blocks_csharp_tests,
         # exception behavior
         test_no_session_permits,
         test_session_integrity_error_blocks,
