@@ -19,21 +19,155 @@ Flow:
 
 confirmed = true CANNOT be set by the agent. Only the developer can set it.
 
+Also emits batch_started and batch_confirmed telemetry events using a
+state file (.telemetry-batch-state.json) to prevent duplicate emissions
+on repeated gate checks.
+
 Permits immediately in autonomous mode or any step other than 'build'.
 """
 
 import sys
 import json
+from pathlib import Path
+from datetime import datetime, timezone
+
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit, write_telemetry_event,
+    read_manifest, read_phase_runtime, block, permit, write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
+
+try:
+    from filelock import FileLock, Timeout as LockTimeout
+except ImportError:
+    FileLock = None
+    LockTimeout = None
 
 BUILD_TOOLS = {
     "write_file", "create_file", "edit_file", "str_replace",
     "str_replace_editor", "apply_edit", "run_build", "execute_command"
 }
+
+BATCH_STATE_FILENAME = ".telemetry-batch-state.json"
+
+
+def _read_batch_state(session_root: Path) -> dict:
+    """Read batch telemetry state tracking file."""
+    try:
+        state_path = session_root / BATCH_STATE_FILENAME
+        if state_path.exists():
+            return json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {"phases": {}}
+
+
+def _write_batch_state(session_root: Path, state: dict) -> None:
+    """Write batch telemetry state tracking file."""
+    try:
+        state_path = session_root / BATCH_STATE_FILENAME
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _emit_batch_started(
+    session_root: Path, phase_id: str, batch: dict, state: dict
+) -> None:
+    """Emit batch_started event if not already emitted for this batch."""
+    phases_state = state.get("phases", {})
+    phase_state = phases_state.get(phase_id, {})
+    started_batches = phase_state.get("startedBatches", [])
+
+    batch_id = batch.get("id")
+    if batch_id in started_batches:
+        return
+
+    task_ids = batch.get("taskIds", [])
+    write_telemetry_event(session_root, {
+        "event": "batch_started",
+        "phaseId": phase_id,
+        "sessionId": session_root.name,
+        "batchId": batch_id,
+        "batchLabel": batch.get("label", f"Batch {batch_id}"),
+        "taskCount": len(task_ids),
+    })
+
+    started_batches.append(batch_id)
+    phase_state["startedBatches"] = started_batches
+    phases_state[phase_id] = phase_state
+    state["phases"] = phases_state
+    _write_batch_state(session_root, state)
+
+
+def _emit_batch_confirmed(
+    session_root: Path, phase_id: str, batch: dict, state: dict
+) -> None:
+    """Emit batch_confirmed event if not already emitted for this batch."""
+    phases_state = state.get("phases", {})
+    phase_state = phases_state.get(phase_id, {})
+    confirmed_batches = phase_state.get("confirmedBatches", [])
+
+    batch_id = batch.get("id")
+    if batch_id in confirmed_batches:
+        return
+
+    now = datetime.now(timezone.utc)
+    confirmation_wait_minutes = None
+    completed_at = batch.get("completedAt")
+    if completed_at:
+        try:
+            completed = datetime.fromisoformat(completed_at)
+            confirmation_wait_minutes = round(
+                (now - completed).total_seconds() / 60
+            )
+        except Exception:
+            pass
+
+    write_telemetry_event(session_root, {
+        "event": "batch_confirmed",
+        "phaseId": phase_id,
+        "sessionId": session_root.name,
+        "batchId": batch_id,
+        "batchLabel": batch.get("label", f"Batch {batch_id}"),
+        "confirmationWaitMinutes": confirmation_wait_minutes,
+    })
+
+    confirmed_batches.append(batch_id)
+    phase_state["confirmedBatches"] = confirmed_batches
+    phases_state[phase_id] = phase_state
+    state["phases"] = phases_state
+    _write_batch_state(session_root, state)
+
+
+def _locked_batch_emit(
+    session_root: Path,
+    phase_id: str,
+    batch: dict,
+    next_batch: dict | None,
+    emit_started: bool = False,
+    emit_confirmed: bool = False,
+) -> None:
+    """Execute batch telemetry emissions under a file lock to prevent races."""
+    try:
+        if FileLock is not None:
+            lock = FileLock(str(session_root / ".telemetry-batch-state.lock"), timeout=1)
+            with lock:
+                state = _read_batch_state(session_root)
+                if emit_confirmed:
+                    _emit_batch_confirmed(session_root, phase_id, batch, state)
+                if emit_started:
+                    target = next_batch if next_batch else batch
+                    _emit_batch_started(session_root, phase_id, target, state)
+        else:
+            state = _read_batch_state(session_root)
+            if emit_confirmed:
+                _emit_batch_confirmed(session_root, phase_id, batch, state)
+            if emit_started:
+                target = next_batch if next_batch else batch
+                _emit_batch_started(session_root, phase_id, target, state)
+    except Exception:
+        pass
 
 
 def main():
@@ -64,8 +198,7 @@ def main():
         permit()
         return
 
-    phase_data = manifest.get("phases", {}).get(phase_id, {})
-    runtime = phase_data.get("runtime", {})
+    runtime = read_phase_runtime(session_root, phase_id)
     current_step = runtime.get("currentStep", "")
 
     if current_step != "build":
@@ -79,7 +212,10 @@ def main():
 
     current_batch_id = runtime.get("currentBatchId")
     if current_batch_id is None:
-        # No batch in progress yet — first batch is always permitted
+        # No batch in progress yet — first batch starts now
+        batches = runtime.get("batches", [])
+        if batches:
+            _locked_batch_emit(session_root, phase_id, batches[0], None, emit_started=True)
         permit()
         return
 
@@ -106,10 +242,23 @@ def main():
         )
 
     if current_batch.get("confirmed", False) is True:
+        # Batch confirmed — emit confirmed event for this batch and
+        # started event for the next batch
+        current_idx = next(
+            (i for i, b in enumerate(batches) if b.get("id") == current_batch_id),
+            None
+        )
+        next_batch = None
+        if current_idx is not None and current_idx + 1 < len(batches):
+            next_batch = batches[current_idx + 1]
+
+        _locked_batch_emit(session_root, phase_id, current_batch, next_batch, emit_confirmed=True, emit_started=bool(next_batch))
+
         permit()
         return
 
-    manifest_path = session_root / "session-manifest.md"
+    from hooks_utils import get_phase_dir
+    phase_manifest_path = get_phase_dir(session_root, phase_id) / "phase-manifest.json"
     batch_label = current_batch.get("label", f"Batch {current_batch_id}")
     review_path = current_batch.get("reviewPath", f"phase-{phase_id}-batch-{current_batch_id}-review.md")
 
@@ -130,7 +279,7 @@ def main():
             f"  {review_path}\n\n"
             f"To unblock:\n"
             f"  1. Review the batch review document and test results\n"
-            f"  2. Open: {manifest_path}\n"
+            f"  2. Open: {phase_manifest_path}\n"
             f"  3. Set batches[{current_batch_id}].confirmed = true\n\n"
             f"This flag cannot be set by the agent."
         ),

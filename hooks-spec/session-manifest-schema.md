@@ -170,7 +170,7 @@ The file has two parts:
   // ─────────────────────────────────────────────────────────────────
   "sessionState": {
     "status": "kick-off | async-approvals | build-sprint | review-merge | complete",
-    "parentBranch": "string — git branch name for the parent feature branch (e.g. feature/PROF-50-rule-assignment). Used by sage-state-sync hook to push manifest updates for cross-machine visibility. Set once at kick-off by phase-splitter.",
+    "parentBranch": "string — git branch name for the parent feature branch (e.g. feature/PROF-50-rule-assignment). Cross-machine visibility in Sprint mode relies on developers pulling the parent feature branch. Same-machine worktrees share the .sage/ directory directly. Set once at kick-off by phase-splitter.",
     "allPhasesApproved": false,
     "foundationVerified": false,
     "foundationVerifiedAt": null,
@@ -287,7 +287,8 @@ NEW path patterns (files expected to be created during build):
 | `phases[N].runtime.findingSummary` | Agent skills (Planned — not yet implemented) | During build sprint |
 | `phases[N].runtime.hookRejectionCount` | `block()` in hooks_utils (auto-increment) | On each gate rejection |
 | `phases[N].runtime.deferredItems` | Agent skills | During build sprint |
-| `phases[N].runtime.linearIssueStatus` | phase-splitter skill (at kick-off approval confirmation) | Kick-off — on session driver confirmation |
+| `phases[N].runtime.linearIssueStatus` | phase-splitter skill (kick-off) + `linear-status-sync` hook (during build sprint) | Kick-off — on session driver confirmation; Build sprint — on each debounced poll |
+| `phases[N].definition.assignedDeveloper` | phase-splitter skill (kick-off) + `linear-status-sync` hook (during build sprint) | Kick-off — on manifest generation; Build sprint — when Linear assignee differs |
 | `sessionState.*` | Hook scripts + orchestrator | Throughout work cycle |
 | `pathValidation.*` | phase-splitter | Kick-off only |
 | `kickoffOutputs.*` | kickoff-dev-review + phase-splitter | Kick-off only |
@@ -382,6 +383,105 @@ running Windows), replace with `msvcrt.locking` or use a
 cross-platform lock library such as `filelock` (pip install filelock).
 Since Python 3.12 is confirmed on developer machines, `filelock` is the
 recommended approach for cross-platform compatibility.
+
+---
+
+## Duration semantics
+
+The manifest records two duration concepts:
+
+- **`actualDurationHours`** — wall-clock time from `startedAt` to
+  `completedAt`. Includes overnight gaps, lunch breaks, and developer
+  confirmation waits. This is NOT a measure of active effort.
+
+- **`activeExecutionHours`** — derived post-hoc by the intel-recorder
+  from telemetry `step_paused`/`step_resumed` events. Calculated as
+  `actualDurationHours - (totalIdleMinutes / 60)`. This is the metric
+  used for velocity calibration.
+
+The manifest itself does not store `activeExecutionHours`. It is computed
+at intel-recording time from telemetry and written to
+`.sage/intel/velocity-history.jsonl`.
+
+---
+
+## Telemetry state files
+
+Two lightweight state files live in `[SESSION_ROOT]/` alongside the
+manifest. They are written by hook scripts and consumed only by hooks.
+They are NOT committed to git — add them to `.gitignore`.
+
+Each state file has a corresponding lock file (`.telemetry-last-event.lock`
+and `.telemetry-batch-state.lock`) that serialises concurrent access using
+the `filelock` package (same mechanism as `manifest.lock`).
+
+### `.telemetry-last-event.json`
+
+Written by `telemetry_logger.py`. Tracks the last event timestamp per
+phase for idle-gap detection.
+
+```json
+{
+  "phases": {
+    "1": { "lastTimestamp": "ISO8601", "currentStep": "build" },
+    "3": { "lastTimestamp": "ISO8601", "currentStep": "build" }
+  }
+}
+```
+
+### `.telemetry-batch-state.json`
+
+Written by `batch_confirmation_gate.py`. Tracks which batch lifecycle
+events have already been emitted to prevent duplicates on repeated gate
+checks.
+
+```json
+{
+  "phases": {
+    "3": {
+      "startedBatches": [1, 2],
+      "confirmedBatches": [1]
+    }
+  }
+}
+```
+
+---
+
+## Batch telemetry event contract
+
+In Checkpoint build mode, three telemetry events are emitted per batch:
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `batch_started` | `batch_confirmation_gate.py` | Gate passes — first tool call for the batch |
+| `batch_completed` | `manifest_step_writer.py` | `phase-{N}-batch-{M}-review.md` written |
+| `batch_confirmed` | `batch_confirmation_gate.py` | Gate passes after confirmation wait |
+
+Event schemas:
+
+```json
+{"event": "batch_started", "phaseId": "3", "sessionId": "...", "batchId": 1, "batchLabel": "...", "taskCount": 9}
+{"event": "batch_completed", "phaseId": "3", "sessionId": "...", "batchId": 1, "batchLabel": "...", "testsPassing": true, "durationMinutes": 142}
+{"event": "batch_confirmed", "phaseId": "3", "sessionId": "...", "batchId": 1, "batchLabel": "...", "confirmationWaitMinutes": 45}
+```
+
+---
+
+## Idle detection event contract
+
+The telemetry logger emits paired events when an activity gap exceeds
+`telemetry.idleThresholdMinutes` (default: 30 minutes) from
+`workflow-config.json`:
+
+```json
+{"event": "step_paused", "phaseId": "3", "sessionId": "...", "step": "build", "idleGapMinutes": 985}
+{"event": "step_resumed", "phaseId": "3", "sessionId": "...", "step": "build", "idleGapMinutes": 985}
+```
+
+Detection is retrospective — the pause is only identified when the
+next event arrives. The `step_paused` timestamp is `lastEventTime +
+idleBufferMinutes`; the `step_resumed` timestamp is the current time.
 
 ---
 

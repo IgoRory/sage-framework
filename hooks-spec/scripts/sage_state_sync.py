@@ -4,15 +4,20 @@ SAGE Framework — Hook: sage-state-sync
 Event: afterFileEdit
 Blocking: False
 
-Pushes .sage/ session state to the parent feature branch after the
-manifest-step-writer updates session-manifest.md. Provides cross-machine
-phase visibility in Sprint mode without requiring developers to manually
-commit and push session state.
+Pushes the current phase directory to the parent feature branch after any
+phase file is written (phase-manifest.json, telemetry, or phase artifacts).
+Provides cross-machine phase visibility in Sprint mode.
 
-Uses git plumbing commands (hash-object, mktree, commit-tree) to create
-a commit on the parent branch without touching the developer's working
-tree or index. Retries on push conflicts (up to 2 retries). Silently
-no-ops on any failure.
+Per-phase architecture: each phase writes only to its own phase-{N}/
+directory. No manifest merge or telemetry union is needed because each
+worktree owns a unique phase directory. The root manifest is rarely
+modified and is pushed at kickoff by phase-splitter.
+
+Uses git plumbing commands (hash-object, read-tree, update-index,
+write-tree, commit-tree) with an alternate index file to create a commit
+on the parent branch without touching the developer's working tree or
+index. Retries on push conflicts (up to 3 retries). Silently no-ops on
+any failure.
 """
 
 import sys
@@ -20,7 +25,6 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from datetime import datetime, timezone
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -28,12 +32,14 @@ from hooks_utils import (
     find_repo_root,
     get_session_root,
     get_phase_id,
+    get_phase_dir,
     read_manifest,
+    read_phase_runtime,
     NoSessionError,
     SessionIntegrityError,
 )
 
-MAX_RETRIES = 2
+MAX_RETRIES = 3
 
 
 def _run_git(args: list[str], cwd: str | Path, timeout: int = 10, stdin_data: str | None = None) -> subprocess.CompletedProcess:
@@ -50,61 +56,48 @@ def _run_git(args: list[str], cwd: str | Path, timeout: int = 10, stdin_data: st
     )
 
 
-def _is_manifest_edit(file_path: str) -> bool:
-    return Path(file_path).name == "session-manifest.md"
+def _is_phase_file(file_path: str, session_root: Path, phase_id: str) -> bool:
+    """Return True if the edited file is inside the current phase directory."""
+    phase_dir = get_phase_dir(session_root, phase_id)
+    try:
+        Path(file_path).resolve().relative_to(phase_dir.resolve())
+        return True
+    except ValueError:
+        pass
+    normalized = str(Path(file_path)).replace("\\", "/")
+    return f"phase-{phase_id}/" in normalized
 
 
-def _build_commit_message(phase_id: str | None, manifest: dict) -> str:
-    current_step = "unknown"
-    prev_step = "unknown"
-    if phase_id:
-        phase = manifest.get("phases", {}).get(phase_id, {})
-        runtime = phase.get("runtime", {})
-        current_step = runtime.get("currentStep", "unknown")
-        step_status = runtime.get("stepStatus", {})
-        completed = [s for s, v in step_status.items() if v == "complete"]
-        if completed:
-            prev_step = completed[-1]
-
-    return f"[sage-sync] Phase {phase_id or '?'}: {prev_step} complete -> {current_step}"
+def _build_commit_message(phase_id: str, runtime: dict) -> str:
+    current_step = runtime.get("currentStep", "unknown")
+    step_status = runtime.get("stepStatus", {})
+    completed = [s for s, v in step_status.items() if v == "complete"]
+    prev_step = completed[-1] if completed else "unknown"
+    return f"[sage-sync] Phase {phase_id}: {prev_step} complete -> {current_step}"
 
 
-def _collect_session_files(session_root: Path, phase_id: str | None) -> list[Path]:
-    """
-    Returns a list of absolute paths for all session files that should
-    be synced to the parent branch.
-    """
-    files: list[Path] = []
-    manifest_path = session_root / "session-manifest.md"
-    if manifest_path.exists():
-        files.append(manifest_path)
-
-    telemetry_path = session_root / "workflow-telemetry.jsonl"
-    if telemetry_path.exists():
-        files.append(telemetry_path)
-
-    if phase_id:
-        phase_dir = session_root / f"phase-{phase_id}"
-        if phase_dir.exists():
-            for child in phase_dir.rglob("*"):
-                if child.is_file():
-                    files.append(child)
-
-    return files
+def _collect_phase_files(session_root: Path, phase_id: str) -> list[Path]:
+    """Returns all files in the phase directory."""
+    phase_dir = get_phase_dir(session_root, phase_id)
+    if not phase_dir.exists():
+        return []
+    return [child for child in phase_dir.rglob("*") if child.is_file()]
 
 
 def _sync_to_parent(
     repo_root: Path,
     session_root: Path,
     parent_branch: str,
-    phase_id: str | None,
-    manifest: dict,
+    phase_id: str,
+    runtime: dict,
 ) -> None:
-    commit_msg = _build_commit_message(phase_id, manifest)
-    session_files = _collect_session_files(session_root, phase_id)
+    commit_msg = _build_commit_message(phase_id, runtime)
+    phase_files = _collect_phase_files(session_root, phase_id)
 
-    if not session_files:
+    if not phase_files:
         return
+
+    alt_index = session_root / ".sage-sync-index"
 
     for attempt in range(MAX_RETRIES + 1):
         result = _run_git(
@@ -128,19 +121,20 @@ def _sync_to_parent(
 
         env_with_alt_index = os.environ.copy()
         env_with_alt_index["GIT_TERMINAL_PROMPT"] = "0"
-        alt_index = session_root / ".sage-sync-index"
         env_with_alt_index["GIT_INDEX_FILE"] = str(alt_index)
 
         try:
-            subprocess.run(
+            rt_result = subprocess.run(
                 ["git", "read-tree", base_tree],
                 cwd=str(repo_root),
                 capture_output=True,
                 text=True,
                 env=env_with_alt_index,
             )
+            if rt_result.returncode != 0:
+                return
 
-            for abs_path in session_files:
+            for abs_path in phase_files:
                 rel_path = abs_path.relative_to(repo_root)
                 git_path = str(rel_path).replace("\\", "/")
 
@@ -152,7 +146,7 @@ def _sync_to_parent(
                     return
                 blob_sha = result.stdout.strip()
 
-                subprocess.run(
+                ui_result = subprocess.run(
                     ["git", "update-index", "--add", "--cacheinfo",
                      f"100644,{blob_sha},{git_path}"],
                     cwd=str(repo_root),
@@ -160,6 +154,8 @@ def _sync_to_parent(
                     text=True,
                     env=env_with_alt_index,
                 )
+                if ui_result.returncode != 0:
+                    return
 
             result = subprocess.run(
                 ["git", "write-tree"],
@@ -208,12 +204,23 @@ def main():
         event_input = {}
 
     file_path = event_input.get("file_path", "")
-    if not file_path or not _is_manifest_edit(file_path):
+    if not file_path:
         sys.exit(0)
 
     try:
         repo_root = find_repo_root()
         session_root = get_session_root(repo_root)
+    except (NoSessionError, SessionIntegrityError):
+        sys.exit(0)
+
+    phase_id = get_phase_id()
+    if not phase_id:
+        sys.exit(0)
+
+    if not _is_phase_file(file_path, session_root, phase_id):
+        sys.exit(0)
+
+    try:
         manifest = read_manifest(session_root)
     except (NoSessionError, SessionIntegrityError):
         sys.exit(0)
@@ -222,10 +229,10 @@ def main():
     if not parent_branch:
         sys.exit(0)
 
-    phase_id = get_phase_id()
+    runtime = read_phase_runtime(session_root, phase_id)
 
     try:
-        _sync_to_parent(repo_root, session_root, parent_branch, phase_id, manifest)
+        _sync_to_parent(repo_root, session_root, parent_branch, phase_id, runtime)
     except Exception:
         pass
 

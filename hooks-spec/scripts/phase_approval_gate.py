@@ -15,7 +15,8 @@ import sys
 import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit, write_telemetry_event,
+    read_manifest, read_phase_runtime, block, permit,
+    write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
 
@@ -51,8 +52,7 @@ def main():
         permit()
         return
 
-    phase_data = manifest.get("phases", {}).get(phase_id, {})
-    runtime = phase_data.get("runtime", {})
+    runtime = read_phase_runtime(session_root, phase_id)
     current_step = runtime.get("currentStep", "")
 
     # Only applies at the very start of S1

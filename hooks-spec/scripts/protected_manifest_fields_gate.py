@@ -22,7 +22,8 @@ import json
 import re
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit, write_telemetry_event,
+    read_manifest, read_phase_runtime, block, permit,
+    write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
 
@@ -43,24 +44,35 @@ def extract_json_block(content: str) -> dict | None:
         return None
 
 
-def collect_confirmed_values(manifest: dict) -> dict[str, bool]:
-    """Collect all protected boolean fields from the manifest."""
+def collect_protected_values_from_root(manifest: dict) -> dict[str, bool]:
+    """Collect protected boolean fields from the root manifest.
+    foundationVerified lives in sessionState of the root manifest.
+    """
     protected = {}
-
-    for phase_id, phase_data in manifest.get("phases", {}).items():
-        runtime = phase_data.get("runtime", {})
-        val_key = f"phases.{phase_id}.runtime.validationConfirmed"
-        protected[val_key] = runtime.get("validationConfirmed", False)
-
-        for batch in runtime.get("batches", []):
-            batch_id = batch.get("id", "?")
-            batch_key = f"phases.{phase_id}.runtime.batches[{batch_id}].confirmed"
-            protected[batch_key] = batch.get("confirmed", False)
-
     session_state = manifest.get("sessionState", {})
     protected["sessionState.foundationVerified"] = session_state.get("foundationVerified", False)
-
     return protected
+
+
+def check_proposed_has_runtime_fields(proposed_manifest: dict) -> list[str]:
+    """Check if the proposed root manifest write contains runtime fields
+    that should be in per-phase manifests. Block if so."""
+    violations = []
+    for phase_id, phase_data in proposed_manifest.get("phases", {}).items():
+        runtime = phase_data.get("runtime", {})
+        if "validationConfirmed" in runtime:
+            violations.append(
+                f"  phases.{phase_id}.runtime.validationConfirmed "
+                f"(belongs in phase-{phase_id}/phase-manifest.json)"
+            )
+        for batch in runtime.get("batches", []):
+            if "confirmed" in batch:
+                batch_id = batch.get("id", "?")
+                violations.append(
+                    f"  phases.{phase_id}.runtime.batches[{batch_id}].confirmed "
+                    f"(belongs in phase-{phase_id}/phase-manifest.json)"
+                )
+    return violations
 
 
 def main():
@@ -102,14 +114,20 @@ def main():
         permit()
         return
 
-    current_protected = collect_confirmed_values(manifest)
-    proposed_protected = collect_confirmed_values(proposed_manifest)
+    # Check if proposed write contains runtime fields that belong in per-phase manifests
+    runtime_violations = check_proposed_has_runtime_fields(proposed_manifest)
+
+    # Check foundationVerified changes in root manifest
+    current_protected = collect_protected_values_from_root(manifest)
+    proposed_protected = collect_protected_values_from_root(proposed_manifest)
 
     changed_fields = []
     for field_key, current_val in current_protected.items():
         proposed_val = proposed_protected.get(field_key, current_val)
         if proposed_val != current_val:
             changed_fields.append(f"  {field_key}: {current_val} → {proposed_val}")
+
+    changed_fields.extend(runtime_violations)
 
     if not changed_fields:
         permit()

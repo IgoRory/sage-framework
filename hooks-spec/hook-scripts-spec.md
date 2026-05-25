@@ -57,7 +57,7 @@ def get_session_root(repo_root: Path) -> Path:
     """
 
 def get_phase_id() -> str | None:
-    """Read from SAGE_PHASE_ID environment variable. Returns None if not set."""
+    """Read from SAGE_PHASE_ID env var, falling back to .sage/current-phase.txt."""
 
 def get_phase_dir(session_root: Path, phase_id: str) -> Path:
     """Return session_root / f'phase-{phase_id}'."""
@@ -105,7 +105,7 @@ def write_telemetry_event(session_root: Path, event: dict) -> None:
 
 **Important notes on spec vs. actual implementation:**
 
-- **Phase ID env var:** The actual implementation uses `SAGE_PHASE_ID`, not `CURSOR_PHASE`.
+- **Phase ID resolution:** The actual implementation checks `SAGE_PHASE_ID` env var first, then falls back to `.sage/current-phase.txt` in the repo root. This covers worktrees and branch-based workflows where the env var is not set.
 - **`write_telemetry_event` signature:** The actual implementation takes 2 parameters `(session_root, event_dict)`, not 4. Telemetry writes to a session-level `workflow-telemetry.jsonl`, not per-phase files.
 - **`block` signature:** The actual implementation takes `(message, phase_id=None)` — 2 parameters. When `phase_id` is provided, `block()` auto-increments `hookRejectionCount` in the manifest before exiting.
 - **`manifest.lock`:** Implemented using the `filelock` package (cross-platform). Acquired by `write_manifest_field()`, `write_manifest_fields()`, and `increment_rejection_count()`.
@@ -116,72 +116,23 @@ def write_telemetry_event(session_root: Path, event: dict) -> None:
 
 ## Script 1: `telemetry_logger.py`
 
-**Purpose:** Logging only. Writes every hook event to the phase lane's
-telemetry.jsonl. Never blocks. Runs alongside all other hooks.
+**Purpose:** Logging and idle detection. Writes every hook event to the
+session-level `workflow-telemetry.jsonl`. Never blocks. Also detects idle
+gaps between consecutive events for the same phase — when the gap exceeds
+`telemetry.idleThresholdMinutes` (from `workflow-config.json`), emits
+`step_paused` and `step_resumed` event pairs retrospectively.
 
-```python
-# .cursor/hooks/scripts/telemetry_logger.py
+**State file:** `.telemetry-last-event.json` in `[SESSION_ROOT]/` tracks
+the last event timestamp per phase.
 
-import sys
-import os
-import json
-from hooks_utils import (
-    find_repo_root, get_session_root, get_phase_id,
-    write_telemetry_event, permit
-)
+**Idle detection events emitted:**
 
-def main():
-    try:
-        repo_root = find_repo_root()
-        session_root = get_session_root(repo_root)
-        phase_id = get_phase_id()
-    except RuntimeError:
-        # No active session — not in a phase chat. Do not log, do not block.
-        permit()
-        return
+| Event | Timestamp | Fields |
+|---|---|---|
+| `step_paused` | `lastEventTime + idleBufferMinutes` | `phaseId`, `sessionId`, `step`, `idleGapMinutes` |
+| `step_resumed` | current time | `phaseId`, `sessionId`, `step`, `idleGapMinutes` |
 
-    # Read the event context passed by Cursor via stdin as JSON
-    try:
-        event_input = json.loads(sys.stdin.read())
-    except Exception:
-        event_input = {}
-
-    event_name = event_input.get("event", "unknown")
-    step = os.environ.get("CURSOR_STEP", "unknown")
-
-    # Build event-specific data fields
-    data = {"step": step}
-
-    if event_name == "preToolUse":
-        data["tool_name"] = event_input.get("tool_name", "unknown")
-        data["tool_input_summary"] = str(
-            event_input.get("tool_input", {}))[:200]
-
-    elif event_name in ("beforeShellExecution", "afterShellExecution"):
-        data["command"] = event_input.get("command", "")[:300]
-        if event_name == "afterShellExecution":
-            data["exit_code"] = event_input.get("exit_code")
-            data["stdout_summary"] = event_input.get("stdout", "")[:200]
-
-    elif event_name == "afterFileEdit":
-        data["file_path"] = event_input.get("file_path", "unknown")
-        data["edit_type"] = event_input.get("edit_type", "unknown")
-
-    elif event_name == "afterMCPExecution":
-        data["mcp_tool"] = event_input.get("tool_name", "unknown")
-        data["mcp_result_summary"] = str(
-            event_input.get("result", {}))[:200]
-
-    elif event_name == "stop":
-        data["stop_reason"] = event_input.get("reason", "unknown")
-
-    write_telemetry_event(session_root, phase_id, event_name, data)
-    permit()
-
-
-if __name__ == "__main__":
-    main()
-```
+See `hooks-spec/scripts/telemetry_logger.py` for the canonical implementation.
 
 ---
 
@@ -1215,9 +1166,21 @@ if __name__ == "__main__":
 **Purpose:** In checkpoint build mode, blocks the next batch's build tool
 from launching until the developer has confirmed the current batch by
 setting `batches[currentBatchId].confirmed = true` in the session manifest.
+Also emits batch lifecycle telemetry events (`batch_started`,
+`batch_confirmed`) when the gate passes.
 
 **Only active during S5 AND when `buildMode = "checkpoint"`.**
 In autonomous mode or any other step, permits immediately.
+
+**Batch telemetry events emitted on gate pass:**
+
+| Event | Condition | Fields |
+|---|---|---|
+| `batch_started` | First pass for a batch (gate permits) | `phaseId`, `sessionId`, `batchId`, `batchLabel`, `taskCount` |
+| `batch_confirmed` | Pass after confirmation wait (confirmed flipped from false to true) | `phaseId`, `sessionId`, `batchId`, `batchLabel`, `confirmationWaitMinutes` |
+
+**State file:** `.telemetry-batch-state.json` in `[SESSION_ROOT]/` prevents
+duplicate event emission on repeated gate checks.
 
 ```python
 # .cursor/hooks/scripts/batch_confirmation_gate.py
@@ -1383,6 +1346,9 @@ manifest in real time. This provides cross-phase visibility in Sprint mode —
 all worktrees share the same `.sage/` directory, so manifest updates are
 instantly visible without git operations.
 
+Also detects batch review documents (`phase-{N}-batch-{M}-review.md`) in
+Checkpoint mode and emits `batch_completed` telemetry events with duration.
+
 **Events:** `afterFileEdit`
 **Blocking:** No
 
@@ -1403,7 +1369,13 @@ updates the manifest:
 | `test-results.md` | agent-testing | completion-report |
 | `completion-report.md` | completion-report | complete (sets `completedAt`) |
 
-For each transition, the hook writes (via `write_manifest_fields()`):
+**Batch review detection:** When a file matches `phase-{N}-batch-{M}-review.md`:
+- Reads the batch's `startedAt` from the manifest to calculate duration
+- Updates `batches[M].completedAt` in the manifest
+- Emits a `batch_completed` telemetry event with `batchId`, `batchLabel`,
+  `testsPassing`, and `durationMinutes`
+
+For each step transition, the hook writes (via `write_manifest_fields()`):
 - `stepStatus.[completed_step] = "complete"`
 - `stepTimestamps.[completed_step].completedAt = now`
 - `currentStep = [next_step]`
@@ -1413,51 +1385,113 @@ For each transition, the hook writes (via `write_manifest_fields()`):
 Uses `write_manifest_fields()` from `hooks_utils.py` for locked batch
 manifest updates. Silently no-ops on any failure.
 
+**Artifact location requirement:** Step artifacts MUST be written to
+`.sage/sessions/[session-id]/phase-N/` with the naming convention
+`phase-{N}-{artifact-suffix}` (e.g. `phase-2-dev-interview-summary.md`).
+Artifacts written to any other location (e.g. `docs/cursor/...` or a
+different session directory) will not trigger manifest updates. If a
+phase completes outside the SAGE artifact pipeline, the
+`linear-status-sync` hook (Script 13) provides a safety net by syncing
+the Linear Done status back to the manifest.
+
 ---
 
 ## Script 12: `sage_state_sync.py`
 
-**Purpose:** Non-blocking hook that pushes `.sage/` session state to the
-parent feature branch after the manifest-step-writer updates
-`session-manifest.md`. Provides cross-machine phase visibility in Sprint
-mode — developers on separate machines can see each other's step progress
-by pulling the parent branch.
+**Purpose:** Non-blocking hook that pushes `.sage/` session state to
+the parent feature branch after any session file is written (manifest,
+telemetry, or phase artifacts). Provides cross-machine phase visibility
+in Sprint mode without requiring developers to manually commit and push
+session state.
 
-**Events:** `afterFileEdit`
+**Event:** `afterFileEdit`
 **Blocking:** No
-**Timeout:** 15000ms (accommodates git fetch + push over network)
+**Timeout:** 15000 ms
 
-**Trigger condition:** Fires on every `afterFileEdit` event. Checks if the
-edited file is `session-manifest.md`. Exits immediately if not.
+Uses git plumbing commands (hash-object, read-tree, update-index,
+write-tree, commit-tree) with an alternate index file to create a commit
+on the parent branch without touching the developer's working tree or
+index.
 
-**Execution flow:**
+Manifest sync uses per-phase merge: the remote manifest's runtime for
+other phases is preserved; only the current phase's runtime is taken
+from local. Telemetry sync uses append-only union: remote lines are
+kept, and only locally-new lines are appended.
 
-1. Read `sessionState.parentBranch` from the manifest. Exit if not set.
-2. Fetch `origin/{parentBranch}`.
-3. Create a temporary detached worktree from `origin/{parentBranch}`.
-4. Copy the session manifest, workflow telemetry, and current phase
-   directory into the temporary worktree.
-5. Stage, commit with `[sage-sync]` prefix, and push to
-   `origin/{parentBranch}`.
-6. If push fails with non-fast-forward, retry (up to 2 retries) by
-   re-fetching and re-applying.
-7. Clean up the temporary worktree.
+Retries on push conflicts (up to 3 retries). Silently no-ops on any
+failure.
 
-**Commit message format:**
+---
+
+## Script 13: `linear_status_sync.py`
+
+**Purpose:** Non-blocking hook that polls Linear for phase issue status
+changes and syncs `linearIssueStatus` (and `assignedDeveloper`) back to
+the session manifest. Closes the gap where Linear status diverges from
+the manifest after kick-off.
+
+**Event:** `afterFileEdit`
+**Blocking:** No
+**Timeout:** 5000 ms
+
+### Trigger and debounce
+
+Fires on every `afterFileEdit` event but debounces using a cursor file
+(`linear-sync-cursor.txt` in the session directory). Skips the poll if
+the last successful poll was within the configurable interval (default
+60 seconds, from `workflow-config.json` field `linearSync.pollIntervalSeconds`).
+
+### Authentication
+
+Uses the `LINEAR_API_KEY` environment variable (same key used by
+`skill_update_poller.py` and the Linear MCP server). Silently exits if
+the key is not set.
+
+### Logic
+
+1. Read the session manifest and collect all `phases[N].definition.linearIssueId`
+   identifiers.
+2. Query Linear GraphQL API in a single batch request for all phase issues.
+3. For each phase, compare Linear status against `phases[N].runtime.linearIssueStatus`:
+   - If different, update `linearIssueStatus` via `write_manifest_fields()`.
+   - If Linear assignee differs from `definition.assignedDeveloper`, update it.
+4. If `linearSync.autoCompleteManifestOnDone` is `true` and Linear status is
+   `Done` but manifest `currentStep` is not `done`/`complete`:
+   - Set `currentStep` to `done` and all `stepStatus` entries to `complete`.
+   - Set `completedAt` from the Linear issue's `completedAt`.
+   - Emit a `linear_status_sync` telemetry event with `autoCompleted: true`.
+
+### GraphQL query
+
+```graphql
+query PhaseStatusSync($identifiers: [String!]!) {
+  issues(filter: { identifier: { in: $identifiers } }) {
+    nodes {
+      identifier
+      state { name }
+      assignee { name }
+      completedAt
+      startedAt
+    }
+  }
+}
 ```
-[sage-sync] Phase 2: implementation-plan complete -> traceability-review
-```
 
-**Conflict handling:** Each phase writes to different `phases.{N}.runtime`
-fields, so manifest conflicts between concurrent pushes are rare. The
-retry loop handles the non-fast-forward case by re-fetching the latest
-remote state, copying local session files over it, and pushing again.
+### Manifest fields written
 
-**Configuration:** Reads `sessionState.parentBranch` from the manifest.
-This field is set once during kickoff by the phase-splitter skill.
+| Field path | Condition |
+|---|---|
+| `phases[N].runtime.linearIssueStatus` | Linear status differs from manifest |
+| `phases[N].definition.assignedDeveloper` | Linear assignee differs from manifest |
+| `phases[N].runtime.currentStep` | Linear status is Done + autoComplete enabled |
+| `phases[N].runtime.stepStatus[*]` | Linear status is Done + autoComplete enabled |
+| `phases[N].runtime.completedAt` | Linear status is Done + autoComplete enabled |
+| `phases[N].runtime.startedAt` | Linear startedAt present + manifest startedAt null |
 
-**Dependencies:** Requires `git` CLI, network access to `origin`, and
-push permission to the parent branch. Silently no-ops on any failure.
+### Failure mode
+
+Silently no-ops on any failure (network, auth, parse, write). All errors
+are swallowed — this hook must never block agent work or corrupt the manifest.
 
 ---
 
@@ -1488,6 +1522,19 @@ Called automatically by `block()` when `phase_id` is provided.
 Internal helper. Replaces the ````json ... ```` block inside
 `session-manifest.md` with the serialised dict. Preserves all
 content outside the block.
+
+### gate_evaluated event
+
+Emitted by gates on their primary permit path (condition satisfied) via
+`permit_with_telemetry()` in `hooks_utils.py`. Not emitted on early exits
+(wrong tool, wrong step, no session).
+
+| Field | Value |
+|---|---|
+| `event` | `"gate_evaluated"` |
+| `hook` | The hook ID (e.g. `"validation-confirmed-gate"`) |
+| `phaseId` | Current phase ID or null |
+| `result` | `"permit"` |
 
 ---
 

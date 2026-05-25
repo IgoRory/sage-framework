@@ -15,8 +15,9 @@ Status reports - delivered inline, on demand only.
 ## How to respond when invoked
 
 When the developer asks for a status update, read:
-1. The session manifest: `.sage/sessions/[active session]/session-manifest.md`
-2. The `workflow-telemetry.jsonl` for each active phase lane
+1. The root session manifest: `.sage/sessions/[active session]/session-manifest.md` (definitions + sessionState)
+2. Per-phase runtime: `phase-{N}/phase-manifest.json` for each phase
+3. Per-phase telemetry: `phase-{N}/workflow-telemetry.jsonl` for each active phase lane
 3. Each phase's current artifact state (what files exist in the phase directory)
 
 Then report:

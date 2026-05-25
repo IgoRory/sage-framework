@@ -71,17 +71,21 @@ When generating `session-manifest.md`, populate it from the session manifest tem
 - `kickoffDate` - today's date in ISO format
 - All phase definitions from the phase-splitter output
 
-Initial runtime values for all phases:
+Phase definitions go in the root `session-manifest.md`. Phase runtime
+(currentStep, stepStatus, buildMode, etc.) goes in per-phase manifest
+files at `phase-{N}/phase-manifest.json` (plain JSON, bootstrapped by
+phase-splitter). Initial per-phase runtime values:
 - `linearIssueStatus`: `"Pending Approval"`
 - `currentStep`: `"dev-interview"`
-- `buildMode`: `"autonomous"`
+- `buildMode`: `null`
 - `validationConfirmed`: `false`
-- All step statuses: `"pending"`
+- All step statuses: `"not-started"`
 - All timestamps: `null`
 
-Write the completed manifest to: `.sage/sessions/[sessionId]/session-manifest.md`
+Write the completed root manifest to: `.sage/sessions/[sessionId]/session-manifest.md`
 Write the session ID to: `.sage/sessions/active-session.txt`
 Create the session directory if it does not exist.
+Per-phase manifests and telemetry files are bootstrapped by phase-splitter.
 
 ## TDD specification format
 

@@ -43,7 +43,14 @@ Read the session manifest from `[SESSION_ROOT]/session-manifest.md`.
 Parse the JSON block. Extract:
 - `sessionId`, `featureId`, `featureTitle`, `mode`, `kickoffDate`
 - `sessionState` (status, foundationVerified, completionLog, etc.)
-- All phase definitions and runtime state
+- All phase definitions (from root manifest)
+
+Then read each phase's runtime from `phase-{N}/phase-manifest.json`
+(plain JSON). These files contain `currentStep`, `stepStatus`,
+`stepTimestamps`, `buildMode`, `batches`, `validationConfirmed`,
+`hookRejectionCount`, `linearIssueStatus`, `startedAt`, `completedAt`,
+etc. Assemble the unified view by combining root definitions with
+per-phase runtime.
 
 ---
 

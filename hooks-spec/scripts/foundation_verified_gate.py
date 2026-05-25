@@ -23,7 +23,8 @@ import sys
 import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit, write_telemetry_event,
+    read_manifest, read_phase_runtime, block, permit,
+    write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
 
@@ -61,15 +62,14 @@ def main():
         permit()
         return
 
-    phase_data = manifest.get("phases", {}).get(phase_id, {})
-    runtime = phase_data.get("runtime", {})
+    runtime = read_phase_runtime(session_root, phase_id)
     current_step = runtime.get("currentStep", "")
 
     if current_step != "build":
         permit()
         return
 
-    definition = phase_data.get("definition", {})
+    definition = manifest.get("phases", {}).get(phase_id, {}).get("definition", {})
     phase_type = definition.get("phaseType", "").lower()
 
     # Only applies to Dependent phases

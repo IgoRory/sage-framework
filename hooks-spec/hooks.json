@@ -2,7 +2,7 @@
   "hooks": [
     {
       "id": "telemetry-logger",
-      "description": "Writes every hook event to the session-scoped workflow-telemetry.jsonl. Always runs, never blocks. Logging failures do not affect gate behaviour.",
+      "description": "Writes every hook event to per-phase workflow-telemetry.jsonl (phase-{N}/workflow-telemetry.jsonl). Session-level events write to the session-root file. Always runs, never blocks.",
       "events": [
         "preToolUse",
         "afterFileEdit",
@@ -13,11 +13,11 @@
       ],
       "script": ".cursor/hooks/scripts/telemetry_logger.py",
       "blocking": false,
-      "timeout_ms": 2000
+      "timeout_ms": 3000
     },
     {
       "id": "plan-mode-enforcer",
-      "description": "Blocks all file-write tool calls while the session manifest currentStep is 'dev-interview'. Enforces Plan mode structurally during S1.",
+      "description": "Blocks all file-write tool calls while phase-manifest.json currentStep is 'dev-interview'. Enforces Plan mode structurally during S1.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/plan_mode_enforcer.py",
       "blocking": true,
@@ -49,7 +49,7 @@
     },
     {
       "id": "validation-confirmed-gate",
-      "description": "Blocks S5 build from starting until the developer has set validationConfirmed = true in the session manifest. This flag cannot be set by any agent or hook — only the developer can set it.",
+      "description": "Blocks S5 build from starting until the developer has set validationConfirmed = true in phase-manifest.json. This flag cannot be set by any agent or hook — only the developer can set it.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/validation_confirmed_gate.py",
       "blocking": true,
@@ -65,7 +65,7 @@
     },
     {
       "id": "batch-confirmation-gate",
-      "description": "In Checkpoint build mode only: blocks the next batch's build tool call until the developer has set batches[N].confirmed = true in the session manifest after reviewing the batch review document.",
+      "description": "In Checkpoint build mode only: blocks the next batch's build tool call until the developer has set batches[N].confirmed = true in phase-manifest.json after reviewing the batch review document.",
       "events": ["preToolUse"],
       "script": ".cursor/hooks/scripts/batch_confirmation_gate.py",
       "blocking": true,
@@ -121,7 +121,7 @@
     },
     {
       "id": "manifest-step-writer",
-      "description": "Updates stepStatus, stepTimestamps, and currentStep in the session manifest when a phase step artifact is written. Non-blocking. Provides real-time cross-phase visibility in Sprint mode.",
+      "description": "Updates stepStatus, stepTimestamps, and currentStep in phase-manifest.json when a phase step artifact is written. Non-blocking. Also updates .telemetry-last-event.json for idle detection.",
       "events": ["afterFileEdit"],
       "script": ".cursor/hooks/scripts/manifest_step_writer.py",
       "blocking": false,
@@ -129,11 +129,19 @@
     },
     {
       "id": "sage-state-sync",
-      "description": "Pushes .sage/ session state to the parent feature branch after manifest step transitions. Non-blocking. Provides cross-machine phase visibility in Sprint mode.",
+      "description": "Pushes the current phase directory to the parent feature branch after phase file writes. Non-blocking. Each worktree pushes only its own phase-{N}/ directory — no merge conflicts.",
       "events": ["afterFileEdit"],
       "script": ".cursor/hooks/scripts/sage_state_sync.py",
       "blocking": false,
       "timeout_ms": 15000
+    },
+    {
+      "id": "linear-status-sync",
+      "description": "Polls Linear for phase issue status changes and syncs linearIssueStatus to phase-manifest.json (display-only — no auto-completion). Non-blocking. Debounced to poll at most once per 60 seconds.",
+      "events": ["afterFileEdit"],
+      "script": ".cursor/hooks/scripts/linear_status_sync.py",
+      "blocking": false,
+      "timeout_ms": 5000
     },
     {
       "id": "skill-update-trigger-watcher",

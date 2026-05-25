@@ -64,6 +64,15 @@ Sprint velocity data is never mixed with Mob or Pair data.
 | Phase splitter duration (minutes) | prd-interview-telemetry.jsonl | Time between `phase_splitter_started` and `phase_splitter_completed` |
 | TDD spec generation duration (minutes) | workflow-telemetry.jsonl | Per phase: time between `tdd_spec_generation_started` and `tdd_spec_generation_completed` |
 | TDD spec total scenario count | workflow-telemetry.jsonl | `totalScenarioCount` from `tdd_specs_all_complete` event |
+| Active execution hours | workflow-telemetry.jsonl | `actualHours` minus sum of all `idleGapMinutes` from `step_paused` events for the phase, divided by 60 |
+| Idle pause count | workflow-telemetry.jsonl | Count of `step_paused` events matching the phase |
+| Total idle minutes | workflow-telemetry.jsonl | Sum of `idleGapMinutes` from all `step_paused` events for the phase |
+| Batch count | Manifest runtime.batches | Checkpoint mode only: length of batches array |
+| Batch durations (minutes) | workflow-telemetry.jsonl | Checkpoint mode only: array of `durationMinutes` from `batch_completed` events |
+| Batch confirmation waits (minutes) | workflow-telemetry.jsonl | Checkpoint mode only: array of `confirmationWaitMinutes` from `batch_confirmed` events |
+| Avg batch duration (minutes) | Derived | Mean of batch durations array |
+| Max confirmation wait (minutes) | Derived | Largest value in batch confirmation waits array |
+| Total confirmation wait (minutes) | Derived | Sum of batch confirmation waits array |
 
 ---
 
@@ -81,6 +90,20 @@ completed timestamps.
 Read workflow-telemetry.jsonl and extract TDD spec generation timing from
 `tdd_spec_generation_started`/`completed` event pairs (per phase) and
 `tdd_specs_all_complete` for the total scenario count.
+
+For idle-time metrics: filter `step_paused` events by phaseId. Sum all
+`idleGapMinutes` values to get `totalIdleMinutes`. Count the events to
+get `idlePauseCount`. Calculate `activeExecutionHours` as
+`actualHours - (totalIdleMinutes / 60)`.
+
+For batch metrics (Checkpoint mode phases only): collect all
+`batch_started`, `batch_completed`, and `batch_confirmed` events for the
+phase. Extract `durationMinutes` from each `batch_completed` event into
+`batchDurations` array. Extract `confirmationWaitMinutes` from each
+`batch_confirmed` event into `batchConfirmationWaits` array. Derive
+`avgBatchDurationMinutes`, `maxConfirmationWaitMinutes`, and
+`totalConfirmationWaitMinutes` from those arrays. Set `batchMetrics` to
+null for Autonomous mode phases.
 
 For each phase that reached Build Complete in this cycle, collect all
 metrics listed above.
@@ -112,6 +135,7 @@ Append one record per phase to `.sage/intel/velocity-history.jsonl`
   "phaseType": "[foundation|independent|dependent]",
   "estimatedHours": [N.N],
   "actualHours": [N.N],
+  "activeExecutionHours": [N.N],
   "buildMode": "[autonomous|checkpoint]",
   "stepDurationMinutes": {
     "s1": [N],
@@ -124,11 +148,21 @@ Append one record per phase to `.sage/intel/velocity-history.jsonl`
     "s8": [N]
   },
   "hookRejectionCount": [N],
+  "idlePauseCount": [N],
+  "totalIdleMinutes": [N],
   "tddGreenFirstPassRate": [0.00],
   "refactorCompletionRate": [0.00],
   "s7TestPassRate": [0.00],
   "criticalFindingsAtS6": [N],
   "foundationWaitMinutes": [N],
+  "batchMetrics": {
+    "batchCount": [N],
+    "batchDurations": [N, N, ...],
+    "batchConfirmationWaits": [N, N, ...],
+    "avgBatchDurationMinutes": [N.N],
+    "maxConfirmationWaitMinutes": [N],
+    "totalConfirmationWaitMinutes": [N]
+  },
   "kickoff": {
     "completenessCheckDurationMinutes": [N],
     "completenessCheckScore": [N],
@@ -143,6 +177,12 @@ Append one record per phase to `.sage/intel/velocity-history.jsonl`
 
 If any metric is unavailable (artifact missing or field null):
 record null for that field. Do not skip the record.
+
+`batchMetrics` is null for Autonomous mode phases. For Checkpoint mode
+phases, all fields within `batchMetrics` must be populated (use empty
+arrays if no batch events exist). `activeExecutionHours` is null when
+no `step_paused` events exist for the phase (indicates no idle gaps were
+detected, so `actualHours` is the effective active time).
 
 ---
 

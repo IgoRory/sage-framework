@@ -27,7 +27,7 @@ import json
 from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, get_phase_dir, block, permit,
+    read_manifest, read_phase_runtime, get_phase_dir, block, permit,
     write_telemetry_event, find_marker_value,
     NoSessionError, SessionIntegrityError
 )
@@ -79,8 +79,7 @@ def main():
         permit()
         return
 
-    phase_data = manifest.get("phases", {}).get(phase_id, {})
-    runtime = phase_data.get("runtime", {})
+    runtime = read_phase_runtime(session_root, phase_id)
     current_step = runtime.get("currentStep", "")
 
     required_artifact_template = PRIOR_ARTIFACT.get(current_step)
@@ -103,7 +102,7 @@ def main():
                 "step": current_step,
                 "missingArtifact": str(artifact_path),
                 "reason": f"Required artifact missing for step '{current_step}'"
-            })
+            }, phase_id=phase_id)
             block(
                 message=(
                     f"STEP GATE — Cannot begin '{current_step}' for phase {phase_id}.\n\n"
@@ -122,7 +121,7 @@ def main():
                 "phaseId": phase_id,
                 "step": current_step,
                 "reason": "Traceability review has Blocker findings — cannot advance to plan-validation"
-            })
+            }, phase_id=phase_id)
             block(
                 message=(
                     f"STEP GATE — Cannot advance to plan-validation.\n\n"
@@ -150,7 +149,7 @@ def main():
         "step": current_step,
         "missingArtifact": str(artifact_path),
         "reason": f"Required artifact missing for step '{current_step}'"
-    })
+    }, phase_id=phase_id)
 
     block(
         message=(

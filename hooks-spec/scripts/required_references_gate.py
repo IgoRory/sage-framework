@@ -20,7 +20,8 @@ import json
 from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit, write_telemetry_event,
+    read_manifest, read_phase_runtime, get_phase_dir, block, permit,
+    write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
 
@@ -30,37 +31,43 @@ BUILD_INITIATING_TOOLS = {
 }
 
 
-def get_read_files_from_telemetry(session_root: Path) -> set:
+def get_read_files_from_telemetry(session_root: Path, phase_id: str | None = None) -> set:
     """
     Parse workflow-telemetry.jsonl and return the set of file paths
     that have been read (confirmed by read_file preToolUse events).
+    Reads both session-root and per-phase telemetry files.
     """
-    telemetry_path = session_root / "workflow-telemetry.jsonl"
-    read_files = set()
-    if not telemetry_path.exists():
-        return read_files
+    read_files: set[str] = set()
+    telemetry_paths = [session_root / "workflow-telemetry.jsonl"]
+    if phase_id:
+        telemetry_paths.append(
+            get_phase_dir(session_root, phase_id) / "workflow-telemetry.jsonl"
+        )
 
-    with open(telemetry_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                record = json.loads(line)
-                if (
-                    record.get("event") == "preToolUse"
-                    and record.get("toolName") in {"read_file", "view_file"}
-                ):
-                    fp = record.get("toolInput", {})
-                    if isinstance(fp, dict):
-                        path = fp.get("path") or fp.get("file_path")
-                    else:
-                        path = str(fp)
-                    if path:
-                        read_files.add(Path(path).name)  # match on filename only
-                        read_files.add(path)              # also match on full path
-            except Exception:
-                continue
+    for telemetry_path in telemetry_paths:
+        if not telemetry_path.exists():
+            continue
+        with open(telemetry_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    if (
+                        record.get("event") == "preToolUse"
+                        and record.get("toolName") in {"read_file", "view_file"}
+                    ):
+                        fp = record.get("toolInput", {})
+                        if isinstance(fp, dict):
+                            path = fp.get("path") or fp.get("file_path")
+                        else:
+                            path = str(fp)
+                        if path:
+                            read_files.add(Path(path).name)
+                            read_files.add(path)
+                except Exception:
+                    continue
 
     return read_files
 
@@ -93,22 +100,21 @@ def main():
         permit()
         return
 
-    phase_data = manifest.get("phases", {}).get(phase_id, {})
-    runtime = phase_data.get("runtime", {})
+    runtime = read_phase_runtime(session_root, phase_id)
     current_step = runtime.get("currentStep", "")
 
     if current_step != "build":
         permit()
         return
 
-    definition = phase_data.get("definition", {})
+    definition = manifest.get("phases", {}).get(phase_id, {}).get("definition", {})
     required_refs = definition.get("requiredReferences", [])
 
     if not required_refs:
         permit()
         return
 
-    read_files = get_read_files_from_telemetry(session_root)
+    read_files = get_read_files_from_telemetry(session_root, phase_id)
 
     missing = []
     for ref in required_refs:

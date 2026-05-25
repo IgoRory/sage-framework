@@ -15,7 +15,8 @@ import sys
 import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, get_phase_dir, block, permit, write_telemetry_event,
+    read_manifest, read_phase_runtime, get_phase_dir, block, permit,
+    write_telemetry_event,
     find_marker_value, NoSessionError, SessionIntegrityError
 )
 
@@ -55,8 +56,7 @@ def main():
         permit()
         return
 
-    phase_data = manifest.get("phases", {}).get(phase_id, {})
-    runtime = phase_data.get("runtime", {})
+    runtime = read_phase_runtime(session_root, phase_id)
     current_step = runtime.get("currentStep", "")
 
     if current_step not in {"security-review", "agent-testing"}:

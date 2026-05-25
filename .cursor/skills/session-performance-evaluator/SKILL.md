@@ -23,7 +23,7 @@ that require human attention.
 
 | Input | Source | Required |
 |-------|--------|----------|
-| workflow-telemetry.jsonl | [SESSION_ROOT]/ | Yes |
+| workflow-telemetry.jsonl | `phase-{N}/workflow-telemetry.jsonl` (per-phase) and `[SESSION_ROOT]/workflow-telemetry.jsonl` (session-level) | Yes |
 | prd-interview-telemetry.jsonl | `.sage/prd-interview-telemetry.jsonl` (path from `workflow-config.json`) | Yes |
 | Phase artifacts (S1-S8) | [SESSION_ROOT]/phase-N/ | Yes |
 | Session manifest | [SESSION_ROOT]/session-manifest.md | Yes |
@@ -33,7 +33,9 @@ that require human attention.
 
 ## Step 1 -- Read all inputs
 
-Read workflow-telemetry.jsonl. Parse all events for the current cycle.
+Read all per-phase telemetry files (`phase-*/workflow-telemetry.jsonl`) and
+the session-root `workflow-telemetry.jsonl`. Union all events and parse
+for the current cycle. Read phase runtime from `phase-{N}/phase-manifest.json`.
 Read prd-interview-telemetry.jsonl. Filter to events matching the current
 session's `linearIssueId` (from the manifest header). Parse kickoff events
 (`workflowKind` values: `"completeness_check"`, `"kickoff_dev_review"`,

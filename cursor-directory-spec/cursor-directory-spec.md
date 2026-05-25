@@ -45,6 +45,9 @@
 │   │       ├── code_review_gate.py
 │   │       ├── security_review_gate.py
 │   │       ├── completion_report_stop_gate.py
+│   │       ├── manifest_step_writer.py
+│   │       ├── sage_state_sync.py
+│   │       ├── linear_status_sync.py
 │   │       └── skill_update_trigger_watcher.py
 │   ├── rules/
 │   │   ├── rules.mdc                          ← existing product rules; preserve as applicable

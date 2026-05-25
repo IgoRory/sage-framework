@@ -259,6 +259,30 @@ Phases: [N] | Tiers: [tier structure] | Mode: sprint"
 git push origin main
 ```
 
+After committing, phase-splitter bootstraps session state in each
+worktree so that hooks can resolve the active session and phase context:
+
+```powershell
+foreach ($phase in 1..$phaseCount) {
+    $wt = "C:\Sage\worktrees\$featureLinearId\phase-$phase"
+
+    # Session identity
+    Copy-Item ".sage\sessions\active-session.txt" "$wt\.sage\sessions\active-session.txt" -Force
+    Set-Content "$wt\.sage\current-phase.txt" "$phase"
+
+    # Session artifacts (manifest, TDD specs, telemetry)
+    Copy-Item ".sage\sessions\$sessionId" "$wt\.sage\sessions\$sessionId" -Recurse -Force
+
+    # Workflow config and PRD references
+    Copy-Item ".sage\workflow-config.json" "$wt\.sage\workflow-config.json" -Force
+    Copy-Item ".sage\prds" "$wt\.sage\prds" -Recurse -Force
+}
+```
+
+Without this bootstrap, hooks (`telemetry_logger`, `manifest_step_writer`,
+`sage_state_sync`) silently exit because `active-session.txt` is empty and
+`get_phase_id()` returns `None`.
+
 Each developer pulls before starting S1:
 ```powershell
 cd C:\Sage\worktrees\LIN-4821\phase-[N]

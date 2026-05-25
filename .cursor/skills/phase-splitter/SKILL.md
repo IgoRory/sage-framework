@@ -198,8 +198,9 @@ Once the team confirms the breakdown:
    - Validate all file paths in scopedFiles exist in the codebase
    - Record any paths that cannot be validated as NEW (not an error)
    - Set `sessionState.parentBranch` to the current git branch name
-     (the parent feature branch). This enables the sage-state-sync hook
-     to push manifest updates for cross-machine visibility.
+     (the parent feature branch). This identifies the branch for
+     cross-machine visibility (developers pull this branch to see
+     other phases' progress).
    - Write to [SESSION_ROOT]/session-manifest.md
    - Write session ID to .sage/sessions/active-session.txt
 
@@ -214,7 +215,46 @@ Once the team confirms the breakdown:
    - Branch naming: "LIN-[issue-id]-phase-N-[kebab-objective]"
    - Worktree path: C:\Sage\worktrees\[feature-id]\phase-N\
 
-5. Report completion of artifact generation (do not end the skill here --
+5. Bootstrap session state in each worktree (Sprint mode only):
+   Each worktree is an independent working tree with its own `.sage/`
+   directory. Hooks resolve session context from the worktree root, so
+   every worktree must have the session files populated. For each
+   worktree created in step 4:
+   - Copy `.sage/sessions/active-session.txt` (containing the session ID)
+   - Copy `.sage/workflow-config.json`
+   - Copy the full session directory
+     `[SESSION_ROOT]/` to `.sage/sessions/[session-id]/` in the worktree
+   - Write the phase number (e.g. `2`) to `.sage/current-phase.txt`
+     in the worktree root. This file is the persistent fallback for
+     `SAGE_PHASE_ID` — hooks read it when the environment variable
+     is not set.
+   - Copy `.sage/prds/` to the worktree so required references resolve
+   - Bootstrap `phase-{N}/phase-manifest.json` in each worktree's
+     session directory with the initial phase runtime:
+     ```json
+     {
+       "currentStep": "dev-interview",
+       "stepStatus": { "dev-interview": "not-started" },
+       "stepTimestamps": {},
+       "buildMode": null,
+       "batches": [],
+       "validationConfirmed": false,
+       "hookRejectionCount": 0,
+       "linearIssueStatus": "Pending Approval",
+       "startedAt": null,
+       "completedAt": null,
+       "findingSummary": {},
+       "deferredItems": []
+     }
+     ```
+   - Bootstrap `phase-{N}/workflow-telemetry.jsonl` as an empty file
+     in each worktree's session directory (telemetry_logger will write
+     per-phase events here).
+
+   If any copy fails, warn but do not abort — the worktree is still
+   usable, but hooks will degrade silently without session context.
+
+6. Report completion of artifact generation (do not end the skill here --
    proceed to Step 11 for approval).
 
 ---
@@ -239,7 +279,7 @@ approval. The approver is whoever is driving the kick-off session
    - Call Linear MCP to update the phase issue status from
      "Pending Approval" to "Approved"
    - Update `linearIssueStatus` to `"Approved"` in the phase's
-     `runtime` block in session-manifest.md
+     `phase-{N}/phase-manifest.json`
 
 4. Update session-level state in session-manifest.md:
    - Set `sessionState.status` to `"build-sprint"`
@@ -284,9 +324,9 @@ and bootstrap `workflow-telemetry.jsonl`:
 python .cursor/hooks/scripts/prd_telemetry_append.py '{"event":"phase_splitter_completed","workflowKind":"phase_splitter","linearIssueId":"[FEATURE_ID]","sessionId":"[session ID]","phaseCount":[N],"manifestPath":"[SESSION_ROOT]/session-manifest.md","worktreesCreated":[true|false],"linearIssuesCreated":[N]}'
 ```
 
-Then immediately write the bootstrap event to `workflow-telemetry.jsonl` so
-the file exists before the orchestrator generates TDD specs and before any
-Cursor hook fires:
+Then immediately write the bootstrap event to the session-root
+`workflow-telemetry.jsonl` (session-level events like kickoff go here;
+per-phase events go to `phase-{N}/workflow-telemetry.jsonl`):
 
 ```python
 import json
@@ -313,6 +353,31 @@ The bootstrap event is written directly to the session's
 `workflow-telemetry.jsonl`. Failures are silent and do not affect the
 phase-splitter workflow.
 
+**Immediately after writing the bootstrap event**, initialize the idle
+detection state file so the first tool call in each phase can detect gaps
+from kickoff:
+
+```python
+import json
+from datetime import datetime, timezone
+from pathlib import Path
+
+now_iso = datetime.now(timezone.utc).isoformat()
+session_root = Path("[SESSION_ROOT]")
+state = {"phases": {}}
+for phase_id in ["1", "2", ...]:  # all phase IDs
+    state["phases"][phase_id] = {
+        "lastTimestamp": now_iso,
+        "currentStep": "dev-interview",
+    }
+state_path = session_root / ".telemetry-last-event.json"
+state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+```
+
+This writes `.telemetry-last-event.json` with the current timestamp for
+all phases. Without this, the first idle gap (between kickoff and when a
+developer starts their phase) would never be detected.
+
 ---
 
 ## Constraints
@@ -320,7 +385,8 @@ phase-splitter workflow.
 - Do not run against a PRD below completeness threshold
 - Do not assign named developers -- profile recommendations only
 - Do not finalise the manifest until the team confirms the breakdown
-- Sprint mode only: create worktrees. Pair mode: skip worktree creation.
+- Sprint mode only: create worktrees and bootstrap `.sage/` in each.
+  Pair mode: skip worktree creation.
 - Cannot approve Linear phase issues without explicit confirmation from the
   session driver (PM or Lead Dev) in the active kick-off session
 

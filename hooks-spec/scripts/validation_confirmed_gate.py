@@ -19,7 +19,8 @@ import sys
 import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
-    read_manifest, block, permit, write_telemetry_event,
+    read_manifest, read_phase_runtime, get_phase_dir, block, permit,
+    write_telemetry_event,
     NoSessionError, SessionIntegrityError
 )
 
@@ -57,8 +58,7 @@ def main():
         permit()
         return
 
-    phase_data = manifest.get("phases", {}).get(phase_id, {})
-    runtime = phase_data.get("runtime", {})
+    runtime = read_phase_runtime(session_root, phase_id)
     current_step = runtime.get("currentStep", "")
 
     if current_step != "build":
@@ -78,15 +78,15 @@ def main():
         "reason": "Developer has not confirmed plan validation"
     })
 
-    manifest_path = session_root / "session-manifest.md"
+    phase_manifest_path = get_phase_dir(session_root, phase_id) / "phase-manifest.json"
     block(
         message=(
             f"VALIDATION GATE — Build blocked for phase {phase_id}.\n\n"
             f"The implementation plan has not been validated by the developer.\n\n"
             f"To unblock:\n"
             f"  1. Review the validation mockup in the phase directory\n"
-            f"  2. Open: {manifest_path}\n"
-            f"  3. Set validationConfirmed = true for phase {phase_id} in the JSON block\n\n"
+            f"  2. Open: {phase_manifest_path}\n"
+            f"  3. Set validationConfirmed = true in the JSON\n\n"
             f"This flag cannot be set by the agent. It requires your explicit confirmation."
         ),
         phase_id=phase_id

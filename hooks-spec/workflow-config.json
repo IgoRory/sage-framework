@@ -182,7 +182,9 @@
     "filename": "workflow-telemetry.jsonl",
     "scope": "session",
     "evaluationCycleInterval": 1,
-    "skillEvaluationCycleInterval": 5
+    "skillEvaluationCycleInterval": 5,
+    "idleThresholdMinutes": 30,
+    "idleBufferMinutes": 5
   },
 
   "hooks": {
@@ -224,6 +226,11 @@
       "agent-testing":       "phase-{N}-test-results.md",
       "completion-report":   "phase-{N}-completion-report.md"
     }
+  },
+
+  "linearSync": {
+    "pollIntervalSeconds": 60,
+    "pollCursorFile": "linear-sync-cursor.txt"
   },
 
   "skillUpdate": {
