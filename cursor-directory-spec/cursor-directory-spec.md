@@ -50,7 +50,7 @@
 │   │   ├── rules.mdc                          ← existing product rules; preserve as applicable
 │   │   ├── sage-session.mdc
 │   │   └── phase-context.mdc
-│   ├── skills/                                ← 8 top-level skill packages
+│   ├── skills/                                ← 9 top-level skill packages
 │   │   ├── prd-completeness-check/
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
@@ -95,10 +95,14 @@
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
 │   │   │       └── per-skill-criteria.md
-│   │   └── prd-interviewer-effectiveness-evaluator/
-│   │       ├── SKILL.md
-│   │       └── references/
-│   │           └── prd-interviewer-signals.md
+│   │   ├── prd-interviewer-effectiveness-evaluator/
+│   │   │   ├── SKILL.md
+│   │   │   └── references/
+│   │   │       └── prd-interviewer-signals.md
+│   │   ├── tdd-orchestrator/                      ← Generic TDD loop orchestration
+│   │   │   └── SKILL.md
+│   │   ├── dev-plan/                              ← Opt-in investigation-first replacement for S1 dev-interview
+│   │   │   └── SKILL.md
 │   ├── templates/
 │   │   └── session-manifest-template.md
 │   └── mcp.json                               ← MCP server URLs (e.g. Linear, Notion, Microsoft 365)
@@ -1293,7 +1297,7 @@ Phases progress through 8 steps in strict order:
 
 | Step | Code | What happens |
 |------|------|--------------|
-| S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes) |
+| S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes). Opt-in alternative: `dev-plan` skill (investigation-first layered plan — no interview) |
 | S2 | implementation-plan | Agent produces implementation plan with TDD mapping |
 | S3 | traceability-review | Agent checks PRD ↔ implementation plan bidirectionally |
 | S4 | plan-validation | Agent produces plan preview; developer confirms |
@@ -1312,7 +1316,10 @@ All artifacts use the pattern: `phase-{N}-{artifact-type}.md`
 Where {N} is the phase number (e.g. phase-1, phase-2).
 
 Examples:
-- `phase-1-dev-interview-summary.md`
+- `phase-1-dev-interview-summary.md` — S1 default (dev-interview agent)
+- `phase-1-dev-plan-L1.md` — S1 opt-in L1 strategic artifact (dev-plan skill)
+- `phase-1-dev-plan-L2.md` — S1 opt-in L2 tactical artifact (dev-plan skill)
+- `phase-1-dev-plan.md` — S1 opt-in final artifact (dev-plan skill, feeds S2)
 - `phase-1-implementation-plan.md`
 - `phase-1-traceability-review.md`
 - `phase-1-plan-preview.canvas.tsx`

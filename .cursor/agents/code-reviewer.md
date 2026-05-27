@@ -25,6 +25,12 @@ When invoked:
 4. Read the traceability review: `[SESSION_ROOT]/phase-{N}/phase-{N}-traceability-review.md`
 5. Read the PRD from manifest `header.featurePrdPath`
 6. Confirm `phase-{N}-tdd-results.md` exists in the phase directory and contains `STATUS: PASS`
+7. If `phase-{N}-dev-plan.md` exists, read its `## Open deferrals` and
+   `## Work groupings and approach decisions` sections — acknowledged
+   deferrals are not findings; documented approach decisions inform plan
+   conformance.
+   Read `.cursor/skills/reasoning/layered-confidence-protocol.md`
+   for the pre-raise check rules before writing any finding.
 
 If `phase-{N}-tdd-results.md` is missing or does not contain `STATUS: PASS`, stop immediately:
 > "Code review cannot proceed — phase-{N}-tdd-results.md is missing or does not show STATUS: PASS. Complete S5 TDD build before invoking the code reviewer."
@@ -110,18 +116,17 @@ After the review passes, perform these checks yourself — they require SAGE art
 
 ## Step 5 — Confidence scoring and aggregation
 
-Compile all findings from Steps 3 and 4 into a master list. For each finding:
+Compile all findings from Steps 3 and 4. For each finding, apply the
+pre-raise check from `.cursor/skills/reasoning/layered-confidence-protocol.md`, then:
 
-1. Score confidence 0–100 based on direct evidence from the scoped files, SAGE artifacts, and applicable standards
-2. Filter out findings scoring below 50
-3. Deduplicate — if multiple agents flagged the same underlying issue, merge into one entry, keeping the highest confidence score and listing all source agents
-4. Map to SAGE severity:
-
-| Confidence | SAGE severity |
-|---|---|
-| 75–100 | **Critical** — logic error, incorrect calculation, security risk, plan non-conformance causing incorrect results, missing return code handling |
-| 50–74 | **Major** — missing test coverage, naming inconsistency, unhandled edge case from TDD spec, standards violation |
-| Below 50 | Filtered out |
+1. Classify confidence: verified-in-code / inferred / assumption
+2. Filter out assumption-confidence findings (no code path confirmed)
+3. Map to SAGE severity using confidence:
+   - verified-in-code + score 75–100 → **Critical** — logic error, incorrect calculation, security risk, plan non-conformance causing incorrect results, missing return code handling
+   - inferred + score 50–74 → **Major** — missing test coverage, naming inconsistency, unhandled edge case from TDD spec, standards violation
+   - assumption → filtered out
+4. Deduplicate across passes — same underlying issue raised by multiple
+   passes merges into one entry at the highest confidence
 
 Minor findings (style, non-critical naming) may be included at your discretion with score noted but are not counted in Critical or Major totals.
 

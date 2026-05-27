@@ -1,7 +1,8 @@
 ﻿# Splitting Heuristics
 
 Reference for phase-splitter. Contains splitting rules, independence
-scoring deductions, effort estimation heuristics, and the phase breakdown
+scoring deductions, effort estimation heuristics, confidence scoring
+criteria, overall recommendation decision rules, and the phase breakdown
 document output structure.
 
 ---
@@ -89,7 +90,8 @@ Phases scoring below 60 must be flagged. Possible resolutions:
 ## Effort estimation by layer and task type
 
 These are baseline estimates for the Profitability codebase. Calibrate
-against intel-advisor historical data when available.
+against intel-advisor historical data when available. Note in the phase
+breakdown when estimates deviate significantly from historical actuals.
 
 Database tasks:
   New stored procedure (standard CRUD): 1.5-2.5 hours
@@ -117,13 +119,103 @@ Effort range formula:
   Phase low estimate = sum of task low estimates
   Phase high estimate = sum of task high estimates * 1.2 (complexity buffer)
 
+Effort confidence adjustments:
+  >70% net-new tasks in a phase: add 20% to high estimate (higher variance)
+  Phase requires 4+ test layers: flag for effort review, likely over 8 hours
+  Historical data available and estimate deviates >40%: note and explain
+
+---
+
+## Confidence scoring criteria
+
+Each phase is scored on three dimensions. Use these criteria to assign
+HIGH / MEDIUM / LOW for each dimension.
+
+### Dimension 1: Dependency confidence
+
+Is the dependency analysis based on verified code or inferred from the PRD?
+
+| Rating | Criteria |
+|--------|----------|
+| HIGH | Every dependency claim is traced to a specific file, method, or data contract in the codebase. The interface contract at each phase boundary is named. |
+| MEDIUM | Most dependencies are verified-in-code. One or two are inferred from PRD language with no direct code trace found. |
+| LOW | At least one dependency is assumption-confidence. No code trace exists for it and it cannot be resolved from the PRD alone. |
+
+Checks that build dependency confidence:
+- **Interface trace**: for each phase boundary, name the exact file and method
+  of the data contract. If it does not exist yet, specify the exact signature
+  the consuming phase needs.
+- **Shared mutable state audit**: identify shared tables, views, config objects,
+  or global services that multiple phases write to. These are hidden coupling
+  points not visible from the PRD.
+- **Test independence check**: can a failing test be written for this phase
+  without another phase being built? If not, the phases are coupled regardless
+  of PRD intent.
+
+### Dimension 2: Effort confidence
+
+Is the effort estimate grounded in the codebase or derived from PRD complexity alone?
+
+| Rating | Criteria |
+|--------|----------|
+| HIGH | Estimate is grounded in delta classification (net-new vs extending) + test layer count + intel-advisor historical data for similar phases. |
+| MEDIUM | Estimate is grounded in delta classification and test layer count. No intel-advisor historical data available. |
+| LOW | Estimate is derived from PRD complexity alone. No delta classification or test layer analysis performed. |
+
+Checks that build effort confidence:
+- **Delta classification**: what proportion of the phase is net-new vs extending
+  existing code? Net-new is higher variance. >70% net-new with an L estimate
+  should be flagged.
+- **Test layer count**: how many test layers does this phase require (unit,
+  integration, E2E, architecture guard, component, Playwright)? Each layer adds
+  time. A phase needing all layers is likely too large.
+- **Historical calibration**: if intel-advisor data exists for similar phase
+  types and layers, use it. Note significant deviation from historical actuals.
+
+### Dimension 3: Objective clarity
+
+Is the phase's single objective genuinely single?
+
+| Rating | Criteria |
+|--------|----------|
+| HIGH | Objective is stated in one sentence with one verb. Anticipated TDD scenarios cluster around a single file group or layer boundary. Reviewer needs context from one domain only. |
+| MEDIUM | Objective is clear but anticipated TDD scenarios fall into two loosely related groups. A case can be made for either merging or splitting. |
+| LOW | Objective requires "and" to state. Anticipated TDD scenarios fall into two distinct clusters with no shared context. Reviewer would need context from two separate domains. |
+
+Checks that build objective clarity:
+- **TDD scenario clustering**: group the phase's anticipated TDD scenarios by
+  file or layer touched. Two distinct clusters with no overlap = split candidate.
+- **Single-sentence test**: state the phase objective in one sentence. If "and"
+  is required, it is likely two phases.
+- **Reviewer scope prediction**: what does a reviewer need to understand to
+  review this phase? Two domains = split candidate.
+
+---
+
+## Overall recommendation decision rules
+
+Apply in order. Use the first rule that matches.
+
+| Condition | Recommendation |
+|-----------|---------------|
+| Objective clarity = LOW | SPLIT RECOMMENDED (regardless of other dimensions) |
+| Any dimension LOW + blast radius cross-phase | SPIKE RECOMMENDED |
+| Any dimension LOW + blast radius phase-only | REVIEW BEFORE BUILD |
+| All dimensions MEDIUM or above | PROCEED |
+
+Blast radius definitions:
+- **Cross-phase**: the uncertainty affects other phases' scope, sequencing, or
+  interface contracts (e.g. a Foundation phase with LOW dependency confidence)
+- **Phase-only**: the uncertainty is contained within this phase and does not
+  affect other phases' plans (e.g. an Independent phase with LOW effort confidence)
+
 ---
 
 ## Phase breakdown document output structure
 
-Write [SESSION_ROOT]/phase-breakdown.md with this structure:
+Write `[SESSION_ROOT]/phase-breakdown.md` with this structure:
 
-``````markdown
+```markdown
 # Phase Breakdown -- [Feature title]
 
 **Feature:** [Linear feature issue ID]
@@ -137,9 +229,13 @@ Foundation phases (start immediately): Phase [N], Phase [N]
 Independent phases (start immediately): Phase [N]
 Dependent phases (wait for Foundation Verified): Phase [N]
 
+## Parallel streams
+
+[Describe which phases can run simultaneously and with how many developers]
+
 ## Dependency map
 
-Phase [N] (Foundation) --> Phase [N] (Dependent)
+Phase [N] (Foundation) --> Phase [N] (Dependent) — [contract: file/method name]
 Phase [N] (Independent) --> (no dependents)
 
 ## Phases
@@ -153,24 +249,55 @@ Phase [N] (Independent) --> (no dependents)
 **Developer profile:** [profile]
 
 **Files in scope:**
-- [exact file path] -- [what changes]
+- [exact file path] -- [what changes] -- [net-new / extending]
 - ...
 
-**Upstream dependencies:** [None / Phase N (reason)]
+**Upstream dependencies:** [None / Phase N (contract: file/method name)]
 **Downstream consumers:** [None / Phase N (reason)]
 
 **Test approach:**
 [How this phase will be tested in isolation]
 
+**Confidence summary:**
+Dependency confidence:  HIGH / MEDIUM / LOW  — [one-line basis, e.g. "all deps traced to specific files"]
+Effort confidence:      HIGH / MEDIUM / LOW  — [one-line basis, e.g. "60% net-new, 3 test layers, no historical data"]
+Objective clarity:      HIGH / MEDIUM / LOW  — [one-line basis, e.g. "single verb, scenarios cluster around one SP group"]
+Overall recommendation: PROCEED / REVIEW BEFORE BUILD / SPLIT RECOMMENDED / SPIKE RECOMMENDED
+
+[Include spike brief if SPIKE RECOMMENDED — see spike brief structure below]
+
 ### Phase 2: ...
+
+## Open deferrals
+
+[Any phase boundary decisions or dependency claims deferred with named
+unblocking conditions. Format: Decision | Unblocking condition | Affects]
 
 ## Flags
 
-[Any phases flagged for low independence score or effort outside range,
-with recommended resolution]
+[Any phases flagged for low independence score, effort outside range,
+or confidence dimensions, with recommended resolution]
 
 ## Adjustment notes
 
-[Record any changes the team makes during kick-off review]
-``````
+[Record any changes the team makes during kick-off review, including
+back-revisions applied with their change notes]
+```
 
+---
+
+## Spike brief structure
+
+Include in the phase section when overall recommendation = SPIKE RECOMMENDED:
+
+```markdown
+**Spike recommended before build:**
+Question: [specific unknown that must be resolved — one sentence]
+Scope: [exact files or interfaces to investigate]
+Time-box: [suggested hours — typically 1-3]
+Success condition: [what the spike must produce to unblock the phase]
+Convert to: [Bug Batch Mode or Phase Gate Mode after spike]
+```
+
+The spike runs via `tdd-orchestrator` Spike Mode before the phase's S5 build
+gate opens. S1–S4 planning for the phase can proceed in parallel.

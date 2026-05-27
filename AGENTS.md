@@ -35,6 +35,11 @@ scope through instruction alone.
 - [intel-recorder](#intel-recorder)
 - [intel-advisor](#intel-advisor)
 
+**Skills**
+
+- [phase-splitter](#phase-splitter)
+- [dev-plan](#dev-plan)
+
 ---
 
 ## orchestrator
@@ -571,3 +576,139 @@ workflow mode.
 - Read only
 - Reads from `.sage/intel/` as the canonical data source
 - Recommendations are advisory — no binding decisions
+
+---
+
+## Skills
+
+Skills are invocable workflow packages stored in `.cursor/skills/`. Unlike agents,
+skills are not bound to a single phase — they are invoked by agents or developers
+when the workflow requires a specific capability.
+
+---
+
+## dev-plan
+
+**Skill file:** `.cursor/skills/dev-plan/SKILL.md`  
+**Active during:** S1 (opt-in replacement for dev-interview)
+
+### Role
+
+Investigation-first replacement for the S1 dev-interview. Instead of a Q&A
+interview, the agent investigates the codebase and PRD first, then publishes
+findings as a structured layered plan. The developer reviews and corrects the
+plan rather than answering questions the agent could have resolved from code.
+
+Produces three progressive artifacts: L1 (strategic groupings, verified
+challenges, risks, simplification opportunities, priority order), L2 (tactical
+approach decisions and scenario assessments per grouping), and the final
+`phase-{N}-dev-plan.md` execution-ready S1 artifact.
+
+Supports back-revision (targeted patch to a prior level when later work reveals
+an earlier decision was wrong) and deferral (park a decision with a named
+unblocking condition rather than forcing a premature answer).
+
+### What it produces
+
+- `phase-{N}-dev-plan-L1.md` — strategic view, written after investigation
+- `phase-{N}-dev-plan-L2.md` — tactical decisions per grouping, written after L1 approved
+- `phase-{N}-dev-plan.md` — final S1 artifact, feeds S2 and gates, written after L2 approved
+
+### Constraints
+
+- Artifact-write only — no product/source/config edits; writes only the three
+  dev-plan artifacts to the active phase directory
+- Never asks a question answerable from the codebase — questions arise only
+  from `confidence = assumption` items the reconciliation subagent cannot resolve
+- Build mode is asked once, at the start of L3 generation only
+- Deferred items must name their unblocking condition — items without a
+  condition are treated as escalations, not deferrals
+- Does not modify the session manifest, TDD spec, PRD, or any file outside
+  the active phase directory
+
+### Migration note
+
+Ships as a skill (opt-in, no hook enforcement). The long-term path is promotion
+to a full agent with `plan-mode-enforcer` awareness, `manifest-step-gate`
+recognition of `phase-{N}-dev-plan.md` as a valid S1 artifact, and a
+`devPlanMode` flag in the session manifest runtime.
+
+---
+
+## phase-splitter
+
+**Skill file:** `.cursor/skills/phase-splitter/SKILL.md`  
+**Active during:** Kick-off — Phase Breakdown step (Sprint and Pair modes)
+
+### Role
+
+Analyses the completed PRD and Profitability codebase to generate a recommended
+phase breakdown using a three-level planning funnel: L1 domain decomposition
+(natural groupings, verified dependencies, shared state audit), L2 phase boundary
+decisions (splitting rules, independence scoring, three-dimension confidence
+scoring, parallel stream analysis), and L3 execution (manifest generation, Linear
+issues, git worktrees).
+
+Each phase receives a confidence summary across three dimensions — dependency
+confidence, effort confidence, and objective clarity — plus an overall
+recommendation (PROCEED / REVIEW BEFORE BUILD / SPLIT RECOMMENDED / SPIKE
+RECOMMENDED). Phases with low confidence are flagged before the team commits.
+Back-revision support allows L2 findings to patch L1 decisions without a full
+re-run. Spike briefs are generated for phases with unresolvable cross-phase
+uncertainty.
+
+### What it produces
+
+- `phase-split-L1.md` (optional, if team requests persistence) — domain map
+- `phase-breakdown.md` — full breakdown with confidence scores and spike briefs
+- `session-manifest.md` — written on team confirmation
+- Linear phase issues — one per phase, status Pending Approval
+- Git worktrees — Sprint mode only
+
+### Constraints
+
+- Does not run against a PRD that has not passed prd-completeness-check
+- Does not assign named developers — profile recommendations only
+- Does not finalise the manifest until the team confirms L2
+- Cannot auto-approve Linear phase issues — approval is human-only
+- Sprint mode only: creates worktrees; Pair mode skips worktree creation
+
+---
+
+## dev-plan
+
+**Skill file:** `.cursor/skills/dev-plan/SKILL.md`  
+**Active during:** S1 — opt-in replacement for dev-interview
+
+### Role
+
+Opt-in replacement for the dev-interview (S1) Q&A interview. Instead of asking
+the developer questions, the agent investigates the codebase first and publishes
+its findings as a structured, layered plan. The developer reviews and corrects
+the plan rather than answering questions blind.
+
+Uses a three-level planning funnel: L1 strategic (work groupings, verified
+challenges, risks, simplification opportunities), L2 tactical (approach decisions
+and test strategy per grouping, scenario assessments), and L3 execution (final S1
+artifact, refined TDD scenarios, confirmed scoped files). Supports back-revision
+(later levels can patch prior level decisions) and deferral (decisions with named
+unblocking conditions carry forward explicitly). Confidence classification
+(verified-in-code / inferred / assumption) filters false positives — only verified
+findings reach the developer.
+
+### What it produces
+
+- `phase-{N}-dev-plan-L1.md` — strategic view for developer review
+- `phase-{N}-dev-plan-L2.md` — tactical decisions per grouping for developer review
+- `phase-{N}-dev-plan.md` — final S1 artifact, feeds S2 and gates
+
+### Constraints
+
+- Skill only in this pass — no hook enforcement; gate compatibility with
+  `manifest-step-gate` is a follow-up change
+- Agent never asks a question it can answer by reading the codebase
+- All escalations to the developer must be backed by source evidence
+- `assumption`-confidence items are listed separately and do not drive planning
+  decisions until verified or confirmed by the developer
+- Build mode is asked once, at the end of L2 review
+

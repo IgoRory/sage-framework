@@ -312,7 +312,7 @@ workflow. The workflow is governed by two directories:
 All AI agents operating in this repo are defined in `.cursor/agents/`.
 All hook scripts that enforce build gates live in `.cursor/hooks/`.
 All skills (prd-completeness-check, prd-interviewer, kickoff-dev-review,
-phase-splitter, session-performance-evaluator, skill-effectiveness-evaluator)
+phase-splitter, dev-plan, session-performance-evaluator, skill-effectiveness-evaluator)
 live in `.cursor/skills/`.
 
 **`.sage/`** — Workflow runtime. Session manifests live in

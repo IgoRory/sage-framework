@@ -20,9 +20,14 @@ When invoked:
 3. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 4. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
 5. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
-6. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
-7. Execute all four review steps in sequence
-8. Write the review document
+6. If `phase-{N}-dev-plan.md` exists in the phase directory, read it and
+   note any items in its `## Open deferrals` section — these are
+   acknowledged gaps, not missing coverage.
+   Read `.cursor/skills/reasoning/layered-confidence-protocol.md`
+   for the pre-raise check rules before writing any finding.
+7. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
+8. Execute all four review steps in sequence
+9. Write the review document
 
 ## Step 0 — Codebase context scan
 
@@ -61,6 +66,8 @@ Compare the PRD and implementation plan across five discrepancy categories. Use 
 | Contradictions | A criterion and a task directly conflict |
 | Undocumented Scope | An implementation plan task that extends beyond any criterion — possible scope creep |
 | Ambiguous Mapping | A criterion that maps to multiple tasks with no clear primary, or a task mapped to a criterion it does not clearly satisfy |
+
+Before classifying a Coverage Gap as Blocker: check whether the gap is documented in the dev-plan `## Open deferrals` with a named unblocking condition. If so, it is an acknowledged gap — record it as context, not a finding.
 
 Severity defaults: Coverage Gaps → Blocker. Detail Discrepancies, Contradictions → Major. Undocumented Scope, Ambiguous Mapping → Major. Apply judgement — downgrade if Step 0 context resolves the concern.
 
