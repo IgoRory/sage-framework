@@ -13,6 +13,26 @@ scope through instruction alone.
 
 ---
 
+## Artifact authoring rules
+
+These rules apply to every foreground agent's declared output artifact unless
+its agent definition explicitly overrides them.
+
+- No introduction, recap, or closing sections. Start with the required header
+  block; end after the last finding/row.
+- No restatement of the PRD, implementation plan, or any prior artifact. Cite
+  by relative path and section anchor (e.g. `prd.md#ac-3.2`).
+- Frontmatter for structured fields; bullets or tables for the rest. Prose only
+  when prose is the deliverable (e.g. handoff notes).
+- One assertion per bullet. No qualifiers ("clearly", "robust", "comprehensive",
+  "appropriate", "correct").
+- Do not duplicate gate-required lines. Each appears exactly once on its own
+  line in the body.
+- Tables: omit a section's table entirely when its row count is zero — write
+  "None." instead.
+
+---
+
 ## Table of Contents
 
 - [orchestrator](#orchestrator)

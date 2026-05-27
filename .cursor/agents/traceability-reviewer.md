@@ -122,55 +122,41 @@ Blocker findings: [N]
 Major findings: [N]
 Minor findings: [N]
 
-## Codebase context (Step 0)
+## Codebase context
 
-[Summary of what already exists in scoped files relevant to this phase. Note criteria already partially/fully addressed by existing code, and any tasks that appear to duplicate existing functionality. State "Scoped files do not yet exist" if all files are net new.]
+[One-line per scoped file: `path — exists/net-new — covers AC-X` or
+"Scoped files do not yet exist."]
 
-## PRD quality (Step 1)
+## Forward traceability
 
-| Category | Criterion | Description | Severity |
-|----------|-----------|-------------|----------|
-| [category] | [criterion text] | [what is missing or unclear] | Minor / Blocker |
+| AC | Scenario | Task | Test method | Status |
+|---|---|---|---|---|
+| prd.md#ac-X | tdd-spec.md#scenario-N.X | impl-plan.md#task-N.X | [method] | OK / BLOCKER / MAJOR |
 
-[If none: "No PRD quality issues found."]
+## Backward traceability
 
-## Bidirectional traceability (Step 2)
-
-| Category | PRD criterion / Task | Description | Severity |
-|----------|----------------------|-------------|----------|
-| [category] | [criterion or task] | [discrepancy description] | Blocker / Major / Minor |
-
-[If none: "No discrepancies found."]
-
-## TDD spec chain (Step 3)
-
-### Forward traceability — PRD to test method
-
-| PRD criterion | Scenario | Task | Test method | Status |
-|---------------|----------|------|-------------|--------|
-| [criterion] | [N.X] | [task N.X] | [method name] | OK / BLOCKER / MAJOR |
-
-### Backward traceability — Implementation to PRD
-
-| Task | Scenario | PRD criterion | Status |
-|------|----------|---------------|--------|
-| [task N.X] | [N.X] | [criterion] | OK / MAJOR |
+| Task | Scenario | AC | Status |
+|---|---|---|---|
+| impl-plan.md#task-N.X | tdd-spec.md#scenario-N.X | prd.md#ac-X | OK / MAJOR |
 
 ## Findings
 
+Each finding: `severity | source step | item ref | one-line description`.
+Omit a severity heading when its count is 0.
+
 ### Blockers
-[Each Blocker: source step, document/criterion/task affected, what is missing, and the condition that must be satisfied before S4 can proceed]
+- [step] [ref] [description] — required resolution: [one line]
 
 ### Majors
-[Each Major: source step, affected item, description]
+- [step] [ref] [description]
 
 ### Minors
-[Each Minor: source step, affected item, description]
+- [step] [ref] [description]
 
-## Resolution required
+## Resolution
 
-[If Blocker findings > 0: "Blockers must be resolved before S4 can proceed. Re-invoke `implementation-planner` to address the findings above, then re-invoke this agent."]
-[If Blocker findings = 0: "S3 is complete. Invoke `plan-preview-generator` to begin S4 plan-validation."]
+[If Blocker findings > 0: "Re-invoke `implementation-planner`, then re-invoke this agent."]
+[If Blocker findings = 0: "S3 complete. Invoke `plan-preview-generator`."]
 ```
 
 ## After writing the review
@@ -188,3 +174,5 @@ Tell the developer:
 - Step 0 codebase scan is read-only — context gathering only, not a code review
 - Do not edit or rewrite upstream artifacts. State the required resolution condition, but do not implement fixes yourself
 - Do not re-run S2 yourself — direct the developer to re-invoke `implementation-planner`
+- Do not quote PRD criteria, TDD scenarios, or implementation plan tasks verbatim. Use anchored references (`prd.md#ac-X`, `tdd-spec.md#scenario-N.X`, `impl-plan.md#task-N.X`).
+- Each finding ≤ 2 lines. Severity headings with zero findings are omitted.

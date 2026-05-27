@@ -164,14 +164,17 @@ Minor findings: [N]
 
 ## Findings
 
+Each finding: `severity | file:line | policy §N.N | one-line description | fix hint`.
+Maximum 3 lines per finding. Omit a severity heading when its count is 0.
+
 ### Critical
-[Each Critical finding: file, line/procedure, rule violated (cite policy section), description, why it is critical]
+- [file:line] [policy §] [description] — [fix hint]
 
 ### Major
-[Each Major finding: file, rule violated, description]
+- [file:line] [policy §] [description] — [fix hint]
 
 ### Minor
-[Each Minor finding: file, rule violated, description]
+- [file:line] [policy §] [description] — [fix hint]
 
 ## Summary
 
@@ -195,3 +198,5 @@ Tell the developer:
 - Do not fix findings — report only
 - Cite the policy section for every finding so the developer understands the compliance basis
 - Do not invent security concerns not grounded in the standards reference or the design intent review — flag real risks, not hypothetical ones
+- Each finding ≤ 3 lines. Severity headings with zero findings are omitted.
+- Do not restate the PRD, implementation plan, or code-review findings — reference by section anchor.

@@ -124,31 +124,30 @@ The orchestrator owns the S8 completion report for each phase. After S7 test res
 **Phase ID:** [N]
 **Session:** [session ID]
 
-## Phase summary
+## Summary
 
-[1-3 sentence summary of what this phase implemented]
+[1 sentence — what shipped. No restatement of PRD or plan.]
 
 ## Files changed
 
-| File | Action | Description |
-|------|--------|-------------|
-| [path] | Created / Modified | [brief description] |
+| File | Action |
+|---|---|
+| [path] | Created / Modified |
 
-## Tests passing
+## Test results
 
-| Test file | Test count | Status |
-|-----------|-----------|--------|
-| [path] | [N] | PASS |
+`phase-{N}-test-results.md` — STATUS: PASS — [N] tests
 
-**Total:** [N] tests passing
+## Deferred
 
-## Deferred items
+- [item] — see `impl-plan.md#task-N.X` — reason: [one line]
 
-[List any items from the implementation plan that were intentionally deferred, with justification]
+[Or: "None."]
 
 ## Handoff notes
 
-[Any information the next phase or the reviewer needs to know — integration points, known limitations, decisions made during build]
+[Bullets only when the next phase or reviewer needs information not present
+in upstream artifacts. Otherwise: "None."]
 ```
 
 The `completion-report-stop-gate` hook blocks the agent from ending its turn at S8 until `phase-{N}-test-results.md` contains `STATUS: PASS`.
@@ -161,6 +160,8 @@ The `completion-report-stop-gate` hook blocks the agent from ending its turn at 
 - Cannot set `validationConfirmed = true` in the session manifest - only the developer can
 - Cannot set `batches[N].confirmed = true` - only the developer can
 - In Mob mode: open Phase Chats automatically; do not wait for manual paste or instruction
+- Completion report references upstream artifacts; never re-summarises them.
+- Files-changed table: action only — no description column. The diff is the description.
 
 ## TDD spec generation telemetry
 

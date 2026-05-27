@@ -162,14 +162,18 @@ Minor findings: [N]
 
 ## Findings
 
+Each finding: `severity | file:line | one-line description | fix hint`.
+Maximum 3 lines per finding. No code excerpts unless `file:line` is
+insufficient to locate the issue. Omit a severity heading when its count is 0.
+
 ### Critical
-[Each finding: source step/subagent if applicable, file, line/procedure, description, why critical, confidence score]
+- [file:line] [description] — [fix hint]
 
 ### Major
-[Each finding: source step/subagent if applicable, file, line/procedure, description, confidence score]
+- [file:line] [description] — [fix hint]
 
 ### Minor
-[Each finding: source agent(s), file, description, confidence score]
+- [file:line] [description] — [fix hint]
 
 ## Summary
 
@@ -190,3 +194,5 @@ Critical findings must be resolved before S7 can proceed. Return to S5 build to 
 - Do not proceed if `tdd-results.md` is missing or not passing
 - If subagents are used, their prompts must include the SAGE context block — never pass a bare file list
 - Do not launch PR-history or previous-feedback review passes unless the current SAGE session explicitly provides PR metadata
+- Each finding ≤ 3 lines. Severity headings with zero findings are omitted.
+- Do not restate the implementation plan or TDD scenarios in the review body — reference by section anchor.
