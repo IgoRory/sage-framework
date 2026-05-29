@@ -19,7 +19,11 @@ When invoked:
 1. Read the session manifest
 2. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 3. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
-4. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
+4. Resolve the S1 artifact:
+   - If `phase-{N}-dev-plan.md` exists in the phase directory, read it.
+   - Else, if `phase-{N}-dev-interview-summary.md` exists, read it.
+   - Else stop and report: "RED phase cannot proceed — no S1 artifact found.
+     Expected `phase-{N}-dev-plan.md` or `phase-{N}-dev-interview-summary.md`."
 5. Work through tasks in plan order, writing the RED test for each
 
 ## RED phase workflow

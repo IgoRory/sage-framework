@@ -19,7 +19,7 @@ for calculation phases. You may produce multiple artifacts for a single phase
 when the PRD contains both spatial and linear content.
 
 After producing all artifacts, explicitly tell the developer how to confirm:
-set `validationConfirmed = true` in the session manifest.
+set `validationConfirmed = true` in `[SESSION_ROOT]/phase-{N}/phase-manifest.json`.
 
 ---
 
@@ -171,7 +171,7 @@ If N, describe what needs to change: ___
 
 ## Constraints
 
-- Cannot set `validationConfirmed = true` in the session manifest
+- Cannot set `validationConfirmed = true` in `phase-{N}/phase-manifest.json`
 - Must explicitly instruct the developer to set this flag themselves after
   the PM has reviewed all preview artifacts
 - Cannot write to files outside the current phase directory

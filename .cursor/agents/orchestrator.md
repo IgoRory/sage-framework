@@ -71,7 +71,14 @@ When generating `session-manifest.md`, populate it from the session manifest tem
 - `kickoffDate` - today's date in ISO format
 - All phase definitions from the phase-splitter output
 
-Initial runtime values for all phases:
+Phase definitions go in the root `session-manifest.md`. Phase runtime
+(`currentStep`, `stepStatus`, `buildMode`, `validationConfirmed`,
+`linearIssueStatus`, batches, and timestamps) goes in per-phase manifest
+files at `phase-{N}/phase-manifest.json`. The hook layer reads phase runtime
+from `phase-manifest.json`, so phase-splitter must bootstrap one runtime file
+for every phase during session setup.
+
+Initial per-phase runtime values:
 - `linearIssueStatus`: `"Pending Approval"`
 - `currentStep`: `"dev-interview"`
 - `buildMode`: `"autonomous"`
@@ -79,7 +86,7 @@ Initial runtime values for all phases:
 - All step statuses: `"pending"`
 - All timestamps: `null`
 
-Write the completed manifest to: `.sage/sessions/[sessionId]/session-manifest.md`
+Write the completed root manifest to: `.sage/sessions/[sessionId]/session-manifest.md`
 Write the session ID to: `.sage/sessions/active-session.txt`
 Create the session directory if it does not exist.
 
@@ -157,7 +164,7 @@ The `completion-report-stop-gate` hook blocks the agent from ending its turn at 
 - Do not write implementation code - coordination and specification only
 - Every artifact must be machine-readable without ambiguity
 - Use predicate-based language in all artifacts - no vague qualifiers
-- Cannot set `validationConfirmed = true` in the session manifest - only the developer can
+- Cannot set `validationConfirmed = true` in `phase-{N}/phase-manifest.json` - only the developer can
 - Cannot set `batches[N].confirmed = true` - only the developer can
 - In Mob mode: open Phase Chats automatically; do not wait for manual paste or instruction
 - Completion report references upstream artifacts; never re-summarises them.

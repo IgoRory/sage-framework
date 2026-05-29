@@ -120,12 +120,17 @@ Compile all findings from Steps 3 and 4. For each finding, apply the
 pre-raise check from `.cursor/skills/reasoning/layered-confidence-protocol.md`, then:
 
 1. Classify confidence: verified-in-code / inferred / assumption
-2. Filter out assumption-confidence findings (no code path confirmed)
-3. Map to SAGE severity using confidence:
-   - verified-in-code + score 75–100 → **Critical** — logic error, incorrect calculation, security risk, plan non-conformance causing incorrect results, missing return code handling
-   - inferred + score 50–74 → **Major** — missing test coverage, naming inconsistency, unhandled edge case from TDD spec, standards violation
-   - assumption → filtered out
-4. Deduplicate across passes — same underlying issue raised by multiple
+2. Assign a numeric confidence score only to non-assumption findings:
+   - 100 — direct evidence confirms the issue and the failure path is exercised by the scoped implementation or TDD scenario
+   - 75 — direct evidence confirms the issue and the failure path is reachable in normal use
+   - 50 — evidence confirms a standards, coverage, or maintainability issue, but impact is limited or conditional
+   - Below 50 — weak evidence, style-only preference, or pre-existing issue not touched by the phase
+3. Filter out assumption-confidence findings and findings scoring below 50.
+4. Map to SAGE severity using confidence and impact:
+   - 75–100 → **Critical** only when the issue can cause incorrect results, security risk, broken required behaviour, plan non-conformance that changes output, or missing required return/status handling
+   - 50–74 → **Major** for missing required test coverage, standards violations, unhandled edge cases from the TDD spec, or maintainability issues that affect implementation confidence
+   - Otherwise → **Minor** at reviewer discretion; do not count Minor findings in gate decisions
+5. Deduplicate across passes — same underlying issue raised by multiple
    passes merges into one entry at the highest confidence
 
 Minor findings (style, non-critical naming) may be included at your discretion with score noted but are not counted in Critical or Major totals.

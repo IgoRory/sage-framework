@@ -12,18 +12,24 @@ S2 - Implementation Plan
 
 - `phase-{N}-implementation-plan.md` - written to `[SESSION_ROOT]/phase-{N}/`
 - Linear issue tasks - created via Linear MCP
-- Batch definitions written to `session-manifest.md` (Checkpoint mode only)
+- Batch definitions written to `phase-{N}/phase-manifest.json` (Checkpoint mode only)
 
 ## How to start
 
 When invoked:
 1. Read the session manifest: `.sage/sessions/[active session]/session-manifest.md`
-2. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
+2. Resolve the S1 artifact:
+   - If `phase-{N}-dev-plan.md` exists in the phase directory, read it.
+   - Else, if `phase-{N}-dev-interview-summary.md` exists, read it.
+   - Else stop and report: "Implementation planning cannot proceed — no S1
+     artifact found. Expected `phase-{N}-dev-plan.md` or
+     `phase-{N}-dev-interview-summary.md`."
 3. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
 4. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
-5. Read all scoped files listed in the manifest phase definition to understand the existing codebase
-6. Read all files in `requiredReferences` from the manifest phase definition
-7. Produce the implementation plan
+5. Read the phase runtime from `[SESSION_ROOT]/phase-{N}/phase-manifest.json`
+6. Read all scoped files listed in the manifest phase definition to understand the existing codebase
+7. Read all files in `requiredReferences` from the manifest phase definition
+8. Produce the implementation plan
 
 ## Implementation plan structure
 

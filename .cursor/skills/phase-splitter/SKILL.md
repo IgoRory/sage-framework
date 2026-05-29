@@ -327,6 +327,22 @@ spike briefs.
      to push manifest updates for cross-machine visibility.
    - Write to [SESSION_ROOT]/session-manifest.md
    - Write session ID to .sage/sessions/active-session.txt
+3. Bootstrap per-phase runtime:
+   - Create `[SESSION_ROOT]/phase-{N}/` for every phase.
+   - Write `[SESSION_ROOT]/phase-{N}/phase-manifest.json` for every phase.
+   - Seed each phase runtime with:
+     - `linearIssueStatus`: `"Pending Approval"`
+     - `currentStep`: `"dev-interview"`
+     - `buildMode`: `"autonomous"`
+     - `validationConfirmed`: `false`
+     - `stepStatus`: every configured phase step set to `"pending"`
+     - `timestamps`: every configured phase step set to `null`
+     - `batches`: `[]` unless Checkpoint mode is later selected
+
+The root `session-manifest.md` stores session metadata, phase definitions,
+session-level state, path validation, and kick-off outputs. Runtime fields
+that hooks gate on live in `phase-{N}/phase-manifest.json`; keep those files
+in sync with Linear and SAGE step transitions.
 
 If L3 generation surfaces a file ownership conflict or phase boundary problem,
 trigger a targeted L2 back-revision before continuing (see Back-revision rules).
@@ -365,7 +381,7 @@ Lead Dev, or both).
    - Call Linear MCP to update the phase issue status from
      "Pending Approval" to "Approved"
    - Update `linearIssueStatus` to `"Approved"` in the phase's
-     `runtime` block in session-manifest.md
+     `phase-{N}/phase-manifest.json`
 
 4. Update session-level state in session-manifest.md:
    - Set `sessionState.status` to `"build-sprint"`

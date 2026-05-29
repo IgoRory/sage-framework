@@ -24,6 +24,7 @@ phase completion. Sprint mode is the primary target.
 |-------|--------|----------|
 | Session manifest | `[SESSION_ROOT]/session-manifest.md` | Yes |
 | Active session ID | `.sage/sessions/active-session.txt` | Yes |
+| Phase runtime | `[SESSION_ROOT]/phase-N/phase-manifest.json` | Yes |
 | Phase artifacts | `[SESSION_ROOT]/phase-N/` | Yes |
 | PRD/kickoff telemetry | `.sage/prd-interview-telemetry.jsonl` | No (enriches kickoff section) |
 | Workflow telemetry | `[SESSION_ROOT]/workflow-telemetry.jsonl` | No (enriches TDD spec section) |
@@ -43,7 +44,11 @@ Read the session manifest from `[SESSION_ROOT]/session-manifest.md`.
 Parse the JSON block. Extract:
 - `sessionId`, `featureId`, `featureTitle`, `mode`, `kickoffDate`
 - `sessionState` (status, foundationVerified, completionLog, etc.)
-- All phase definitions and runtime state
+- All phase definitions
+
+For each phase, read `[SESSION_ROOT]/phase-N/phase-manifest.json`.
+If a phase runtime file is missing, treat runtime fields as empty and show
+the phase as blocked on session setup rather than failing the whole report.
 
 ---
 
@@ -88,7 +93,7 @@ For each phase in the manifest, check the phase directory
 
 | Step | Artifact | Gate marker to check |
 |------|----------|---------------------|
-| S1 | `phase-N-dev-interview-summary.md` | Existence only |
+| S1 | `phase-N-dev-plan.md` or `phase-N-dev-interview-summary.md` | Existence only |
 | S2 | `phase-N-implementation-plan.md` | Existence only |
 | S3 | `phase-N-traceability-review.md` | `Blocker findings: N` (anchored line) |
 | S4 | `phase-N-plan-preview.canvas.tsx` or `phase-N-plan-preview.md` or `phase-N-calculation-proof.md` | Existence only |
@@ -150,20 +155,20 @@ guidance line. Use the first matching rule:
 | S6 complete + `Critical findings: 0` | "Code review clear. Proceed to security review (S6.5)." |
 | S6 complete + `Critical findings` > 0 | "Code review found [N] critical findings. Fix and re-run code review." |
 | S5 complete (`STATUS: PASS`) | "Build complete, all TDD tests green. Proceed to code review (S6)." |
-| S5 in progress + checkpoint + batch not confirmed | "Batch [N] review is ready at `[reviewPath]`. Review it, then set `batches[N].confirmed = true` in the session manifest." |
+| S5 in progress + checkpoint + batch not confirmed | "Batch [N] review is ready at `[reviewPath]`. Review it, then set `batches[N].confirmed = true` in `phase-N/phase-manifest.json`." |
 | S5 in progress | "Build in progress ([buildMode] mode, [buildSubStep] sub-step)." |
 | S5 blocked (foundation) | "Blocked on Foundation verification. [Upstream phase(s)] must complete, merge, and pass regression. S1-S4 can proceed in parallel." |
-| S5 blocked (validation) | "Plan preview is ready. Review it, then set `validationConfirmed = true` in the session manifest to unblock the build." |
-| S4 complete + `validationConfirmed = false` | "Plan preview generated. Review it, then set `validationConfirmed = true` in the session manifest." |
+| S5 blocked (validation) | "Plan preview is ready. Review it, then set `validationConfirmed = true` in `phase-N/phase-manifest.json` to unblock the build." |
+| S4 complete + `validationConfirmed = false` | "Plan preview generated. Review it, then set `validationConfirmed = true` in `phase-N/phase-manifest.json`." |
 | S4 in progress | "Plan preview generation in progress." |
 | S3 complete + `Blocker findings` > 0 | "Traceability review has [N] Blocker findings. Resolve them before plan validation (S4)." |
 | S3 complete + `Blocker findings: 0` | "Traceability review clear. Proceed to plan validation (S4)." |
 | S3 in progress | "Traceability review in progress." |
 | S2 complete | "Implementation plan ready. Proceed to traceability review (S3)." |
 | S2 in progress | "Implementation planning in progress." |
-| S1 complete | "Dev interview complete. Proceed to implementation planning (S2)." |
-| S1 in progress | "Dev interview active. Complete all questions and choose build mode (Autonomous or Checkpoint)." |
-| S1 not started + Linear approved | "Phase approved. Open the phase chat and begin the dev interview (S1)." |
+| S1 complete | "S1 planning complete. Proceed to implementation planning (S2)." |
+| S1 in progress | "S1 planning active. Complete dev-plan or dev-interview and confirm build mode." |
+| S1 not started + Linear approved | "Phase approved. Open the phase chat and begin S1 planning." |
 | S1 not started + Linear not approved | "Phase not yet approved in Linear. PM or Lead Dev must approve the phase issue." |
 
 ---

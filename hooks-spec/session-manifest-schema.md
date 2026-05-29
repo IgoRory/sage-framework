@@ -2,14 +2,15 @@
 
 ## Overview
 
-`session-manifest.md` is the single source of truth for the hook
-layer and all agent consumers throughout a Sprint work cycle.
-It lives at `[SESSION_ROOT]/session-manifest.md` and is committed
-to the repository.
+`session-manifest.md` is the source of truth for session metadata,
+phase definitions, and session-level state throughout a Sprint work
+cycle. Per-phase runtime lives in `[SESSION_ROOT]/phase-{N}/phase-manifest.json`.
+Both files are committed to the repository as session state.
 
 The file has two parts:
 1. A machine-readable JSON block (delimited by ```json ... ```) at the
-   top of the file. This is what all hooks and agents read and write.
+   top of the file. Hooks and agents read this for session metadata,
+   phase definitions, and session-level state.
 2. A human-readable markdown rendering below the JSON block, generated
    from the JSON at kick-off and at each significant state change.
    The markdown is for the team — it is never parsed by hooks.
@@ -26,9 +27,9 @@ The file has two parts:
   - `foundation` — no `upstreamPhases` AND has `downstreamPhases`
   - `independent` — no `upstreamPhases` AND no `downstreamPhases`
   - `dependent` — has one or more `upstreamPhases`
-- Hook scripts update `phases[N].runtime.currentStep`,
-  `phases[N].runtime.stepStatus`, and `phases[N].runtime.validationConfirmed`
-  during the build sprint
+- Hook scripts update per-phase runtime (`currentStep`, `stepStatus`,
+  `validationConfirmed`, batches, and timestamps) in
+  `phase-{N}/phase-manifest.json` during the build sprint
 - Orchestrator agent sets `sessionState.foundationVerified`
   after post-merge regression
 - No agent or hook ever modifies `phases[N].definition`
@@ -100,7 +101,7 @@ The file has two parts:
         }
       },
 
-      // ── Runtime state (written/updated by hooks during build) ────
+      // ── Runtime state shape (stored in phase-{N}/phase-manifest.json) ──
       "runtime": {
         "assignedDeveloper": "string — name of developer assigned at planning",
         "linearIssueStatus": "Pending Approval | Approved | In Progress | Build Complete | Done",
@@ -280,14 +281,14 @@ NEW path patterns (files expected to be created during build):
 |---|---|---|
 | `header.*` | phase-splitter | Kick-off only |
 | `phases[N].definition.*` | phase-splitter | Kick-off only |
-| `phases[N].runtime.currentStep` | `manifest-step-writer` hook | On each step artifact write |
-| `phases[N].runtime.stepStatus[step]` | `manifest-step-writer` hook | On each step artifact write |
-| `phases[N].runtime.validationConfirmed` | Developer (manual) | S4 |
-| `phases[N].runtime.stepTimestamps` | `manifest-step-writer` hook | On each step artifact write |
-| `phases[N].runtime.findingSummary` | Agent skills (Planned — not yet implemented) | During build sprint |
-| `phases[N].runtime.hookRejectionCount` | `block()` in hooks_utils (auto-increment) | On each gate rejection |
-| `phases[N].runtime.deferredItems` | Agent skills | During build sprint |
-| `phases[N].runtime.linearIssueStatus` | phase-splitter skill (at kick-off approval confirmation) | Kick-off — on session driver confirmation |
+| `phase-{N}/phase-manifest.json.currentStep` | `manifest-step-writer` hook | On each step artifact write |
+| `phase-{N}/phase-manifest.json.stepStatus[step]` | `manifest-step-writer` hook | On each step artifact write |
+| `phase-{N}/phase-manifest.json.validationConfirmed` | Developer (manual) | S4 |
+| `phase-{N}/phase-manifest.json.stepTimestamps` | `manifest-step-writer` hook | On each step artifact write |
+| `phase-{N}/phase-manifest.json.findingSummary` | Agent skills (Planned — not yet implemented) | During build sprint |
+| `phase-{N}/phase-manifest.json.hookRejectionCount` | `block()` in hooks_utils (auto-increment) | On each gate rejection |
+| `phase-{N}/phase-manifest.json.deferredItems` | Agent skills | During build sprint |
+| `phase-{N}/phase-manifest.json.linearIssueStatus` | phase-splitter skill (at kick-off approval confirmation) | Kick-off — on session driver confirmation |
 | `sessionState.*` | Hook scripts + orchestrator | Throughout work cycle |
 | `pathValidation.*` | phase-splitter | Kick-off only |
 | `kickoffOutputs.*` | kickoff-dev-review + phase-splitter | Kick-off only |
@@ -295,16 +296,17 @@ NEW path patterns (files expected to be created during build):
 | `header.lastUpdatedAt` | Any writer | On every write |
 
 **Update mechanism:**
-All manifest writes use a read-modify-write pattern:
-1. Read the full JSON block from the manifest file
-2. Apply the specific field update
+Root manifest writes use a read-modify-write pattern:
+1. Read the full JSON block from `session-manifest.md`
+2. Apply the specific session or definition field update
 3. Update `header.lastUpdatedAt`
 4. Write the full JSON block back
 5. Regenerate the human-readable markdown section from the updated JSON
 
-Hook scripts that update the manifest use a file lock
-(`manifest.lock`) to prevent concurrent writes from parallel
-phase lanes corrupting the JSON.
+Phase runtime writes use a read-modify-write pattern against
+`phase-{N}/phase-manifest.json`. Hook scripts use `phase-manifest.lock`
+for per-phase runtime and `manifest.lock` for root manifest writes so
+parallel phase lanes cannot corrupt JSON state.
 
 ---
 

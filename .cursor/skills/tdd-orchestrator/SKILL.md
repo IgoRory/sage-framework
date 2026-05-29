@@ -115,12 +115,12 @@ different role, it must stop and return the exact next role to invoke.
 These fields are protected by SAGE process ownership. This skill may read them
 to determine state, but must never set them or ask a subagent to set them:
 
-- `phases[N].runtime.validationConfirmed` - developer confirmation after S4.
-- `phases[N].runtime.batches[*].confirmed` - developer checkpoint approval.
+- `phase-{N}/phase-manifest.json.validationConfirmed` - developer confirmation after S4.
+- `phase-{N}/phase-manifest.json.batches[*].confirmed` - developer checkpoint approval.
 - `sessionState.foundationVerified` - orchestrator-owned after post-merge
   regression.
 
-The skill may reference `phases[N].runtime.buildSubStep` to distinguish S5a
+The skill may reference `phase-{N}/phase-manifest.json.buildSubStep` to distinguish S5a
 `red` from S5b `green-refactor`, but must not use it to skip the required
 artifacts or protected human confirmations.
 

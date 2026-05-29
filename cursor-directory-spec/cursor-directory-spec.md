@@ -325,10 +325,12 @@ or take any action. You read and report.
 ## What you monitor
 
 1. The session manifest at `[SESSION_ROOT]/session-manifest.md`
-   — specifically `phases[N].runtime` for all phases
-2. Per-lane telemetry at `[SESSION_ROOT]/phase-N/telemetry.jsonl`
+   for session metadata and phase definitions
+2. Per-phase runtime at `[SESSION_ROOT]/phase-N/phase-manifest.json`
+   for `currentStep`, `stepStatus`, approvals, and gate state
+3. Per-lane telemetry at `[SESSION_ROOT]/phase-N/telemetry.jsonl`
    for each active lane
-3. Linear phase issues for current status
+4. Linear phase issues for current status
 
 ## What you report on demand
 
@@ -465,7 +467,8 @@ description: >
   Produces the S2 implementation plan for a phase lane. Maps every
   TDD scenario to a specific test file and assertion, lists all files
   to create or modify, and populates the Linear phase issue with
-  implementation tasks. Invoke after S1 dev interview summary exists.
+  implementation tasks. Invoke after the S1 planning artifact exists
+  (`phase-{N}-dev-plan.md` or `phase-{N}-dev-interview-summary.md`).
 model: claude-4.6-sonnet-medium
 tools:
   - read_file
@@ -482,7 +485,9 @@ You are producing the S2 Implementation Plan for a phase lane.
 
 ## Your inputs — read these first
 
-1. Dev interview summary:
+1. S1 planning artifact:
+   `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-dev-plan.md` when
+   dev-plan was used, otherwise
    `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-dev-interview-summary.md`
 2. TDD spec: `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-tdd-spec.md`
 3. Session manifest — specifically `phases[PHASE_ID].definition.scopedFiles`
@@ -493,11 +498,11 @@ You are producing the S2 Implementation Plan for a phase lane.
 
 ## Build mode handling
 
-Read the dev interview summary to find the build mode the developer selected.
+Read the S1 planning artifact to find the build mode the developer selected.
 
 **If build mode = autonomous:**
 Produce the standard implementation plan structure. No batch groupings needed.
-Update `phases[PHASE_ID].runtime.buildMode = "autonomous"` in the manifest.
+Update `buildMode = "autonomous"` in `[SESSION_ROOT]/phase-{PHASE_ID}/phase-manifest.json`.
 
 **If build mode = checkpoint:**
 After producing the standard plan structure, add a Batch Breakdown section.

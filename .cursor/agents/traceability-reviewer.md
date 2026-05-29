@@ -19,11 +19,15 @@ When invoked:
 2. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
 3. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 4. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
-5. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
-6. If `phase-{N}-dev-plan.md` exists in the phase directory, read it and
-   note any items in its `## Open deferrals` section — these are
-   acknowledged gaps, not missing coverage.
-   Read `.cursor/skills/reasoning/layered-confidence-protocol.md`
+5. Resolve the S1 artifact:
+   - If `phase-{N}-dev-plan.md` exists in the phase directory, read it and
+     note any items in its `## Open deferrals` section — these are
+     acknowledged gaps, not missing coverage.
+   - Else, if `phase-{N}-dev-interview-summary.md` exists, read it.
+   - Else stop and report: "Traceability review cannot proceed — no S1
+     artifact found. Expected `phase-{N}-dev-plan.md` or
+     `phase-{N}-dev-interview-summary.md`."
+6. Read `.cursor/skills/reasoning/layered-confidence-protocol.md`
    for the pre-raise check rules before writing any finding.
 7. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
 8. Execute all four review steps in sequence
