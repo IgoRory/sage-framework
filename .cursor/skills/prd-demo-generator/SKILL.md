@@ -1,15 +1,29 @@
 ---
 name: prd-demo-generator
 description: >
-  Generates interactive HTML demos from a completed PRD draft. Reads the PRD's
-  acceptance criteria (AC-REQ, AC-EC, AC-UI, AC-ERR) and component specification
-  to produce self-contained HTML files that visualise every demoable scenario.
-  Optional step invoked by the PM between prd-interviewer and
-  prd-completeness-check. Regenerate on demand when the PRD changes. Writes to
-  .sage/prds/[FEATURE_ID]/demos/. Use this skill when the PM says "generate a
-  demo", "create an HTML demo", "visualise the PRD", "show me what this looks
-  like", or "regenerate the demo".
+  DEPRECATED — permanently inert. This skill is preserved as a historical
+  artefact. No current pipeline invokes it. Re-activation requires PM
+  approval and a fresh evaluation against the current pipeline. The
+  functional replacement is the three-surface manual handoff pattern
+  documented in prd-interviewer/references/handoff-prompt-templates.md
+  Template 1. Deprecation lineage: Phase C (initial), Phase D (no
+  consumers verified), Phase E (preservation permanent per PM ruling).
 ---
+
+> **STATUS: DEPRECATED — permanently inert.** No current pipeline reads
+> from or invokes this skill. Preserved as historical artefact per PM
+> ruling at Phase E close (25-MAY-2026). Functional replacement is the
+> three-surface manual handoff pattern documented in
+> `.cursor/skills/prd-interviewer/references/handoff-prompt-templates.md`
+> Template 1 (Demo handoff prompt). Re-activation requires PM approval
+> and a fresh evaluation against the current pipeline.
+>
+> Deprecation lineage: Phase C close (initial deprecation), Phase D close
+> (no consumers verified), Phase E close (preservation made permanent per
+> PM ruling), L1–L12 overhaul Phase 8 (banner re-affirmed).
+>
+> Body content below is **preserved verbatim** from the pre-lift skill as a
+> historical record.
 
 # PRD Demo Generator
 

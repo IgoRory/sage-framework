@@ -1,8 +1,8 @@
 # Complexity Classifier — Feature Complexity Tier Assignment
 
 Reference for prd-interviewer. Use during Step 2 (codebase reconnaissance) to
-classify the feature's complexity tier. The tier determines minimum question
-thresholds for the main interview and the edge-case interview phase.
+classify the feature's complexity tier. The tier determines expected interview
+depth, the coverage dimensions required, and the time estimate to set with the PM.
 
 ---
 
@@ -45,20 +45,39 @@ to Tier 4.
 
 ---
 
-## Minimum Question Thresholds
+## Coverage Dimensions per Tier
 
-| Tier | Main interview (P1–P5b) | Edge-case phase (P6) | Total minimum |
-|---|---|---|---|
-| Tier 1 (Simple) | 10 | 5 | 15 |
-| Tier 2 (Medium) | 15 | 8 | 23 |
-| Tier 3 (Complex) | 20 | 12 | 32 |
-| Tier 4 (Very Complex) | 25 | 15 | 40 |
+The coverage dimensions replace count-based thresholds as the calibration
+mechanism. At each conclusion gate, the interviewer self-assesses against
+the required dimensions for the feature's tier. Every required dimension
+must be satisfied before proceeding.
 
-These thresholds are minimums. The skill should ask as many questions as
-needed to fully cover the feature. The thresholds exist to prevent
-under-interviewing, not to cap interview depth.
+**Dimension definitions:**
+- **D-PRED** — Every requirement area has a testable predicate (GIVEN / WHEN / THEN) the interviewer can state without PM help
+- **D-SP** — Every affected stored procedure has a defined before/after behavior delta
+- **D-COMP** — Every UI component has all 6 specification elements (name/type, function, data, states, empty/loading/error, interactions)
+- **D-DETAIL** — For every UI surface, the micro-detail layer is captured: label text, tooltip text, placeholder text, validation messages, empty-state copy, hover/focus behavior, disabled-state reason text, sort/filter defaults, and keyboard behavior
+- **D-CROSS** — For every entity or action this feature touches, the cross-page/cross-feature impact is explicitly stated: which other screens display this data, which dashboards roll it up, which exports include it, which downstream calculations consume it, and what happens to each when this feature's data changes
+- **D-RATIONALE** — For every non-obvious design choice, the PM has stated WHY, and at least one alternative was explicitly considered and rejected with reasoning
+- **D-EC** — Every applicable edge-case category (of the 7) has at least one scenario with a defined outcome
+- **D-SCOPE** — Out-of-scope boundary is explicit for every adjacent area surfaced in recon
+
+**Required dimensions per tier:**
+
+- **Tier 1 (Simple):** D-PRED, D-SCOPE, D-EC, D-RATIONALE. D-SP applies if SPs are affected. D-DETAIL and D-CROSS apply if the feature touches UI or shared data.
+- **Tier 2 (Medium):** D-PRED, D-SCOPE, D-EC, D-RATIONALE, plus D-SP / D-COMP / D-DETAIL / D-CROSS as applicable to the feature's surface area.
+- **Tier 3 (Complex):** All eight dimensions required.
+- **Tier 4 (Very Complex):** All eight dimensions required, with D-DETAIL and D-CROSS explicitly enumerated per UI surface and per entity (umbrella statements are not acceptable — every surface and every entity must be individually traced).
+
+---
 
 ### Minimum Acceptance Criteria Thresholds
+
+> **Note:** This table is consumed by prd-completeness-check as an output
+> quality metric for the generated PRD. It is **NOT** an interview question
+> target. The interviewer never asks questions to hit these AC counts;
+> ACs are derived from understanding captured during the interview, and
+> this table only governs the completeness-check pass/fail at P9.
 
 The PRD generation step (P9) must produce at least this many ACs per
 category. If below threshold after the first generation pass, derive
@@ -73,22 +92,6 @@ additional ACs from under-covered areas before finalising.
 
 For non-UI features (no Section 5b components), the AC-UI + AC-ERR
 column applies only to error/recovery scenarios from Section 6 Category 7.
-
----
-
-### Mid-interview enforcement
-
-Track questions asked per section throughout the interview. Before
-concluding the main interview (P1-P5b) at the conclusion gate, verify
-the running total meets the tier minimum for the main interview column.
-If the count is below threshold, identify which categories are
-under-covered and ask additional questions before proceeding to the
-edge-case phase.
-
-Similarly, before concluding the edge-case phase (P7), verify the
-edge-case question count meets the tier minimum. If under threshold,
-identify which of the 7 edge-case categories have the fewest questions
-and expand coverage there.
 
 ---
 
@@ -117,8 +120,9 @@ after Step 2 completes:
 
 ## Recalibration
 
-The tier thresholds and minimum question counts are subject to recalibration
-by the skill-effectiveness-evaluator. If the evaluator finds that Tier 2
-features consistently produce PRDs that fail completeness check on D3 (edge
-cases), it may propose raising the Tier 2 edge-case minimum. Do not hardcode
-these values in downstream logic — always read them from this reference file.
+The tier thresholds and coverage dimension requirements are subject to
+recalibration by the skill-effectiveness-evaluator. If the evaluator finds
+that Tier 2 features consistently produce PRDs that fail completeness check
+on D3 (edge cases), it may propose adding D-EC as a required dimension at
+Tier 1, or tightening the D-EC definition. Do not hardcode these values in
+downstream logic — always read them from this reference file.

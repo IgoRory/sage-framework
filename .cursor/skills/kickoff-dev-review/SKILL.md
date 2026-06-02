@@ -27,8 +27,44 @@ every concern, asks targeted follow-ups, and updates the PRD at
 | Input | Source | Required |
 |-------|--------|----------|
 | Teams meeting link | Provided by invoker | Yes |
-| PRD | `.sage/prds/[FEATURE_ID]/prd.md` | Yes |
-| Component specification | `.sage/prds/[FEATURE_ID]/component-spec.md` | Yes (UI features) |
+| PRD | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/prd.md` — legacy `.sage/prds/[FEATURE_ID]/prd.md` accepted during the backfill-on-touch window | Yes |
+| Bundle manifest (file inventory + per-file `prdHash` and `FRESH` confirmation) | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/bundle-manifest.json` | Yes for new-format bundles; legacy disk-walk fallback during the backfill-on-touch window |
+| Acceptance criteria | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/acceptance-criteria.md` | Yes |
+| Reuse map | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/reuse-map-draft.md` (or `reuse-map.md` if PM-confirmed) | Yes |
+| Component specification | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/component-spec.md` | Yes (UI features) |
+| Demo summary | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/demos/_summary.md` | Yes (when bundle includes a demo surface per manifest) |
+| Component-spec summary | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/component-spec/_summary.md` | Yes (when bundle includes a component-spec surface per manifest) |
+
+---
+
+## L1–L12 contract alignment (binding)
+
+This skill is a new downstream consumer in the L1–L12 contract (see
+[`prd-interviewer/references/downstream-agent-contract.md`](../prd-interviewer/references/downstream-agent-contract.md)
+§1). The binding alignment points specific to the kick-off dev review are:
+
+- **Bundle discovery via `bundle-manifest.json`.** Before reading any
+  derivative, this skill reads
+  `.sage/prds/[FEATURE_ID]/[sub-prd-id]/bundle-manifest.json` to confirm
+  the bundle is complete. For each `files[]` entry: confirm the file is
+  present on disk and its `prdHash` matches the current `prd.md` body
+  SHA-256 (i.e. `FRESH`). If any file in the manifest is `MISSING` or
+  `STALE`, surface the result to the team and STOP — the kick-off
+  cannot proceed against a stale bundle; the PM must run `prd-amend` or
+  re-handoff the affected surface first.
+- **Pre-read load order.** Once the bundle is confirmed `FRESH`, load
+  PRD + AC sibling + reuse map + demo `_summary.md` + component-spec
+  `_summary.md` as the pre-read for the team discussion. Do not deep-read
+  the heavy artifacts (HTML demos, JSON sample-data, full
+  `component-spec.md`) unless a team concern challenges a specific item.
+- **§4 sub-section IDs in concern categorisation.** When a concern maps
+  to a specific requirement, record the §4.NNN ID (`{PREFIX}-NNN` across
+  the 14 prefixes) in the concern log so the downstream phase-splitter
+  consumes the same identifiers.
+- **Sequential `AC-NNN` with `surface` field.** When a concern maps to a
+  specific AC, record the sequential `AC-NNN` ID. The legacy bucketed
+  `AC-{REQ|EC|UI|ERR}-NNN` form is accepted for pre-lift bundles during
+  the backfill-on-touch window.
 
 ---
 

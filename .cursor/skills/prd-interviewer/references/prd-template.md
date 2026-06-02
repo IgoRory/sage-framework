@@ -1,329 +1,428 @@
-﻿# PRD Template -- Profitability Domain
+﻿# PRD Template
 
-Reference for prd-interviewer. Use this structure when generating the PRD
-draft from the interview answer record. Every section heading and subsection
-must appear in the output, even if the content is a TODO placeholder.
+Reference for prd-interviewer. Empty PRD scaffold matching the L1–L12
+8-section schema exactly. Use this structure when generating the PRD draft
+from the interview answer record.
+
+The PRD is the **outcome-only business deliverable**. It describes what
+the feature does for the user, the rules it must honour, and the scope of
+change — in plain English. It does **not** carry acceptance-criteria text,
+internal mechanism prose (SP names, return codes, flag mutations), or
+implementation prescription. Those concerns live in sibling artifacts:
+
+| Concern | Sibling artifact |
+|---|---|
+| Acceptance criteria | `acceptance-criteria.md` |
+| Component / surface map (reuse decisions) | `component-spec.md` |
+| Sample data | `sample-data/*.json` |
+| Demos | `demos/demo-interactive.html` / `demos/calculation-demo.html` |
+| Bidirectional trace | `traceability.md` |
+| Reuse map (full table) | `reuse-map-draft.md` |
+| Component pattern decisions | `component-pattern-confirmation.md` |
+| Bundle file inventory | `bundle-manifest.json` |
+
+The PRD references these siblings by path and ID — it never restates
+their content.
+
+**Schema authority.** Section numbers, sub-section headings, and §4 ID
+prefixes in this template come from
+[`prd-section-schema.md`](./prd-section-schema.md). Section numbers and
+ID prefixes are **stable** — once published, they do not change.
 
 ---
 
-## PRD structure
+## PRD file path
 
-The PRD is generated as a markdown file at `.sage/prds/[FEATURE_ID]/prd.md` with this exact structure:
+`.sage/prds/[FEATURE_ID]/[sub-prd-id]/prd.md`
 
 ---
 
-# [Feature title]
+## Plain-English rule (binding)
 
-**Linear issue:** [issue ID]
+Every paragraph in the PRD reads like a business analyst wrote it for a
+business reader. Translate every technical mechanism into the observable
+outcome it produces. Forbidden in PRD body text:
+
+| Forbidden | Reason | Use instead |
+|---|---|---|
+| Stored procedure names (e.g. `usp_SaveProductCosts`) | Internal mechanism | The user-visible behaviour the SP causes |
+| Return code values, error codes | Internal mechanism | The user-visible toast / dialog / banner the code produces |
+| Internal flag names (e.g. `isAODDependent`) | Internal mechanism | The condition under which the user observes the resulting behaviour |
+| View / column names (e.g. `vw_HierarchyHistory`) | Internal mechanism | The data the user sees and how they see it |
+| Class names, selector names | Internal mechanism | The component pattern named in `component-spec.md` |
+| AC text inline (Given / When / Then) | Belongs in sibling | A reference to AC IDs in `acceptance-criteria.md` |
+| Reuse table inline (component → existing pattern) | Belongs in sibling | A reference to the table in `component-spec.md` |
+| API endpoint paths | Internal mechanism | The user-observable behaviour the endpoint enables |
+
+PM-directed SQL is admissible verbatim only when explicitly requested by
+the PM (carry-over from L2).
+
+---
+
+## Template
+
+The PRD file begins with a YAML frontmatter block (see "Frontmatter for
+`prd.md`" in [`prd-section-schema.md`](./prd-section-schema.md)). The
+frontmatter is terminated by a `---` delimiter. The body content begins
+immediately after.
+
+````markdown
+---
+title: [Feature Title]
+subPrdId: [sub-prd-N]
+featureId: [PROF-NNN]
+version: 1.0.0
+author: [PM full name]
+date: [DD-MMM-YYYY]
+prdHash: [sha256-hex of body content below the closing --- delimiter]
+---
+
+# [Feature Title] — Business Requirements
+
 **Status:** Draft
-**Author:** [PM name]
-**Date:** [ISO date]
-**Completeness score:** Not yet assessed
+**Repository:** Profitability
+**Applies To:** [Both FP and OP / FP only / OP only]
 
 ---
 
-## 1. Feature overview
+## §1 Feature Definition
 
-[2-3 sentences from Q1.2. Must answer: what does this feature do, who
-uses it, and what can they do after it exists that they could not before.
-Do not use vague qualifiers. Derive from Q1.1 and Q1.2 answers.]
+### §1.1 Purpose
 
----
+[One paragraph of business English describing what this sub-PRD delivers.
+Who uses it, what problem it solves, what the user can do after this
+feature exists that they cannot do today.]
 
-## 2. Primary change type
+### §1.2 Business outcome
 
-[List the change types selected in Q1.3. One per line.]
-- [ ] New user-facing screen or UI change
-- [ ] Change to how calculations are performed
-- [ ] Change to how costs or income are allocated
-- [ ] Change to reporting or BI output
-- [ ] Configuration or administration change
-- [ ] Data model or schema change
+[The user-observable or customer-visible outcome the feature produces.
+Outcome-only — no implementation steps.]
 
----
+### §1.3 Dependencies
 
-## 3. Affected area
+#### §1.3.1 Prerequisite
+[Work items / data / configuration that must exist before this sub-PRD can
+ship. If none: `None.`]
 
-[From Q1.4. Name the specific area of the product, referencing codebase
-components by name where confirmed in the interview.]
+#### §1.3.2 Blocks-Downstream
+[What this sub-PRD's completion unblocks. If none: `None.`]
 
----
+#### §1.3.3 Concurrent
+[Sub-PRDs / work items that ship in the same cycle and share surfaces. If
+none: `None.`]
 
-## 4. User roles
+#### §1.3.4 Reference
+[External documents, ADRs, prior PRDs the reader may need. If none:
+`None.`]
 
-[From Q1.5. List each role that will interact with this feature.]
+#### §1.3.5 Cross-Sub-PRD
+[Relationships with other sub-PRDs in the same feature. Each entry
+references the related sub-PRD by ID and the canonical behaviour entry it
+points at (e.g. `sub-prd-2 §4.2 CL-007`). If none: `None.`]
 
----
+### §1.4 User Roles
 
-## 5. Requirements
+[Role list only — no permissions matrix. Permissions live under §4.9.
+Example:
+- Profitability Admin
+- Rule Creator
+- Read-only Reviewer]
 
-[One requirement per line. Each must be a testable predicate -- a specific
-condition and a specific outcome. No vague qualifiers. Derive from the
-acceptance criteria in Q4.1 and the scenario descriptions throughout the
-interview.
+### §1.5 User Stories
 
-Format each requirement as:
-"When [condition], [subject] [must/must not] [outcome]."
+[Each story carries `id`, `role`, `goal`, `motivation`, `linked_ac_ids`.
 
-Examples:
-- "When ProcessID = 1001 and the instrument type is Loan, the
-  FTP_NetInterestIncome measure must equal the sum of
-  FTP_GrossInterestIncome minus FTP_FundingCost for all instruments
-  in the portfolio."
-- "When usp_CalculateFTP returns -3, the system must display the message
-  'Allocation blocked: instrument not initialised' in the status panel
-  within 200ms."
-
-If a requirement is parked (PM could not answer), write:
-"TODO: [topic of parked question Q[N].[N]]"
-]
+Example:
+- **US-001**
+  - **role:** Profitability Admin
+  - **goal:** Update leaf-level Unit Costs without leaving the page
+  - **motivation:** Reduce edit friction during quarterly review
+  - **linked_ac_ids:** AC-007, AC-008, AC-012]
 
 ---
 
-## 6. Calculation logic (include only if Q1.3 includes b)
+## §2 Success Criteria
 
-### 6.1 Affected measures
-[From Q2.1. List each measure by exact name from vw_BI_AllInstruments.]
+### §2.1 Definition of success
 
-### 6.2 Affected stored procedures
-[From Q2.2. List each procedure by exact name.]
+[Free-form prose describing what "successful delivery" looks like for
+this sub-PRD.]
 
-### 6.3 Current behaviour
-[From Q2.3. Describe current behaviour in predicate form. If parked: TODO.]
+### §2.2 KPIs
 
-### 6.4 New behaviour
-[From Q2.3. Describe new behaviour in predicate form. If parked: TODO.]
-
-### 6.5 FTP and revision date changes
-[From Q2.4. If not applicable: "No change to FTP revision date handling."]
-
-### 6.6 Return code handling
-[From Q2.5. For each relevant return code (-1 through -8), state the
-required behaviour. If not applicable: "No change to return code handling."]
-
-### 6.7 Instrument flag behaviour
-[From Q2.6. If not applicable: "No change to instrument flag handling."]
+[KPIs are optional. If the PM does not specify any, write
+`Not applicable — [reason]`.]
 
 ---
 
-## 7. Allocation methodology (include only if Q1.3 includes c)
+## §3 Scope
 
-### 7.1 Allocation type
-[From Q3.1.]
+### §3.1 In Scope
 
-### 7.2 Current methodology
-[From Q3.2. In predicate form. If parked: TODO.]
+[Explicit bulleted list. Each bullet is specific enough that a developer
+could not accidentally include something out-of-scope.]
 
-### 7.3 New methodology
-[From Q3.2. In predicate form. If parked: TODO.]
+### §3.2 Out of Scope
 
-### 7.4 Allocation driver
-[From Q3.4. Name the specific driver.]
+[Explicit bulleted list of adjacent areas that are intentionally excluded,
+each with a one-line reason. If the PM provided none, write
+`Not applicable — [reason]`.]
 
-### 7.5 GLAllocationLog changes
-[From Q3.5. If not applicable: "No change to GLAllocationLog."]
+### §3.3 Scope Boundaries
 
-### 7.6 Exclusions
-[From Q3.6. If none: "No exclusions."]
+[Edges and grey areas where in/out is non-obvious. Each entry names the
+boundary and the rule that decides. If none: `Not applicable — [reason]`.]
 
 ---
 
-## 8. Acceptance criteria
+## §4 Detailed Business Requirements
 
-Generate ACs from **four sources**. Each AC must be agent-evaluable
-(explicit input, explicit action/condition, explicit measurable output).
-No vague qualifiers. Format:
-"Given [precondition], when [action], then [measurable outcome]."
+Every §4 sub-section below appears in the document. Sub-sections in the
+P2 coverage map carry one or more `{PREFIX}-NNN` entries; unused sub-
+sections carry an explicit `Not applicable — [reason]` notice. **No
+silent omissions.**
 
-Use categorised IDs to trace AC provenance:
+### §4.1 Data Model & Entities (`DM-NNN`)
 
-### 8.1 Requirement ACs (AC-REQ-NNN)
+[Per-entity entries. Each entry carries an outcome-only description of
+the entity from the user's perspective: what it represents, what
+relationships it has to other entities, what state it can be in. No SP
+names, no view columns, no class names.
 
-One AC per requirement from Section 5. Derive from Q4.1, Q4.2, and the
-requirements list. Each requirement must have at least one AC.
+Example:
+- **DM-001 — Product Unit Cost**
+  - The dollar cost the business has assigned to a single leaf product at
+    a specific As-Of Date. Relates one-to-one to a leaf node in the
+    Product hierarchy.]
 
-AC-REQ-001: Given [precondition], when [action], then [outcome].
-AC-REQ-002: ...
+### §4.2 Calculation & Logic (`CL-NNN`)
 
-[If a requirement is deferred: "TODO: [DI-ID] -- [topic]"]
+[Per-calculation entries. Each entry carries inputs (named in business
+language), transformation (PM-stated formula), outputs, and at least one
+boundary case. Verbatim numeric worked example required where PM supplied
+numbers; otherwise `[NUMBERS TBD — DI-NNN]`.
 
-### 8.2 Edge-case ACs (AC-EC-NNN)
+If not applicable: `Not applicable — [reason]`.]
 
-One AC per edge case documented in Section 11. Each edge case becomes a
-testable scenario. Cross-reference the edge case condition.
+### §4.3 Allocation & Distribution (`AL-NNN`)
 
-AC-EC-001: Given [precondition], when [edge condition], then [outcome].
-  Edge case: "[condition text from Section 11]"
-AC-EC-002: ...
+[Per-allocation-rule entries. Each entry names driver / scope / source-
+pool / target-pool / exclusions / fractional-remainder / ordering.
 
-### 8.3 UI state ACs (AC-UI-NNN)
+If not applicable: `Not applicable — [reason]`.]
 
-One AC per non-trivial state transition identified in the component
-specification (Section 5b / component-spec.md). Cover state entries,
-state exits, and inter-component impacts.
+### §4.4 Workflow & State (`WF-NNN`)
 
-AC-UI-001: Given [component] is in [state A], when [trigger], then
-  [component] transitions to [state B] and [observable effect].
-  Component: [component name]
-AC-UI-002: ...
+[Per-state-transition entries. Each entry names the precondition, the
+trigger, the resulting state, and the user-observable signal.
 
-[If no UI components: "Not applicable -- no UI components in scope."]
+If not applicable: `Not applicable — [reason]`.]
 
-### 8.4 Error/empty/loading ACs (AC-ERR-NNN)
+### §4.5 UI & Interaction (`UI-NNN`)
 
-One AC per error path, empty state, and loading state identified in
-Q5b.7-Q5b.9 and Section 6 (failure and recovery edge cases).
+[Per-surface entries. Each entry names the affordance, the visible
+states, and the user-observable interactions. Detailed component-by-
+component states / interactions / data bindings live in
+`component-spec.md`; §4.5 names what the user is asked to do.
 
-AC-ERR-001: Given [data condition], when [action], then [error behaviour].
-  Recovery: [user recovery path]
-AC-ERR-002: ...
+If not applicable: `Not applicable — [reason]`.]
 
-[If no error states applicable: "Not applicable -- backend-only feature."]
+### §4.6 Validation & Constraints (`VC-NNN`)
 
-### 8.5 Performance requirements
-[From Q4.3. If none: "No performance requirements specified."]
+[Per-validation-rule entries. Each entry names the input predicate, the
+violation outcome, and the recovery path.
 
-### 8.6 Test scope
-[From Q4.4. Name specific test files in scope.]
+If not applicable: `Not applicable — [reason]`.]
 
-### 8.7 AC coverage summary
+### §4.7 Error Handling (`ER-NNN`)
 
-| Category | Count | Tier minimum | Status |
-|----------|-------|-------------|--------|
-| AC-REQ | [N] | [from tier] | [Met/Below] |
-| AC-EC | [N] | [from tier] | [Met/Below] |
-| AC-UI + AC-ERR | [N] | [from tier] | [Met/Below] |
-| **Total** | **[N]** | **[from tier]** | |
+[Per-failure-mode entries. Each entry names the trigger, the user-
+observable signal (toast, banner, dialog), and the recovery path.
 
-If any category is below tier minimum, derive additional ACs from
-under-covered areas before finalising the PRD.
+If not applicable: `Not applicable — [reason]`.]
 
----
+### §4.8 Notifications & Messaging (`NM-NNN`)
 
-## 9. Scope boundaries
+[Per-notification entries. Each entry names the trigger, the channel
+(toast / email / in-app banner / alert), the recipient role, and the
+verbatim copy if PM-provided.
 
-### In scope
-[Derive from the full interview -- everything confirmed as in scope.]
+If not applicable: `Not applicable — [reason]`.]
 
-### Out of scope
-[From Q5a.1 and Q5a.2. At minimum one explicit item. If the PM provided
-none, write: "TODO: Product Manager to confirm explicit out-of-scope items
-before completeness check."]
+### §4.9 Permissions & Access Control (`PA-NNN`)
 
-### Downstream impact
-[From Q5a.3. Name specific reports, Dataverse entities, or exports that
-must not be affected.]
+[Per-permission entries. Each entry names the role, the affordance the
+role can or cannot access, and the user-observable signal when access is
+denied.
 
-### Dataverse boundary
-[From Q5a.4. State explicitly whether this feature crosses the Dataverse
-boundary and if so, which entities are read or written.]
+If not applicable: `Not applicable — [reason]`.]
 
----
+### §4.10 Integration & External Surfaces (`IN-NNN`)
 
-## 10. UI and UX (include only if Q1.3 includes a or UI files found in recon)
+[Per-integration entries. Each entry names the external system, the
+direction (this sub-PRD reads / writes / both), and the user-observable
+behaviour.
 
-### Screen inventory
-[List each new or modified screen. Format:
-| Screen name | New / Modified | Purpose | Layout description |
-|-------------|---------------|---------|-------------------|
-| [name] | [New/Modified] | [one sentence] | [top-to-bottom component placement and spatial relationships] |
-]
+If not applicable: `Not applicable — [reason]`.]
 
-### Navigation
-[From Q5b.4. What triggers navigation to each screen.]
+### §4.11 Performance & Scale (`PF-NNN`)
 
-### Component specification
-[This section states that the component specification is maintained in
-a separate file. Write:
-"Component specifications for all new and modified UI components are
-documented in the companion Component Specification file.
+[Per-performance-budget entries. Each entry names the metric (load time,
+render time, max-rows, throughput) and the budget threshold.
 
-See: [component-spec.md](./component-spec.md)
+If not applicable: `Not applicable — [reason]`.]
 
-The component specification covers: [list component names]."
-]
+### §4.12 Audit & Telemetry (`AU-NNN`)
 
----
+[Per-audit-entry entries. Each entry names what is recorded, the trigger,
+and the consumer.
 
-## 11. Edge cases and constraints
+If not applicable: `Not applicable — [reason]`.]
 
-[From Section 6. Format each with a cross-reference to its corresponding
-acceptance criterion in Section 8.2:
+### §4.13 Reporting & Export (`RX-NNN`)
 
-"[Condition]: [required behaviour]. → AC-EC-[N]"
+[Per-report-or-export entries. Each entry names the report, the trigger,
+the format, and the recipient.
 
-Each edge case must have a corresponding AC-EC entry in Section 8.2 that
-makes it testable. The cross-reference enables bidirectional tracing.
+If not applicable: `Not applicable — [reason]`.]
 
-Examples:
-- "NewInstFlag = 1: instrument must be included in FTP calculation but
-  excluded from prior-period comparison. → AC-EC-001"
-- "Named revision date in effect: FTP rate must be sourced from the
-  rate table effective at the named date, not the current rate table.
-  → AC-EC-002"
-- "Naming note: the codebase uses both 'MktRisk' and 'MarketRisk' in
-  different files -- build team must verify which is authoritative for
-  this feature before writing tests. → AC-EC-003"
+### §4.14 Cross-Page Impacts (`CP-NNN`) — relationship pointer register
 
-Edge cases from each of the seven categories (interaction sequence,
-cascading behaviour, concurrency, state boundary, cross-component
-dependency, data integrity, failure and recovery) should be grouped
-under subheadings for clarity.]
+#### Outbound impacts
+
+[Per-outbound-impact entry. Each entry references a canonical behaviour
+entry in the originating sub-PRD by sub-PRD ID + requirement ID. Never
+duplicates behaviour text.
+
+Example:
+- **CP-001 → sub-prd-3 §4.5 UI-014** — this sub-PRD updates the Product
+  Unit Cost data shape; sub-prd-3 §4.5 UI-014 consumes it on the
+  Allocation Rules page.
+
+If none: `None.`]
+
+#### Inbound impacts
+
+[Per-inbound-impact entry. Same format.
+
+If none: `None.`]
 
 ---
 
-## 12. Open items (Deferred Items)
+## §5 Data Migration
 
-[Automatically generated from the Unified Deferred Items List. Include all
-items with status "Open" or "Accepted". Format:
+[Default: `Not applicable — [reason]`.
 
-| DI ID | Question | Section | Category | PM Reason | Status |
-|-------|----------|---------|----------|-----------|--------|
-| DI-001 | Q2.3 -- current vs new behaviour | P2 | Calculation | "Need to check with finance" | Accepted |
-| DI-002 | Q5b.6 -- component states for grid | P6 | UI | "Will decide during development" | Accepted |
-]
-
-If no deferred items: "No open items -- all questions resolved during
-interview."
-
-Items with status "Accepted" indicate known gaps that must be resolved
-before the PRD can pass prd-completeness-check at full score.
-
----
-
-## Component specification file structure
-
-The component specification is a separate file at `.sage/prds/[FEATURE_ID]/component-spec.md`.
-Title: "[Feature title] -- Component Specification"
-
-For each UI component identified in Section 5b:
+When triggered (the feature touches existing data, records, or
+calculation results), address explicitly:
+- **Existing data:** What happens to records created before this feature
+  is deployed?
+- **Calculation results:** If any calculations or allocations are already
+  stored, do they remain valid after this change, or do they need to be
+  recalculated?
+- **Migration step:** Is there a one-time data migration step required as
+  part of deployment?
+- **Historical records:** Are any historical records affected by how the
+  new feature categorises or displays data?]
 
 ---
 
-### [Component name and type]
-(e.g., "ProcessSelector -- multi-select dropdown")
+## §6 Risks & Mitigations
 
-**Functional description:**
-[Predicate form -- what it does, not what it looks like. From Q5b.5b.]
+[Free-form prose. PM authors risks and mitigations.
 
-**States:**
-| State | Trigger | Description |
-|-------|---------|-------------|
-| Default | Page load | [description] |
-| Loading | Data fetch initiated | [description] |
-| [state] | [trigger] | [description] |
-
-**User interactions:**
-[From Q5b.10. List each interaction and what it does.]
-
-**Selectable options:**
-[From Q5b.5c. For dropdowns/selects: list all options or the data source.
-For calculated fields: name the stored procedure or view.]
-
-**Data binding:**
-[From Q5b.5c. Name the specific field: Adjusted_GL field name, ProcessID,
-SP parameter name, or view column name. Generic references do not pass
-prd-completeness-check D5.]
+Example:
+- **Risk:** Concurrent edits from two Admins could overwrite each other's
+  Unit Cost changes.
+- **Mitigation:** Concurrency dialog surfaces the conflict and offers
+  three resolutions (Cancel / Load Latest / Save Anyway). See AC-014.]
 
 ---
 
+## §7 Open Items & Ambiguities
+
+[Free-form. Captures Deferred Items (DI-NNN) that remained `Accepted` at
+the single conclusion gate plus any ambiguity-scan deferrals.
+
+Example:
+- **DI-007:** PM to confirm refresh cadence for the daily-rate input.
+  Tracked-as-DI from the ambiguity scan ("as needed").
+- **DI-012:** Concurrency dialog copy `[TEXT TBD — requires PM decision]`.
+
+If none: `None — no open items.`]
+
+---
+
+## §8 Related Artefacts
+
+Each pointer carries a freshness status (`FRESH` / `STALE` / `MISSING`)
+derived from `prd-stale-check`. A FRESH status means the derivative's
+`prdHash` header matches the current SHA-256 of `prd.md` body content.
+
+| Artefact | Path | Freshness |
+|---|---|---|
+| Acceptance criteria | `./acceptance-criteria.md` | [status] |
+| Component spec | `./component-spec.md` | [status] |
+| Reuse map (full) | `./reuse-map-draft.md` | [status] |
+| Component pattern decisions | `./component-pattern-confirmation.md` | [status] |
+| Traceability | `./traceability.md` | [status] |
+| Interactive demo | `./demos/demo-interactive.html` | [status] |
+| Calculation demo | `./demos/calculation-demo.html` | [status or `Not produced`] |
+| Demo behaviour manifest | `./demos/demo-behavior-manifest.md` | [status] |
+| Demo coverage report | `./demos/demo-coverage.md` | [status] |
+| Demo handoff summary | `./demos/_summary.md` | [status] |
+| Sample data | `./sample-data/` | [status] |
+| Sample-data summary | `./sample-data/_summary.md` | [status] |
+| Component-spec handoff summary | `./component-spec/_summary.md` | [status] |
+| Verbatim PM answers | `./interview-answers.json` | [status] |
+| Bundle manifest | `./bundle-manifest.json` | [status] |
+| PRD breakdown | `../prd-breakdown.[sub-prd-id].md` | [status or `N/A`] |
+
+---
+
+## Version History
+
+Every entry carries `Date | Author (full name) | Change summary (concrete
+delta — not "updated file")`. PM edits and agent edits MUST be
+distinguishable from the author field alone. No anonymous entries, no
+"various" authorship, no placeholder authors.
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | [DD-MMM-YYYY] | [PM full name] | Initial PRD authored from interview |
+| 1.1 | [DD-MMM-YYYY] | [agent name, e.g. `prd-amend`] | [concrete delta — e.g. "Regenerated demo brief after PM edit to §4.5 UI-007 copy strings"] |
+
+````
+
+---
+
+## Generation order
+
+1. **P8 PRD drafting** writes the body of `prd.md` against the §1–§8
+   structure above, populating §4 sub-sections from the in-flow
+   `{PREFIX}-NNN` IDs assigned during P3 / P4 / P5 / P6.
+2. **Pre-write artifact-bar walk** (Family G G3) runs against
+   `production-grade-quality-bar.md` Pass Conditions for the PRD bar.
+   Failure: do not write. Surface failing Pass Condition. Resolve gap.
+   Retry.
+3. **prdHash computation** runs once the body content is finalised. The
+   computed hash is written into the YAML frontmatter `prdHash` field.
+   On computation failure (Family L11 D5), the field carries
+   `'[COMPUTATION_FAILED]'`.
+4. **Sibling derivatives** (`acceptance-criteria.md`, `reuse-map-draft.md`,
+   `component-pattern-confirmation.md`) are written next, each carrying
+   the unnumbered preamble's derivative frontmatter with the computed
+   `prdHash` value.
+5. **P9 handoff briefs** are authored next; the heavy handoff-chat outputs
+   (`demos/*.html`, `sample-data/*.json`, `component-spec.md`) are
+   produced by the three manual handoff chats and return through the
+   interviewer's Family N anchor verification.
+6. **`traceability.md`** is auto-built at P9 from the in-memory AC list
+   plus the three handoff `_summary.md` files — table-only, deterministic.
+7. **`bundle-manifest.json`** is finalised at end of P9 and emits
+   `prd_bundle_manifest_finalised` immediately before
+   `prd_interview_completed`.
+
+The PRD is the outcome-only deliverable. The sibling artifacts are the
+implementation-facing deliverables. Together they form the post-lift
+bundle for one sub-PRD.
