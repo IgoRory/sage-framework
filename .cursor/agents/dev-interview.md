@@ -183,46 +183,58 @@ Write `phase-{N}-dev-interview-summary.md` to `[SESSION_ROOT]/phase-{N}/` using 
 **Date:** [ISO date]
 **Developer:** [developer name]
 **Build mode:** [autonomous | checkpoint]
+**Batch boundary:** [database | api | ui | full-stack | n/a]
 
-## Codebase exploration findings
+## Codebase delta
 
-[Delta analysis — Already exists / Needs extending / Net new, with file paths]
-[Reuse opportunities identified — SP/DAL/service/component with paths]
-[Write "Not applicable — new feature area" if Step 2 was skipped]
+| Classification | Item | Path |
+|---|---|---|
+| Already exists / Needs extending / Net new | [item] | [path] |
 
-## Spec gap analysis
+[Or: "Not applicable — new feature area."]
 
-[Gaps identified in the TDD spec before the interview, and how each was resolved during the interview]
-[Write "No gaps identified" if Step 1 found none]
+## Reuse opportunities
 
-## Scope confirmation
+- [SP / DAL / service / component] at [path]
 
-[Confirmed scoped files. List any additions or removals agreed during interview.]
+[Or: "None identified."]
+
+## Spec gaps resolved
+
+| Gap | Resolution |
+|---|---|
+| [TDD spec section anchor] | [one-line resolution] |
+
+[Or: "No gaps identified."]
+
+## Scope changes
+
+- Added: [file]
+- Removed: [file]
+- Read-only: [file]
+
+[Or: "Scope unchanged from manifest."]
 
 ## TDD scenario refinements
 
-### Scenario [N.1]: [title]
-**Status:** [Confirmed | Refined]
-**Changes:** [what changed, or "None"]
-**Refined scenario (if changed):**
-Given: ...
-When: ...
-Then: ...
+Only list scenarios that changed. Reference unchanged scenarios as
+"Confirmed: N.1, N.2, N.3" on a single line.
 
-[Repeat for each scenario in the TDD spec]
+### Scenario [N.X] (Refined)
+**Change:** [one line]
+**Refined:**
+- Given: ...
+- When: ...
+- Then: ...
 
 ## Implementation notes
 
-[Bullet list of constraints, patterns, and dependencies identified during interview]
+- [constraint or pattern, one line each]
 
 ## Domain specifics
 
-[Only if applicable — verified measures/source objects/result outputs, revision date context, return/status codes, flags, component states and transitions]
-
-## Build mode
-
-**Selected:** [Autonomous | Checkpoint]
-[If Checkpoint: batch boundary type — database | api | ui | full-stack]
+[Only if applicable. Bullet list of verified names — measures, source views,
+result tables, return codes, flags, component states. No prose.]
 ```
 
 After writing the summary, tell the developer:
@@ -240,3 +252,5 @@ After writing the summary, tell the developer:
 - Do not write the summary until all questions are answered and build mode is confirmed
 - Do not reference information outside the current phase's PRD, TDD spec, and manifest definition
 - Feature explorer subagent runs in Step 2 — do not launch it outside that step
+- Do not restate PRD acceptance criteria or TDD spec scenario text. Reference by section anchor (`prd.md#ac-X`, `phase-{N}-tdd-spec.md#scenario-N.X`).
+- List unchanged scenarios on a single "Confirmed:" line — do not repeat their Given/When/Then.

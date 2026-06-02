@@ -19,10 +19,19 @@ When invoked:
 2. Read the PRD from the path in manifest (`header.featurePrdPath`, e.g. `.sage/prds/[FEATURE_ID]/prd.md`)
 3. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 4. Read the TDD spec: `[SESSION_ROOT]/phase-{N}/phase-{N}-tdd-spec.md`
-5. Read the dev interview summary: `[SESSION_ROOT]/phase-{N}/phase-{N}-dev-interview-summary.md`
-6. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
-7. Execute all four review steps in sequence
-8. Write the review document
+5. Resolve the S1 artifact:
+   - If `phase-{N}-dev-plan.md` exists in the phase directory, read it and
+     note any items in its `## Open deferrals` section — these are
+     acknowledged gaps, not missing coverage.
+   - Else, if `phase-{N}-dev-interview-summary.md` exists, read it.
+   - Else stop and report: "Traceability review cannot proceed — no S1
+     artifact found. Expected `phase-{N}-dev-plan.md` or
+     `phase-{N}-dev-interview-summary.md`."
+6. Read `.cursor/skills/reasoning/layered-confidence-protocol.md`
+   for the pre-raise check rules before writing any finding.
+7. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
+8. Execute all four review steps in sequence
+9. Write the review document
 
 ## Step 0 — Codebase context scan
 
@@ -61,6 +70,8 @@ Compare the PRD and implementation plan across five discrepancy categories. Use 
 | Contradictions | A criterion and a task directly conflict |
 | Undocumented Scope | An implementation plan task that extends beyond any criterion — possible scope creep |
 | Ambiguous Mapping | A criterion that maps to multiple tasks with no clear primary, or a task mapped to a criterion it does not clearly satisfy |
+
+Before classifying a Coverage Gap as Blocker: check whether the gap is documented in the dev-plan `## Open deferrals` with a named unblocking condition. If so, it is an acknowledged gap — record it as context, not a finding.
 
 Severity defaults: Coverage Gaps → Blocker. Detail Discrepancies, Contradictions → Major. Undocumented Scope, Ambiguous Mapping → Major. Apply judgement — downgrade if Step 0 context resolves the concern.
 
@@ -115,55 +126,41 @@ Blocker findings: [N]
 Major findings: [N]
 Minor findings: [N]
 
-## Codebase context (Step 0)
+## Codebase context
 
-[Summary of what already exists in scoped files relevant to this phase. Note criteria already partially/fully addressed by existing code, and any tasks that appear to duplicate existing functionality. State "Scoped files do not yet exist" if all files are net new.]
+[One-line per scoped file: `path — exists/net-new — covers AC-X` or
+"Scoped files do not yet exist."]
 
-## PRD quality (Step 1)
+## Forward traceability
 
-| Category | Criterion | Description | Severity |
-|----------|-----------|-------------|----------|
-| [category] | [criterion text] | [what is missing or unclear] | Minor / Blocker |
+| AC | Scenario | Task | Test method | Status |
+|---|---|---|---|---|
+| prd.md#ac-X | tdd-spec.md#scenario-N.X | impl-plan.md#task-N.X | [method] | OK / BLOCKER / MAJOR |
 
-[If none: "No PRD quality issues found."]
+## Backward traceability
 
-## Bidirectional traceability (Step 2)
-
-| Category | PRD criterion / Task | Description | Severity |
-|----------|----------------------|-------------|----------|
-| [category] | [criterion or task] | [discrepancy description] | Blocker / Major / Minor |
-
-[If none: "No discrepancies found."]
-
-## TDD spec chain (Step 3)
-
-### Forward traceability — PRD to test method
-
-| PRD criterion | Scenario | Task | Test method | Status |
-|---------------|----------|------|-------------|--------|
-| [criterion] | [N.X] | [task N.X] | [method name] | OK / BLOCKER / MAJOR |
-
-### Backward traceability — Implementation to PRD
-
-| Task | Scenario | PRD criterion | Status |
-|------|----------|---------------|--------|
-| [task N.X] | [N.X] | [criterion] | OK / MAJOR |
+| Task | Scenario | AC | Status |
+|---|---|---|---|
+| impl-plan.md#task-N.X | tdd-spec.md#scenario-N.X | prd.md#ac-X | OK / MAJOR |
 
 ## Findings
 
+Each finding: `severity | source step | item ref | one-line description`.
+Omit a severity heading when its count is 0.
+
 ### Blockers
-[Each Blocker: source step, document/criterion/task affected, what is missing, and the condition that must be satisfied before S4 can proceed]
+- [step] [ref] [description] — required resolution: [one line]
 
 ### Majors
-[Each Major: source step, affected item, description]
+- [step] [ref] [description]
 
 ### Minors
-[Each Minor: source step, affected item, description]
+- [step] [ref] [description]
 
-## Resolution required
+## Resolution
 
-[If Blocker findings > 0: "Blockers must be resolved before S4 can proceed. Re-invoke `implementation-planner` to address the findings above, then re-invoke this agent."]
-[If Blocker findings = 0: "S3 is complete. Invoke `plan-preview-generator` to begin S4 plan-validation."]
+[If Blocker findings > 0: "Re-invoke `implementation-planner`, then re-invoke this agent."]
+[If Blocker findings = 0: "S3 complete. Invoke `plan-preview-generator`."]
 ```
 
 ## After writing the review
@@ -181,3 +178,5 @@ Tell the developer:
 - Step 0 codebase scan is read-only — context gathering only, not a code review
 - Do not edit or rewrite upstream artifacts. State the required resolution condition, but do not implement fixes yourself
 - Do not re-run S2 yourself — direct the developer to re-invoke `implementation-planner`
+- Do not quote PRD criteria, TDD scenarios, or implementation plan tasks verbatim. Use anchored references (`prd.md#ac-X`, `tdd-spec.md#scenario-N.X`, `impl-plan.md#task-N.X`).
+- Each finding ≤ 2 lines. Severity headings with zero findings are omitted.

@@ -70,11 +70,21 @@ Signals that indicate a diff is warranted:
   Independent (dependency detection missed a case)
 - File ownership conflicts discovered during build (two phases modified
   the same file -- the Rule 2 conflict resolution was not triggered)
+- SPIKE RECOMMENDED phases that complete without needing the spike
+  (dependency confidence criteria are too aggressive for this team)
+- PROCEED phases that later reveal hidden cross-phase coupling
+  (dependency confidence criteria are not catching real dependencies)
+- Confidence scores consistently rated MEDIUM but phases complete without
+  issues (scoring rubric may be too conservative; consider tightening HIGH criteria)
+- Back-revisions triggered on the same type of L1 grouping error repeatedly
+  (a specific codebase pattern is not being detected at L1)
 
 Diff scope:
   Add or tighten a specific splitting rule.
   Adjust a specific independence scoring deduction value.
+  Adjust a specific confidence scoring threshold or check.
   Do not change the overall splitting rule priority order.
+  Do not change the overall recommendation decision rule priority order.
 
 ---
 

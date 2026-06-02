@@ -50,7 +50,7 @@
 │   │   ├── rules.mdc                          ← existing product rules; preserve as applicable
 │   │   ├── sage-session.mdc
 │   │   └── phase-context.mdc
-│   ├── skills/                                ← 8 top-level skill packages
+│   ├── skills/                                ← 9 top-level skill packages
 │   │   ├── prd-completeness-check/
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
@@ -95,10 +95,14 @@
 │   │   │   ├── SKILL.md
 │   │   │   └── references/
 │   │   │       └── per-skill-criteria.md
-│   │   └── prd-interviewer-effectiveness-evaluator/
-│   │       ├── SKILL.md
-│   │       └── references/
-│   │           └── prd-interviewer-signals.md
+│   │   ├── prd-interviewer-effectiveness-evaluator/
+│   │   │   ├── SKILL.md
+│   │   │   └── references/
+│   │   │       └── prd-interviewer-signals.md
+│   │   ├── tdd-orchestrator/                      ← Generic TDD loop orchestration
+│   │   │   └── SKILL.md
+│   │   ├── dev-plan/                              ← Opt-in investigation-first replacement for S1 dev-interview
+│   │   │   └── SKILL.md
 │   ├── templates/
 │   │   └── session-manifest-template.md
 │   └── mcp.json                               ← MCP server URLs (e.g. Linear, Notion, Microsoft 365)
@@ -321,10 +325,12 @@ or take any action. You read and report.
 ## What you monitor
 
 1. The session manifest at `[SESSION_ROOT]/session-manifest.md`
-   — specifically `phases[N].runtime` for all phases
-2. Per-lane telemetry at `[SESSION_ROOT]/phase-N/telemetry.jsonl`
+   for session metadata and phase definitions
+2. Per-phase runtime at `[SESSION_ROOT]/phase-N/phase-manifest.json`
+   for `currentStep`, `stepStatus`, approvals, and gate state
+3. Per-lane telemetry at `[SESSION_ROOT]/phase-N/telemetry.jsonl`
    for each active lane
-3. Linear phase issues for current status
+4. Linear phase issues for current status
 
 ## What you report on demand
 
@@ -461,7 +467,8 @@ description: >
   Produces the S2 implementation plan for a phase lane. Maps every
   TDD scenario to a specific test file and assertion, lists all files
   to create or modify, and populates the Linear phase issue with
-  implementation tasks. Invoke after S1 dev interview summary exists.
+  implementation tasks. Invoke after the S1 planning artifact exists
+  (`phase-{N}-dev-plan.md` or `phase-{N}-dev-interview-summary.md`).
 model: claude-4.6-sonnet-medium
 tools:
   - read_file
@@ -478,7 +485,9 @@ You are producing the S2 Implementation Plan for a phase lane.
 
 ## Your inputs — read these first
 
-1. Dev interview summary:
+1. S1 planning artifact:
+   `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-dev-plan.md` when
+   dev-plan was used, otherwise
    `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-dev-interview-summary.md`
 2. TDD spec: `[SESSION_ROOT]/phase-{PHASE_ID}/phase-{PHASE_ID}-tdd-spec.md`
 3. Session manifest — specifically `phases[PHASE_ID].definition.scopedFiles`
@@ -489,11 +498,11 @@ You are producing the S2 Implementation Plan for a phase lane.
 
 ## Build mode handling
 
-Read the dev interview summary to find the build mode the developer selected.
+Read the S1 planning artifact to find the build mode the developer selected.
 
 **If build mode = autonomous:**
 Produce the standard implementation plan structure. No batch groupings needed.
-Update `phases[PHASE_ID].runtime.buildMode = "autonomous"` in the manifest.
+Update `buildMode = "autonomous"` in `[SESSION_ROOT]/phase-{PHASE_ID}/phase-manifest.json`.
 
 **If build mode = checkpoint:**
 After producing the standard plan structure, add a Batch Breakdown section.
@@ -1293,7 +1302,7 @@ Phases progress through 8 steps in strict order:
 
 | Step | Code | What happens |
 |------|------|--------------|
-| S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes) |
+| S1 | dev-interview | Agent interviews developer; Plan mode only (no file writes). Opt-in alternative: `dev-plan` skill (investigation-first layered plan — no interview) |
 | S2 | implementation-plan | Agent produces implementation plan with TDD mapping |
 | S3 | traceability-review | Agent checks PRD ↔ implementation plan bidirectionally |
 | S4 | plan-validation | Agent produces plan preview; developer confirms |
@@ -1312,7 +1321,10 @@ All artifacts use the pattern: `phase-{N}-{artifact-type}.md`
 Where {N} is the phase number (e.g. phase-1, phase-2).
 
 Examples:
-- `phase-1-dev-interview-summary.md`
+- `phase-1-dev-interview-summary.md` — S1 default (dev-interview agent)
+- `phase-1-dev-plan-L1.md` — S1 opt-in L1 strategic artifact (dev-plan skill)
+- `phase-1-dev-plan-L2.md` — S1 opt-in L2 tactical artifact (dev-plan skill)
+- `phase-1-dev-plan.md` — S1 opt-in final artifact (dev-plan skill, feeds S2)
 - `phase-1-implementation-plan.md`
 - `phase-1-traceability-review.md`
 - `phase-1-plan-preview.canvas.tsx`

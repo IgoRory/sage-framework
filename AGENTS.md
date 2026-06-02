@@ -13,6 +13,26 @@ scope through instruction alone.
 
 ---
 
+## Artifact authoring rules
+
+These rules apply to every foreground agent's declared output artifact unless
+its agent definition explicitly overrides them.
+
+- No introduction, recap, or closing sections. Start with the required header
+  block; end after the last finding/row.
+- No restatement of the PRD, implementation plan, or any prior artifact. Cite
+  by relative path and section anchor (e.g. `prd.md#ac-3.2`).
+- Frontmatter for structured fields; bullets or tables for the rest. Prose only
+  when prose is the deliverable (e.g. handoff notes).
+- One assertion per bullet. No qualifiers ("clearly", "robust", "comprehensive",
+  "appropriate", "correct").
+- Do not duplicate gate-required lines. Each appears exactly once on its own
+  line in the body.
+- Tables: omit a section's table entirely when its row count is zero — write
+  "None." instead.
+
+---
+
 ## Table of Contents
 
 - [orchestrator](#orchestrator)
@@ -35,12 +55,18 @@ scope through instruction alone.
 - [intel-recorder](#intel-recorder)
 - [intel-advisor](#intel-advisor)
 
+**Skills**
+
+- [phase-splitter](#phase-splitter)
+- [dev-plan](#dev-plan)
+- [tdd-orchestrator](#tdd-orchestrator)
+
 ---
 
 ## orchestrator
 
-**Mode:** Foreground  
-**Access:** Read / Write  
+**Mode:** Foreground
+**Access:** Read / Write
 **Active during:** Kick-off · Between phases · Post-merge · Phase 04 (Review & Merge)
 
 ### Role
@@ -68,14 +94,14 @@ waiting period is required.
 - Does not write implementation code
 - Every artifact must be machine-readable without ambiguity
 - Uses predicate-based language in all artifacts — no vague qualifiers
-- Cannot set `validationConfirmed = true` in the session manifest
+- Cannot set `validationConfirmed = true` in `phase-{N}/phase-manifest.json`
 
 ---
 
 ## sprint-coordinator
 
-**Mode:** Background  
-**Access:** Read only  
+**Mode:** Background
+**Access:** Read only
 **Active during:** Phase 03 — Build Phase (Sprint mode only)
 
 ### Role
@@ -103,8 +129,8 @@ guidance.
 
 ## dev-interview
 
-**Mode:** Foreground  
-**Access:** Artifact-write only (Plan mode — writes only declared output to phase directory)  
+**Mode:** Foreground
+**Access:** Artifact-write only (Plan mode — writes only declared output to phase directory)
 **Active during:** S1 — Dev Interview
 
 ### Role
@@ -129,8 +155,8 @@ spec scenarios with the developer. Asks the developer to choose their build mode
 
 ## implementation-planner
 
-**Mode:** Foreground  
-**Access:** Read / Write (phase directory only)  
+**Mode:** Foreground
+**Access:** Read / Write (phase directory only)
 **Active during:** S2 — Implementation Plan
 
 ### Role
@@ -138,13 +164,13 @@ spec scenarios with the developer. Asks the developer to choose their build mode
 Maps every TDD scenario to a specific test file and assertion method. Lists all
 files to create or modify with their exact paths. Populates phase issue tasks in
 Linear. In Checkpoint mode, generates batch breakdown and writes batch definitions
-to the session manifest.
+to the phase runtime manifest.
 
 ### What it produces
 
 - `phase-{N}-implementation-plan.md`
 - Linear issue tasks (via MCP)
-- Batch definitions in session manifest (Checkpoint mode only)
+- Batch definitions in `phase-{N}/phase-manifest.json` (Checkpoint mode only)
 
 ### Constraints
 
@@ -184,8 +210,8 @@ must be preserved exactly — the manifest-step-gate hook reads this format.
 
 ## plan-preview-generator
 
-**Mode:** Foreground  
-**Access:** Read / Write (phase directory only)  
+**Mode:** Foreground
+**Access:** Read / Write (phase directory only)
 **Active during:** S4 — Plan Validation
 
 ### Role
@@ -203,7 +229,7 @@ confirmation materials whose format depends on content type:
   outputs with worked examples.
 
 After producing the preview artifact(s), explicitly tells the developer how to
-confirm: set `validationConfirmed = true` in the session manifest.
+confirm: set `validationConfirmed = true` in `phase-{N}/phase-manifest.json`.
 
 ### What it produces
 
@@ -213,7 +239,7 @@ confirm: set `validationConfirmed = true` in the session manifest.
 
 ### Constraints
 
-- Cannot set `validationConfirmed = true` in the session manifest
+- Cannot set `validationConfirmed = true` in `phase-{N}/phase-manifest.json`
 - Must explicitly instruct the developer to set this flag themselves
 - Canvas files must only import from `cursor/canvas` — no npm packages, no
   relative imports, no network calls
@@ -223,8 +249,8 @@ confirm: set `validationConfirmed = true` in the session manifest.
 
 ## prd-demo-generator
 
-**Mode:** Foreground 
-**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/demos/` only) 
+**Mode:** Foreground
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/demos/` only)
 **Active during:** Between prd-interviewer and prd-completeness-check (on PM request)
 
 ### Role
@@ -257,8 +283,8 @@ updated requirements. Embeds a PRD hash for drift detection.
 
 ## code-simplifier
 
-**Mode:** Background (runs after every completed S5b task)  
-**Access:** Read / Write (scoped files only)  
+**Mode:** Background (runs after every completed S5b task)
+**Access:** Read / Write (scoped files only)
 **Active during:** S5b — Build (after each tdd-builder task completes)
 
 ### Role
@@ -284,8 +310,8 @@ What it looks for:
 
 ## test-author
 
-**Mode:** Foreground  
-**Access:** Read / Write (test files and phase directory only)  
+**Mode:** Foreground
+**Access:** Read / Write (test files and phase directory only)
 **Active during:** S5a — Build (RED phase)
 
 ### Role
@@ -310,8 +336,8 @@ document that gates S5b.
 
 ## tdd-builder
 
-**Mode:** Foreground  
-**Access:** Read / Write (production files and phase directory only)  
+**Mode:** Foreground
+**Access:** Read / Write (production files and phase directory only)
 **Active during:** S5b — Build (GREEN-REFACTOR phases)
 
 ### Role
@@ -338,8 +364,8 @@ is present.
 
 ## code-reviewer
 
-**Mode:** Foreground  
-**Access:** Artifact-write only (writes only declared output to phase directory)  
+**Mode:** Foreground
+**Access:** Artifact-write only (writes only declared output to phase directory)
 **Active during:** S6 — Code Review
 
 ### Role
@@ -392,8 +418,8 @@ reads this format.
 
 ## test-runner
 
-**Mode:** Foreground  
-**Access:** Read / Write (test execution and results only)  
+**Mode:** Foreground
+**Access:** Read / Write (test execution and results only)
 **Active during:** S7 (Agent Testing)
 
 ### Role
@@ -416,8 +442,8 @@ test results document.
 
 ## gap-analyzer
 
-**Mode:** Foreground  
-**Access:** Artifact-write only (writes only declared output to session root)  
+**Mode:** Foreground
+**Access:** Artifact-write only (writes only declared output to session root)
 **Active during:** Post-merge · On demand
 
 ### Role
@@ -439,8 +465,8 @@ prioritised gap report.
 
 ## feature-doc-generator
 
-**Mode:** Foreground  
-**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/feature-docs/` only)  
+**Mode:** Foreground
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/feature-docs/` only)
 **Active during:** Phase 04 — Review & Merge
 
 ### Role
@@ -466,8 +492,8 @@ Sources content from completion reports, test results, and the PRD.
 
 **SAGE Hone subsystem**
 
-**Mode:** Background  
-**Access:** Artifact-write only (writes only declared output to session directory; creates Linear issues for violations)  
+**Mode:** Background
+**Access:** Artifact-write only (writes only declared output to session directory; creates Linear issues for violations)
 **Active during:** After every work cycle
 
 ### Role
@@ -491,8 +517,8 @@ anomalies (hook rejection spikes, gate bypass attempts, long step durations).
 
 **SAGE Hone subsystem**
 
-**Mode:** Background  
-**Access:** Read / Write (.skill-update-staging/ only)  
+**Mode:** Background
+**Access:** Read / Write (.skill-update-staging/ only)
 **Active during:** Every 5 work cycles
 
 ### Role
@@ -524,8 +550,8 @@ apply updates without approval.
 
 **SAGE Intel subsystem**
 
-**Mode:** Background  
-**Access:** Read / Write (`.sage/intel/` only)  
+**Mode:** Background
+**Access:** Read / Write (`.sage/intel/` only)
 **Active during:** After every work cycle
 
 ### Role
@@ -551,8 +577,8 @@ calibration. Optionally publishes to Notion dashboard if configured.
 
 **SAGE Intel subsystem**
 
-**Mode:** Foreground  
-**Access:** Read only  
+**Mode:** Foreground
+**Access:** Read only
 **Active during:** On demand (planning cycle)
 
 ### Role
@@ -571,3 +597,133 @@ workflow mode.
 - Read only
 - Reads from `.sage/intel/` as the canonical data source
 - Recommendations are advisory — no binding decisions
+
+---
+
+## Skills
+
+Skills are invocable workflow packages stored in `.cursor/skills/`. Unlike agents,
+skills are not bound to a single phase — they are invoked by agents or developers
+when the workflow requires a specific capability.
+
+---
+
+## dev-plan
+
+**Skill file:** `.cursor/skills/dev-plan/SKILL.md`
+**Active during:** S1 (opt-in replacement for dev-interview)
+
+### Role
+
+Investigation-first replacement for the S1 dev-interview. Instead of a Q&A
+interview, the agent investigates the codebase and PRD first, then publishes
+findings as a structured layered plan. The developer reviews and corrects the
+plan rather than answering questions the agent could have resolved from code.
+
+Produces three progressive artifacts: L1 (strategic groupings, verified
+challenges, risks, simplification opportunities, priority order), L2 (tactical
+approach decisions and scenario assessments per grouping), and the final
+`phase-{N}-dev-plan.md` execution-ready S1 artifact.
+
+Supports back-revision (targeted patch to a prior level when later work reveals
+an earlier decision was wrong) and deferral (park a decision with a named
+unblocking condition rather than forcing a premature answer).
+
+### What it produces
+
+- `phase-{N}-dev-plan-L1.md` — strategic view, written after investigation
+- `phase-{N}-dev-plan-L2.md` — tactical decisions per grouping, written after L1 approved
+- `phase-{N}-dev-plan.md` — final S1 artifact, feeds S2 and gates, written after L2 approved
+
+### Constraints
+
+- Artifact-write only — no product/source/config edits; writes only the three
+  dev-plan artifacts to the active phase directory
+- Never asks a question answerable from the codebase — questions arise only
+  from `confidence = assumption` items the reconciliation subagent cannot resolve
+- Build mode is asked once, at the start of L3 generation only
+- Deferred items must name their unblocking condition — items without a
+  condition are treated as escalations, not deferrals
+- Does not modify the session manifest, TDD spec, PRD, or any file outside
+  the active phase directory
+
+### Migration note
+
+Ships as a skill (opt-in, no hook enforcement). The long-term path is promotion
+to a full agent with `plan-mode-enforcer` awareness, `manifest-step-gate`
+recognition of `phase-{N}-dev-plan.md` as a valid S1 artifact, and a
+`devPlanMode` flag in phase runtime.
+
+---
+
+## phase-splitter
+
+**Skill file:** `.cursor/skills/phase-splitter/SKILL.md`
+**Active during:** Kick-off — Phase Breakdown step (Sprint and Pair modes)
+
+### Role
+
+Analyses the completed PRD and Profitability codebase to generate a recommended
+phase breakdown using a three-level planning funnel: L1 domain decomposition
+(natural groupings, verified dependencies, shared state audit), L2 phase boundary
+decisions (splitting rules, independence scoring, three-dimension confidence
+scoring, parallel stream analysis), and L3 execution (manifest generation, Linear
+issues, git worktrees).
+
+Each phase receives a confidence summary across three dimensions — dependency
+confidence, effort confidence, and objective clarity — plus an overall
+recommendation (PROCEED / REVIEW BEFORE BUILD / SPLIT RECOMMENDED / SPIKE
+RECOMMENDED). Phases with low confidence are flagged before the team commits.
+Back-revision support allows L2 findings to patch L1 decisions without a full
+re-run. Spike briefs are generated for phases with unresolvable cross-phase
+uncertainty.
+
+### What it produces
+
+- `phase-split-L1.md` (optional, if team requests persistence) — domain map
+- `phase-breakdown.md` — full breakdown with confidence scores and spike briefs
+- `session-manifest.md` — written on team confirmation
+- Linear phase issues — one per phase, status Pending Approval
+- Git worktrees — Sprint mode only
+
+### Constraints
+
+- Does not run against a PRD that has not passed prd-completeness-check
+- Does not assign named developers — profile recommendations only
+- Does not finalise the manifest until the team confirms L2
+- Cannot auto-approve Linear phase issues — approval is human-only
+- Sprint mode only: creates worktrees; Pair mode skips worktree creation
+
+---
+
+## tdd-orchestrator
+
+**Skill file:** `.cursor/skills/tdd-orchestrator/SKILL.md`
+**Active during:** On demand — bug batches, phase gates, spikes, and finding remediation
+
+### Role
+
+Coordinates automated TDD RED/GREEN/REFACTOR loops for SAGE phases,
+checkpoint batches, bug batches, exploratory QA findings, and review findings.
+Uses subagents for planning, implementation, review, test coverage assessment,
+and refinement while preserving SAGE gate ownership boundaries.
+
+Supports three operating modes:
+- **Bug Batch Mode** — focused TDD loops for grouped bugs or exploratory QA
+- **Phase Gate Mode** — formal SAGE gate progression with owning agents writing
+  gate artifacts
+- **Spike Mode** — investigation and TDD planning only; no implementation
+
+### What it produces
+
+- In chat by default: bug ledgers, remediation plans, and test summaries
+- Optional phase-local bug batch artifacts:
+  `phase-{N}-bug-batch-[slug].md`
+- Formal gate artifacts only through the owning SAGE role, not directly
+
+### Constraints
+
+- Does not bypass SAGE gates or write role-owned gate artifacts directly
+- Does not write test files during S5b GREEN/REFACTOR
+- Requires S5a RED confirmation before S5b production edits
+- Keeps spike work read-only until the developer approves implementation

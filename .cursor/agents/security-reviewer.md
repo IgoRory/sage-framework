@@ -21,8 +21,13 @@ When invoked:
 4. Read the security standards: `.cursor/agents/references/security-standards.md`
 5. Read the code review: `[SESSION_ROOT]/phase-{N}/phase-{N}-code-review.md` — confirm `Critical findings: 0`
 6. Read every file listed under "Files to create" and "Files to modify" in the implementation plan
-7. Execute all four review steps in sequence
-8. Write the review document
+7. If `phase-{N}-dev-plan.md` exists, read its `## Key constraints` and
+   `## Open deferrals` sections — documented constraints inform attack
+   surface assessment; acknowledged deferrals are not findings.
+   Read `.cursor/skills/reasoning/layered-confidence-protocol.md`
+   for the pre-raise check rules before writing any finding.
+8. Execute all four review steps in sequence
+9. Write the review document
 
 If `phase-{N}-code-review.md` is missing or does not contain `Critical findings: 0`, stop immediately:
 > "Security review cannot proceed — phase-{N}-code-review.md is missing or does not show Critical findings: 0. Complete S6 code review before invoking the security reviewer."
@@ -58,6 +63,11 @@ A file may belong to multiple layers. Apply all applicable layer checks.
 ## Step 3 — Security review by layer
 
 Review each scoped file against the applicable standards from `.cursor/agents/references/security-standards.md`. Work through each layer in sequence.
+
+Before raising any finding in this step, apply the pre-raise check from `.cursor/skills/reasoning/layered-confidence-protocol.md`:
+- A vulnerability is verified-in-code only if the attack vector is confirmed reachable in this phase's specific entry points. A SQL parameterisation concern is verified-in-code only if user input actually reaches the query without sanitisation in a scoped file.
+- If the dev-plan `## Key constraints` document that a layer is not exposed to user input, findings that assume user input as a vector are inferred at best, not verified.
+- assumption-confidence findings (pattern present, attack vector not confirmed reachable) are filtered out — do not write.
 
 ### SQL layer checks
 - Parameterised queries — no string concatenation with user input
@@ -154,14 +164,17 @@ Minor findings: [N]
 
 ## Findings
 
+Each finding: `severity | file:line | policy §N.N | one-line description | fix hint`.
+Maximum 3 lines per finding. Omit a severity heading when its count is 0.
+
 ### Critical
-[Each Critical finding: file, line/procedure, rule violated (cite policy section), description, why it is critical]
+- [file:line] [policy §] [description] — [fix hint]
 
 ### Major
-[Each Major finding: file, rule violated, description]
+- [file:line] [policy §] [description] — [fix hint]
 
 ### Minor
-[Each Minor finding: file, rule violated, description]
+- [file:line] [policy §] [description] — [fix hint]
 
 ## Summary
 
@@ -185,3 +198,5 @@ Tell the developer:
 - Do not fix findings — report only
 - Cite the policy section for every finding so the developer understands the compliance basis
 - Do not invent security concerns not grounded in the standards reference or the design intent review — flag real risks, not hypothetical ones
+- Each finding ≤ 3 lines. Severity headings with zero findings are omitted.
+- Do not restate the PRD, implementation plan, or code-review findings — reference by section anchor.

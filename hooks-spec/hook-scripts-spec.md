@@ -1378,10 +1378,10 @@ if __name__ == "__main__":
 ## Script 11: `manifest_step_writer.py`
 
 **Purpose:** Non-blocking hook that detects phase step artifact writes and
-updates `stepStatus`, `stepTimestamps`, and `currentStep` in the session
-manifest in real time. This provides cross-phase visibility in Sprint mode —
-all worktrees share the same `.sage/` directory, so manifest updates are
-instantly visible without git operations.
+updates `stepStatus`, `stepTimestamps`, and `currentStep` in the phase's
+`phase-manifest.json` in real time. This provides cross-phase visibility in
+Sprint mode — all worktrees share the same `.sage/` directory, so runtime
+updates are instantly visible without git operations.
 
 **Events:** `afterFileEdit`
 **Blocking:** No
@@ -1403,23 +1403,22 @@ updates the manifest:
 | `test-results.md` | agent-testing | completion-report |
 | `completion-report.md` | completion-report | complete (sets `completedAt`) |
 
-For each transition, the hook writes (via `write_manifest_fields()`):
+For each transition, the hook writes (via `write_phase_runtime()`):
 - `stepStatus.[completed_step] = "complete"`
 - `stepTimestamps.[completed_step].completedAt = now`
 - `currentStep = [next_step]`
 - `stepStatus.[next_step] = "in-progress"`
 - `stepTimestamps.[next_step].startedAt = now`
 
-Uses `write_manifest_fields()` from `hooks_utils.py` for locked batch
-manifest updates. Silently no-ops on any failure.
+Uses `write_phase_runtime()` from `hooks_utils.py` for locked batch
+runtime updates. Silently no-ops on any failure.
 
 ---
 
 ## Script 12: `sage_state_sync.py`
 
 **Purpose:** Non-blocking hook that pushes `.sage/` session state to the
-parent feature branch after the manifest-step-writer updates
-`session-manifest.md`. Provides cross-machine phase visibility in Sprint
+parent feature branch after session or phase runtime state changes. Provides cross-machine phase visibility in Sprint
 mode — developers on separate machines can see each other's step progress
 by pulling the parent branch.
 

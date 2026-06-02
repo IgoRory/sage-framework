@@ -71,7 +71,14 @@ When generating `session-manifest.md`, populate it from the session manifest tem
 - `kickoffDate` - today's date in ISO format
 - All phase definitions from the phase-splitter output
 
-Initial runtime values for all phases:
+Phase definitions go in the root `session-manifest.md`. Phase runtime
+(`currentStep`, `stepStatus`, `buildMode`, `validationConfirmed`,
+`linearIssueStatus`, batches, and timestamps) goes in per-phase manifest
+files at `phase-{N}/phase-manifest.json`. The hook layer reads phase runtime
+from `phase-manifest.json`, so phase-splitter must bootstrap one runtime file
+for every phase during session setup.
+
+Initial per-phase runtime values:
 - `linearIssueStatus`: `"Pending Approval"`
 - `currentStep`: `"dev-interview"`
 - `buildMode`: `"autonomous"`
@@ -79,7 +86,7 @@ Initial runtime values for all phases:
 - All step statuses: `"pending"`
 - All timestamps: `null`
 
-Write the completed manifest to: `.sage/sessions/[sessionId]/session-manifest.md`
+Write the completed root manifest to: `.sage/sessions/[sessionId]/session-manifest.md`
 Write the session ID to: `.sage/sessions/active-session.txt`
 Create the session directory if it does not exist.
 
@@ -124,31 +131,30 @@ The orchestrator owns the S8 completion report for each phase. After S7 test res
 **Phase ID:** [N]
 **Session:** [session ID]
 
-## Phase summary
+## Summary
 
-[1-3 sentence summary of what this phase implemented]
+[1 sentence — what shipped. No restatement of PRD or plan.]
 
 ## Files changed
 
-| File | Action | Description |
-|------|--------|-------------|
-| [path] | Created / Modified | [brief description] |
+| File | Action |
+|---|---|
+| [path] | Created / Modified |
 
-## Tests passing
+## Test results
 
-| Test file | Test count | Status |
-|-----------|-----------|--------|
-| [path] | [N] | PASS |
+`phase-{N}-test-results.md` — STATUS: PASS — [N] tests
 
-**Total:** [N] tests passing
+## Deferred
 
-## Deferred items
+- [item] — see `impl-plan.md#task-N.X` — reason: [one line]
 
-[List any items from the implementation plan that were intentionally deferred, with justification]
+[Or: "None."]
 
 ## Handoff notes
 
-[Any information the next phase or the reviewer needs to know — integration points, known limitations, decisions made during build]
+[Bullets only when the next phase or reviewer needs information not present
+in upstream artifacts. Otherwise: "None."]
 ```
 
 The `completion-report-stop-gate` hook blocks the agent from ending its turn at S8 until `phase-{N}-test-results.md` contains `STATUS: PASS`.
@@ -158,9 +164,11 @@ The `completion-report-stop-gate` hook blocks the agent from ending its turn at 
 - Do not write implementation code - coordination and specification only
 - Every artifact must be machine-readable without ambiguity
 - Use predicate-based language in all artifacts - no vague qualifiers
-- Cannot set `validationConfirmed = true` in the session manifest - only the developer can
+- Cannot set `validationConfirmed = true` in `phase-{N}/phase-manifest.json` - only the developer can
 - Cannot set `batches[N].confirmed = true` - only the developer can
 - In Mob mode: open Phase Chats automatically; do not wait for manual paste or instruction
+- Completion report references upstream artifacts; never re-summarises them.
+- Files-changed table: action only — no description column. The diff is the description.
 
 ## TDD spec generation telemetry
 
