@@ -1,776 +1,381 @@
 ﻿---
 name: prd-interviewer
 description: >
-  Conducts a structured interview with a Product Owner (Rory or Philip) to
-  produce a complete PRD and companion Component Specification, both saved to
-  .sage/prds/[FEATURE_ID]/ and structured to pass prd-completeness-check.
-  Always starts from a Linear feature issue or ADO work item reference.
-  Enforces Step 0 repo preflight (correct branch and up-to-date with remote
-  per .sage/workflow-config.json) on the open workspace, appends PRD lifecycle
-  telemetry to .sage/prd-interview-telemetry.jsonl, and maps interview progress
-  to phase IDs P1–P9. Has read access to the Profitability codebase to ask
-  informed questions about existing components, stored procedures, and data
-  structures. Use this skill whenever a PM says "lets write a PRD", "help me
-  spec this feature", "start a PRD for [feature]", or provides a Linear or ADO
-  reference and asks to begin feature documentation. Do not begin writing a PRD
-  without running this interview first.
+  Conducts a structured L1–L12 interview with a Product Owner (Rory or Philip)
+  to produce a complete sub-PRD bundle saved to
+  .sage/prds/[FEATURE_ID]/[sub-prd-id]/. Always reads
+  prd-breakdown.[sub-prd-id].md first and consumes Component Pattern
+  Summaries directly — never re-runs codebase recon and never re-opens
+  cited YAMLs mid-interview. Runs a 9-phase interview (Step 0 preflight,
+  P1–P9 with P3/P4/P5 conditional on breakdown indicators), assigns the
+  14 §4 sub-section IDs (DM/CL/AL/WF/UI/VC/ER/NM/PA/IN/PF/AU/RX/CP-NNN)
+  in-flow during the phase that captures the requirement, derives
+  sequential AC-NNN at P8, authors three manual handoff briefs at P9,
+  verifies handoff returns via Family N anchor attestation, and
+  finalises bundle-manifest.json at end of P9. Use whenever a PM says
+  "run prd-interviewer", "interview me for [sub-prd-id]", or provides a
+  sub-PRD reference and asks to begin the interview.
 ---
 
-# PRD Interviewer
+# PRD Interviewer — L1–L12 coordinator
 
-Conducts a structured interview to produce two output artifacts:
-
-1. PRD -- saved to `.sage/prds/[FEATURE_ID]/prd.md`, structured to pass
-   prd-completeness-check
-2. Component specification -- saved to `.sage/prds/[FEATURE_ID]/component-spec.md`,
-   linked explicitly from the PRD
-
-Both artifacts are drafts until the PM runs prd-completeness-check. They are
-not submitted to prd-completeness-check automatically -- the PM reviews and
-refines them first, then runs the check manually when they believe the PRD
-is ready.
-
-The handoff to prd-writer (if used) requires human approval in the format:
-APPROVE / REJECT: [reason] / REDIRECT: [direction]
+This file is the **thin coordinator** for the L1–L12 PRD interview
+model. It owns the driver state machine, the telemetry emit-site
+names, the conclusion-gate routing, the read-discipline rule, and
+the `prdRunId` correlation. Every phase-specific behaviour
+(question discipline, depth bars, closure rules, cross-cutting
+sub-batches, sub-driver states, self-review checklists) lives in
+the per-phase modules under `references/interview-conduct/`. The
+coordinator reads only the active phase module +
+`references/interview-conduct/shared-protocols.md` at runtime.
 
 ---
 
 ## Invocation phrases
 
-Treat this skill as invoked when the PM or agent says any of:
-- "Let's write a PRD", "start a PRD", "run the PRD interview", "prd-interviewer"
-- "Help me spec this feature", "interview me for the PRD"
-- They provide a Linear issue id (`LIN-####`) or ADO work item and want feature documentation
+Treat this skill as invoked when the PM or any agent says any of:
 
-When invoked, **always execute Step 0 (repo preflight) before Step 1**, then continue in order.
+- "Run prd-interviewer", "start the interview", "interview me for
+  [sub-prd-id]"
+- "prd-interviewer for [FEATURE_ID]"
+- They provide a sub-PRD reference from
+  `prd-breakdown.[sub-prd-id].md` and ask to begin
 
----
-
-## Interview phase IDs (P1–P9) — telemetry and traceability
-
-These IDs map interview sections to **`phaseId`** in PRD telemetry and to downstream traceability reviews. Use them when emitting `prd_phase_started` / `prd_phase_completed`.
-
-| phaseId | Interview content |
-|---------|-------------------|
-| **P1** | Section 1 — Feature and capability definition |
-| **P2** | Section 2 — Calculation logic (conditional) |
-| **P3** | Section 3 — Allocation methodology (conditional) |
-| **P4** | Section 4 — Acceptance criteria |
-| **P5** | Section 5a — Scope boundaries |
-| **P6** | Section 5b — UI and UX (conditional) |
-| **P7** | Section 6 — Edge cases and constraints |
-| **P8** | After the interview — parked review, verbatim answer record, APPROVE gate |
-| **P9** | PRD / component-spec generation and handoff |
-
-Sections skipped because conditions are false still omit P2/P3/P6 — do not emit phase events for skipped sections.
+On invocation, **always execute Step 0 (repo preflight + L5
+readiness checks) before P1**, then route per the driver state
+machine below.
 
 ---
 
-## PRD telemetry (append-only JSONL)
+## Role statement
 
-**Enforcement:** Append **one JSON object per line** to the file given by `prd.telemetryFile` in **`.sage/workflow-config.json`** (default: `.sage/prd-interview-telemetry.jsonl` relative to repository root). Create `.sage/` if missing. **Never fail the interview** if a telemetry line cannot be written — log the failure and continue.
+The prd-interviewer is a meticulous Business Analyst. Its job is
+not to ask questions to fill a quota — it is to think holistically
+about a feature both as a self-contained capability and in the
+context of the wider application, and produce comprehensive,
+well-defined business requirements that PM, QA, and the
+development team can act on without ambiguity. The skill is an
+active partner: it asks predicate-based questions, gives proactive
+recommendations grounded in cited YAMLs and breakdown findings,
+and challenges both the PM's answers and its own suggestions
+when genuinely warranted. Over-challenging or recommending on
+every answer is prohibited.
 
-**Convention:** Same style as session `workflow-telemetry.jsonl`: UTC ISO `timestamp`, string `event`, optional payloads.
-
-**Required on every line:** `timestamp` (ISO UTC), `event`, `workflowKind` (`"prd_interview"`), `phaseId` (`preflight` \| `P1`–`P9` \| `none`), `linearIssueId` (e.g. `LIN-1234`).
-
-**Correlation:** Generate a **`prdRunId`** (UUID v4) at the **start** of each interview run and reuse it for every event in that run (including multi-chat resumes). Optionally set `sessionId` to the same value as `prdRunId` when no SAGE session exists.
-
-**Preflight optional fields:** `branch`, `headSha`, `originSha`, `commitsBehind`, `commitsAhead`, `workingTreeClean` (boolean), `preflightOutcome` (`pass` \| `fail`).
-
-**MCP optional fields (same as hook telemetry):** `mcpServer`, `mcpTool` when calling Linear MCP.
-
-**Minimal `event` vocabulary:** `prd_preflight`, `prd_phase_started`, `prd_phase_completed`, `prd_parked`, `prd_mcp`, `prd_interview_completed`.
-
-**Implementation:** If the repo script **`prd_telemetry_append.py`** exists at `.cursor/hooks/scripts/`, use it: pass a single JSON object as the first argument (shell-escaped). Otherwise, append one minified JSON object per line to the telemetry file using file tools.
-
-**At each phase boundary:** Emit `prd_phase_started` before the first question of that phase and `prd_phase_completed` after the last question of that phase (or when parking ends that phase). For **P8**, start after Section 6 ends; for **P9**, start when generating drafts.
-
----
-
-## Step 0 — Connected repo preflight (mandatory)
-
-**Scope:** The **git repository root of the Cursor workspace** where this interview runs (the PM's open repo). Do not assume a path outside the workspace.
-
-**Configuration:** Read **`.sage/workflow-config.json`** at the repo root. Use:
-
-- `prd.requiredInterviewBranch` — branch that must be checked out (e.g. `develop`)
-- `prd.remoteName` — remote for fetch/compare (e.g. `origin`)
-- `prd.telemetryFile` — JSONL path (default `.sage/prd-interview-telemetry.jsonl`)
-
-**Steps (run via terminal in repo root):**
-
-1. Confirm **`linearIssueId`** with the PM if not already known (Linear `LIN-####` from the ticket driving this PRD).
-2. Generate **`prdRunId`** (UUID) for this interview run; store it for all subsequent telemetry events.
-3. `git fetch <remoteName>` for the configured remote.
-4. Verify **current branch** equals `prd.requiredInterviewBranch` (`git branch --show-current` or equivalent).
-5. Verify **not behind** the remote tracking branch: e.g. after fetch, `commitsBehind` = 0 for `HEAD..<remote>/<requiredInterviewBranch>` (no incoming commits you have not merged). Document `commitsAhead` if local is ahead (usually allowed).
-6. Optionally note **dirty** working tree (`workingTreeClean`); a dirty tree does **not** automatically fail preflight unless your team policy says otherwise — default is **warn only**.
-
-**Gate:** If branch is wrong or `commitsBehind > 0`, **do not** emit `prd_phase_started` for P1–P9 until resolved. **Stop** after writing `prd_preflight` with `preflightOutcome: fail` and explain what the PM must do (checkout branch, pull/rebase, etc.). **Exception:** If the PM explicitly authorises an override for this run (e.g. hotfix branch), record one line: `preflightOutcome: pass`, `override: true`, `overrideReason: "<verbatim>"` in the telemetry payload and proceed — note the override in the session summary.
-
-**On success:** Append telemetry event **`prd_preflight`** with `preflightOutcome: pass`, `phaseId: preflight`, `linearIssueId`, `prdRunId`, and git summary fields; then proceed to **Before the interview — Step 1**.
+Recommendation, challenge, and silence behaviour are defined in
+[`references/interview-conduct/shared-protocols.md`](./references/interview-conduct/shared-protocols.md)
+(Family A — Question discipline). The coordinator does not
+re-document them.
 
 ---
 
-## Before the interview begins
+## Driver state machine
 
-### Step 1 -- Load the work item
+The coordinator routes between top-level phases only. Nested
+sub-driver states (e.g. `permission-role`, `validation-dependency`,
+`concurrency-contention`, `audit-trail`) live **inside** the
+phase modules that own them (P5 and P6) and exit before their
+owning phase exits — the coordinator never sees sub-driver
+transitions.
 
-Read the Linear feature issue or ADO work item provided by the PM.
-Extract:
-- Feature title and description
-- Any acceptance criteria or notes already written
-- Any linked documents or attachments
+| State | Phase module | Trigger predicate | Exit predicate |
+|---|---|---|---|
+| `step-0` | [`references/interview-conduct/shared-protocols.md`](./references/interview-conduct/shared-protocols.md) §L5 | invocation | L5 readiness checks pass (or PM acknowledges override) |
+| `P1` | [`references/interview-conduct/phase-P1.md`](./references/interview-conduct/phase-P1.md) | Step 0 complete | P1 self-review pass |
+| `P2` | [`references/interview-conduct/phase-P2.md`](./references/interview-conduct/phase-P2.md) | P1 complete | P2 self-review pass + §4 coverage map declared |
+| `P3` | [`references/interview-conduct/phase-P3.md`](./references/interview-conduct/phase-P3.md) | breakdown indicates calculation in scope (or PM amended P2 map to include §4.2 CL) | P3 self-review pass |
+| `P4` | [`references/interview-conduct/phase-P4.md`](./references/interview-conduct/phase-P4.md) | breakdown indicates allocation in scope (or PM amended P2 map to include §4.3 AL) | P4 self-review pass |
+| `P5` | [`references/interview-conduct/phase-P5.md`](./references/interview-conduct/phase-P5.md) | breakdown indicates UI change in scope (or PM amended P2 map to include §4.5 UI) | P5 self-review pass + `component-pattern-confirmation.md` written |
+| `P6` | [`references/interview-conduct/phase-P6.md`](./references/interview-conduct/phase-P6.md) | P5 complete (or skipped) | P6 self-review pass |
+| `gate` | [`references/interview-conduct/phase-P6-to-P7-gate.md`](./references/interview-conduct/phase-P6-to-P7-gate.md) | P6 complete | Gate Step 6 APPROVE |
+| `P7` | [`references/interview-conduct/phase-P7.md`](./references/interview-conduct/phase-P7.md) | gate APPROVE | P7 Step 5 APPROVE |
+| `P8` | [`references/interview-conduct/phase-P8.md`](./references/interview-conduct/phase-P8.md) | P7 APPROVE | P8 Step 7 PM walkthrough pass |
+| `P9` | [`references/interview-conduct/phase-P9.md`](./references/interview-conduct/phase-P9.md) | P8 complete | `prd_interview_completed` emitted |
 
-If the work item is empty or too vague to begin: tell the PM what
-information is needed before the interview can start. Do not proceed
-with a blank work item.
-
-### Step 2 -- Silent codebase reconnaissance
-
-Before asking the first question, silently read the codebase to understand
-what already exists that is relevant to this feature. This takes 2-3 minutes
-and should happen without narrating the process to the PM.
-
-What to read:
-- Stored procedures (usp_*) related to the feature area
-- Views affected: vw_BI_AllInstruments, Global_Result (for calculation features)
-- Existing UI components related to the feature (for UI features)
-- Any configuration tables or reference data relevant to the feature
-- Test files in the feature area to understand current coverage
-
-What to record internally (do not show to PM yet):
-- Which components already exist vs. need to be created
-- Which stored procedures will be affected
-- Which of the 42 output measures are in scope
-- Any existing constraints or edge cases visible in the code
-- Any naming inconsistencies relevant to this feature area
-
-This reconnaissance shapes which questions you ask and how specific your
-probing can be. A question like "does this affect the FTP calculation for
-named revision dates?" is only possible because you read the code first.
-
-### Step 2a -- Classify feature complexity
-
-After reconnaissance, classify the feature's complexity tier using the
-classifier in references/complexity-classifier.md. Count the six factors
-from the reconnaissance findings and apply the threshold table.
-
-Record the classification tier. It determines the minimum question
-thresholds for the main interview and the edge-case phase.
-
-Emit a `prd_complexity_classified` telemetry event with the tier and
-factor counts.
-
-### Step 2b -- Context consistency validation
-
-Cross-validate the Linear issue description and any user-provided context
-against the codebase reconnaissance findings. Check for:
-
-1. **Scope contradictions** — the Linear issue describes a component or
-   feature that does not exist in the codebase, or exists differently than
-   described
-2. **Missing references** — context documents reference components, SPs,
-   or views that do not exist in the codebase
-3. **Incomplete context** — the Linear issue mentions N requirements but
-   the description only defines fewer than N
-4. **Cross-document inconsistencies** — if multiple context sources were
-   provided, they disagree on scope or behaviour
-
-For each issue found, generate a **priority interview question** that will
-be asked at the start of Section 1. Priority questions are asked before
-category-based questions.
-
-If no issues are found, note "Context consistency: no issues" and proceed.
-
-### Step 3 -- Set expectations
-
-Tell the PM:
-- What you found in the codebase (brief summary -- 3-4 sentences)
-- The feature's complexity tier and what it means for interview depth
-  (e.g., "This is a Tier 3 feature — I will ask at least 32 questions
-  across the main interview and edge-case phase")
-- Any context consistency issues found (priority interview questions)
-- How the interview is structured (sections, conditional sections)
-- That you will park unanswered questions and flag them clearly
-- Approximately how long it will take (typically 20-40 minutes)
-- That the output will be a Notion PRD draft for their review
+P3 / P4 / P5 are **conditional**. When skipped, the corresponding
+§4 sub-section (CL / AL / UI) carries an explicit `Not applicable
+— [reason]` notice in `prd.md` per the L4 mandatory "Not
+applicable" rule. P1, P2, P6, gate, P7, P8, P9 always run.
 
 ---
 
-## Interview navigation commands
+## Conclusion-gate routing (single gate)
 
-The PM can interact with interview progress at any time using these commands.
+The legacy two-gate pattern (P6→P7 and P7→P8) is **collapsed**
+into one gate after P6 edge cases
+([`phase-P6-to-P7-gate.md`](./references/interview-conduct/phase-P6-to-P7-gate.md)).
+The legacy `phase-P7-to-P8-gate.md` is removed.
 
-### Status command
+The gate emits exactly one of three PM outcomes:
 
-**Triggers:** "where are we", "show progress", "what section are we on",
-"interview status", "phase status"
+- **APPROVE.** Coordinator routes to `P7`.
+- **REJECT.** PM names the phase to restart from (any of P1–P6);
+  coordinator restarts at the named phase; the gate re-runs at the
+  named phase's exit before P7 can re-run.
+- **REDIRECT.** PM directs to a named phase without rejecting the
+  full interview; downstream phases re-run only if the redirect
+  outcome alters their inputs; the gate re-runs before P7 can
+  re-run.
 
-**Response:** Present the section list with completion status:
+P7 itself is also a gate (APPROVE / REJECT / REDIRECT) — see
+[`phase-P7.md`](./references/interview-conduct/phase-P7.md) Step 5.
+P7 REJECT / REDIRECT may rewind to any earlier phase and the
+single conclusion gate re-runs before P7 can re-run.
 
-```
-P1  Section 1 -- Feature Definition         [DONE]
-P2  Section 2 -- Calculation Logic           [SKIPPED -- not applicable]
-P3  Section 3 -- Allocation Methodology      [SKIPPED -- not applicable]
-P4  Section 4 -- Acceptance Criteria         [DONE]
-P5  Section 5a -- Scope Boundaries           [DONE]
-P6  Section 5b -- UI and UX                  [IN PROGRESS]  <-- current
-P7  Section 6 -- Edge Cases                  [NOT STARTED]
-P8  Final Approval                           [NOT STARTED]
-P9  PRD Generation                           [NOT STARTED]
-
-Questions asked: 14 / 23 minimum (Tier 2)
-Deferred items: 2 open
-Next gate: Main Interview Conclusion (after P6 completes)
-```
-
-Mark each as `[DONE]`, `[IN PROGRESS]`, `[SKIPPED]`, or `[NOT STARTED]`.
-Indicate the current section with `<-- current`.
-
-### Restart command
-
-**Triggers:** "restart this section", "redo Section [N]", "start this
-section over", "restart P[N]"
-
-**Protocol:**
-
-1. **Confirm:** "Restart [Section name]? This discards all answers
-   captured during this section."
-
-2. **Check downstream:** If any sections AFTER the requested section have
-   been started, warn: "Sections [list] were built using context from
-   this section. Would you like to: (a) Reset only this section, (b)
-   Reset this section and all after it, (c) Cancel."
-
-3. **On confirm:** Reset section status to [NOT STARTED], discard that
-   section's answers from the running record, re-enter the section from
-   its first question batch.
-
-4. **Telemetry:** Emit `prd_phase_started` again for the restarted
-   phaseId (the telemetry log shows the restart as a new phase start
-   event).
+P8 has internal artifact-walkthrough REJECT semantics that do not
+require the single conclusion gate to re-run — see
+[`phase-P8.md`](./references/interview-conduct/phase-P8.md) Step 7.
 
 ---
 
-## Interview structure
+## Read-discipline rule (binding)
 
-The interview has six sections. Sections 1, 4, 5a, and 6 are always asked.
-Sections 2, 3, and 5b are conditional.
-
-**Telemetry:** Before starting Section 1, emit **`prd_phase_started`** with `phaseId: P1`. After finishing Section 1, emit **`prd_phase_completed`** with `phaseId: P1`. Repeat for each section with its **P2–P7** mapping from the table above (emit started/completed only for sections you actually run).
-
-Ask questions in batches of 2-4, grouped by logical topic within the
-current section. Wait for all answers before proceeding to the next batch.
-If a batch contains a question whose answer determines the next question
-(conditional logic), isolate it as a single-question batch. This is a
-conversation, not a form -- adapt batch size to the PM's engagement level.
-
-**Live question counter:** Track questions asked per section throughout
-the interview. Before each conclusion gate, verify the running total is
-on track to meet the tier minimum (see references/complexity-classifier.md).
-If a section group completes below threshold, ask additional questions in
-under-covered categories before proceeding.
-
-If an answer is vague, probe once with a specific example from the codebase
-before accepting it. Example: if the PM says "it should handle the standard
-FTP calculation", ask "do you mean the existing usp_CalculateFTP logic, or
-is there a change to how named revision dates are applied?"
-
-If the PM cannot answer a question: defer it using the Unified Deferred
-Items List (see below) and move on.
-
-### Unified Deferred Items List
-
-When the PM cannot or chooses not to answer a question, add it to the
-Deferred Items List with structured tracking:
-
-| Field | Value |
-|-------|-------|
-| ID | DI-001, DI-002, etc. (sequential across entire interview) |
-| Original question | The question ID and text |
-| Section deferred from | P1-P7 |
-| Category | Feature Definition / Calculation / Allocation / AC / Scope / UI / Edge Case |
-| PM reason | Verbatim reason given (or "No reason given") |
-| Status | Open / Resolved / Accepted / Out of Scope |
-
-When deferring, say:
-"I am recording this as deferred item DI-[N]: [topic]. I will surface it
-again at the conclusion gate. You can resolve it then or accept it as a
-gap in the PRD draft."
-
-Deferred items are surfaced at both conclusion gates (main interview and
-edge-case phase). At each gate, the PM can:
-- (a) Resolve now -- provide the answer
-- (b) Accept deferral with documented reason
-- (c) Mark as out of scope
-
-Deferred items with status "Open" or "Accepted" appear as structured
-entries in PRD Section 12 (Open Items).
+- The coordinator reads
+  [`references/interview-conduct/shared-protocols.md`](./references/interview-conduct/shared-protocols.md)
+  once at interview start and holds it in memory for the entire
+  run.
+- At each phase transition, the coordinator reads **only** the
+  active phase module. Phase modules never read each other.
+- The question-bank under
+  [`references/question-sets/`](./references/question-sets/) is
+  pulled by the matching phase module on first question of that
+  phase, not by the coordinator.
+- Schema and template files
+  ([`references/prd-section-schema.md`](./references/prd-section-schema.md),
+  [`references/prd-template.md`](./references/prd-template.md),
+  [`references/acceptance-criteria-template.md`](./references/acceptance-criteria-template.md),
+  [`references/traceability-template.md`](./references/traceability-template.md),
+  [`references/component-spec-template.md`](./references/component-spec-template.md))
+  are loaded by P8 / P9 at the moment of write — not preloaded by
+  the coordinator.
+- Handoff references
+  ([`references/sub-agent-delegation.md`](./references/sub-agent-delegation.md),
+  [`references/handoff-prompt-templates.md`](./references/handoff-prompt-templates.md))
+  are loaded by P9 — not by the coordinator.
+- The coordinator never re-opens a file after its load point. The
+  in-memory content is sufficient; re-loading is a literal-reading
+  defect (Family E E1).
+- Component YAMLs are **never re-opened mid-interview** (Family E
+  E1). The Component Pattern Summaries from
+  `prd-breakdown.[sub-prd-id].md` are the source; Family N anchor
+  verification at P9 Step 4b opens YAML files only after the
+  interview is closed.
 
 ---
 
-## Section 1 -- Feature and capability definition (always ask)
+## `prdRunId` correlation
 
-Q1.1 -- What is the name of this feature as it should appear in the PRD?
+A `prdRunId` is generated as UUID v4 at Step 0 entry and held in
+the in-memory interview session state. Every telemetry event
+emitted during the run carries the same `prdRunId` in its
+envelope. Lifecycle:
 
-Q1.2 -- In one or two sentences, what does this feature do for the user?
-(Probe if vague: who is the user, and what can they do after this feature
-exists that they cannot do today?)
+- **Step 0.** Generated fresh.
+- **Pause-resume.** Preserved across the pause; on resume the
+  staleness check (Family L L1) confirms whether the run
+  continues with the existing `prdRunId` or restarts the phase
+  (re-using the same `prdRunId` for the restart).
+- **ABORT.** A new `prdRunId` is generated for any subsequent
+  fresh interview start after an abort; the aborted run's
+  `prdRunId` is retained in the archived `interview-answers.json`
+  for traceability.
+- **REJECT / REDIRECT at a gate.** Same `prdRunId` is reused —
+  the run is continuing, not restarting.
 
-Q1.3 -- Which of the following best describes the primary change this
-feature makes? (Select all that apply)
-  a) New user-facing screen or UI change
-  b) Change to how calculations are performed
-  c) Change to how costs or income are allocated
-  d) Change to reporting or BI output
-  e) Configuration or administration change
-  f) Data model or schema change
-
-Q1.4 -- Which area of the Profitability product does this feature primarily
-affect? (Reference your codebase recon to offer specific options relevant
-to this feature.)
-
-Q1.5 -- Which user roles will interact with this feature?
-
-Q1.6 -- Is there a deadline or regulatory driver for this feature?
+`linearIssueId` and `subPrdId` are confirmed with the PM at Step 0
+and stamped into every event envelope alongside `prdRunId`.
 
 ---
 
-## Section 2 -- Calculation logic changes (ask if Q1.3 includes b)
+## Telemetry call sites (emit-site names only)
 
-Q2.1 -- Which specific measures in the output set does this change affect?
-(Reference the 42-measure set. If the PM is unsure, read them the relevant
-measure names from vw_BI_AllInstruments and ask them to confirm.)
+Payload shapes for every event live in
+[`references/telemetry-schema.md`](./references/telemetry-schema.md)
+§2. The coordinator names the emit sites; phase modules and gates
+own the emit calls themselves.
 
-Q2.2 -- Which stored procedures will this change touch?
-(From your recon, name the specific procedures you identified. Ask the PM
-to confirm or correct.)
+**Common envelope (every event).** `timestamp` (ISO 8601 UTC),
+`event`, `workflowKind: "prd_interview"`, `phaseId`,
+`linearIssueId`, `prdRunId`, `subPrdId`.
 
-Q2.3 -- What is the current behaviour, and what should the new behaviour be?
-(Require a specific before/after -- not "it should work correctly".)
+**Coordinator-level emits:**
 
-Q2.4 -- Does this change affect FTP calculations? If yes:
-  a) Does it affect named revision dates? If so, which ones?
-  b) Does it affect the rate source (which rate table is used)?
-  c) Does it affect which instrument types are in scope?
+- `prd_preflight` — at Step 0 completion (with `preflightOutcome:
+  pass` or `fail`).
+- `prd_complexity_classified` — after the breakdown's
+  `complexity_tier` is registered or computed.
+- `prd_investigation_manifest` — at Step 0 after the breakdown's
+  `investigation_context` is consumed.
+- `prd_phase_started` / `prd_phase_completed` — at every phase
+  entry / exit (the owning phase module emits; the coordinator
+  enforces emission).
+- `prd_interview_completed` — at the end of P9 after
+  `prd_bundle_manifest_finalised`.
 
-Q2.5 -- Does this change affect how return codes -1 through -8 are handled?
-If yes, which codes and what should the new behaviour be?
+**Phase-and-gate-owned emits (consult the phase / gate module):**
 
-Q2.6 -- Does this change affect any of the instrument flags?
-(NewInstFlag, ClosedInstFlag, PlugInstrumentFlag)
-If yes, how?
+- `prd_phase_rejected`, `prd_phase_redirected` — gates and P7 only.
+- `prd_interview_aborted`, `prd_interview_hard_stopped` — Step 0
+  (`shared-protocols.md` §L5) and any phase on PM ABORT.
+- `prd_interview_override_applied` — Step 0 and any phase when an
+  L5 override applies later in the run (e.g. telemetry sink fall-
+  back at P9).
+- `prd_self_review_gate_failed`,
+  `prd_coverage_dimension_blocked`,
+  `prd_pre_write_bar_walk_failed` — every phase with a self-review
+  or artifact-bar walk.
+- `prd_handoff_re_run`, `prd_anchor_verification_failed`,
+  `manual_handoff_initiated`, `manual_handoff_returned`,
+  `brief_generated` — P9 only.
+- `acceptance_criteria_generated`, `reuse_map_confirmed` — P8.
+- `component_pattern_confirmation_generated`,
+  `component_pattern_confirmation_resolved` — P5 (Confirmation
+  Report authoring at P5 end).
+- `prd_bundle_manifest_finalised` — P9 end-of-phase.
+- `prd_breakdown_gap_detected` — any phase that surfaces a
+  breakdown defect; recorded as DI for the gate to resolve.
+- `prd_interview_resumed_with_staleness_warning`,
+  `prd_interview_resumed_mid_phase` — pause-resume on resume.
+- `prd_telemetry_write_failed`, `prd_workflow_config_defaulted`,
+  `prd_telemetry_corruption_recovered` — infrastructure events
+  emitted by the telemetry layer; never fail the interview
+  (Family I I1).
 
-Q2.7 -- What are the expected outputs for the happy path?
-(Require specific measure values or conditions -- not "correct results".)
-
-Q2.8 -- Are there any instrument types or portfolio segments that should
-be excluded from this calculation change?
-
----
-
-## Section 3 -- Allocation methodology changes (ask if Q1.3 includes c)
-
-Q3.1 -- Which allocation type does this change affect?
-(Expense allocation, income allocation, capital allocation, provisions,
-or a combination?)
-
-Q3.2 -- What is the current allocation methodology, and what should it
-be after this change?
-(Require a specific description -- not "the standard methodology".)
-
-Q3.3 -- Which cost pools or income streams are affected?
-
-Q3.4 -- What is the allocation driver? (What determines how much each
-instrument or entity receives?)
-
-Q3.5 -- Does this change affect the GLAllocationLog? If yes, what
-changes to the log schema or content are required?
-
-Q3.6 -- Are there any instruments, entities, or periods that should be
-excluded from this allocation change?
-
-Q3.7 -- What are the expected allocation outputs for a representative
-test case? (Ask for specific numbers or ratios if possible.)
-
----
-
-## Section 4 -- Acceptance criteria (always ask)
-
-Q4.1 -- What does success look like for this feature? Describe as many
-specific scenarios as you can think of -- happy paths, failure paths, and
-boundary conditions. For each: what is the input, the action, and the
-exact expected output? Aim for at least 5 scenarios for a medium-complexity
-feature.
-(Probe for each scenario: what specific value or condition would tell you
-this has passed?)
-
-Q4.2 -- How will you verify this feature is working in UAT?
-What specific data or steps will you use?
-
-Q4.3 -- Are there any performance requirements?
-(e.g., "the calculation must complete within 30 seconds for a portfolio
-of 10,000 instruments")
-
-Q4.4 -- Are there any existing tests that this feature must not break?
-(From your codebase recon, name the test files in the area and ask the
-PM to confirm which test suites are in scope.)
-
-Q4.5 -- For each edge case we identify later (Section 6), I will generate
-a testable acceptance criterion. Are there any scenarios you already know
-will need explicit pass/fail criteria beyond the happy path?
-(e.g., "when the calculation runs with zero instruments, it must return
-an empty result set -- not an error")
+Telemetry write failure routes to the fallback sink
+`.sage/prd-interview-telemetry.local.jsonl` per Family I I2; the
+PM is warned at the moment of fallback. Schema versioning is
+additive-only; new events appearing in `telemetry-schema.md` are
+honoured without coordinator changes.
 
 ---
 
-## Section 5a -- Scope boundaries (always ask)
+## Cross-phase binding rules (carried from L7 lock)
 
-Q5a.1 -- What is explicitly out of scope for this feature?
-(Prompt with adjacent areas from your codebase recon: "Is [adjacent feature]
-in scope or out of scope?")
+- **Symmetric-surface discipline.** When the per-sub-PRD
+  breakdown's `symmetric_surfaces` field names two or more
+  surfaces as mirror-image, every phase treats them as **one
+  surface** for question purposes. Questions are parameterised by
+  entity name only; the PM hears each question once and the
+  interviewer records the answer once with the parameterised
+  entity list. Forbidden: asking the same question twice with
+  different entity names. Owning phases: every phase that
+  surfaces entity-bound questions (primarily P1, P2, P5, P6).
+- **Default-reuse assumption.** When the per-sub-PRD breakdown
+  carries Component Pattern Summaries, every phase that touches
+  the matched component assumes reuse by default. Questions only
+  ask the PM to confirm **DIFFs** from the matched component
+  pattern — never to describe the surface from scratch. The P5
+  Component Pattern Block discipline is the canonical
+  application; the P5 self-review confirms it; the P5
+  Component Pattern Confirmation Report bulk-confirms the
+  matched-pattern decisions across every matched component.
+- **No mid-interview YAML recon.** The interviewer never re-opens
+  a `.context/components/<component>.yaml` mid-interview
+  (Family E E1). The breakdown's Component Pattern Summaries are
+  the source. Family N anchor verification at P9 opens YAMLs only
+  after the interview is closed — this is post-interview
+  validation, not mid-interview recon.
+- **Production-grade bar.** Every interviewer-authored artifact
+  must pass the Pass Conditions in
+  [`references/production-grade-quality-bar.md`](./references/production-grade-quality-bar.md)
+  before write (L6 G3). Failure: do not write, surface the
+  failing Pass Condition, resolve the gap, retry.
 
-Q5a.2 -- Is there anything that looks related to this feature but should
-NOT be changed as part of this work?
-
-Q5a.3 -- Are there any downstream systems or consumers of this data that
-must not be affected? (e.g., specific BI reports, Dataverse entities,
-external exports)
-
-Q5a.4 -- Does this feature touch the Dataverse boundary?
-If yes: which Dataverse entities are read or written, and is any new
-write permission required?
-
----
-
-## Section 5b -- UI and UX (ask if Q1.3 includes a, or if codebase recon
-## identified UI files in scope)
-
-Q5b.1 -- Which screens or pages does this feature add or change?
-List each one.
-
-Q5b.2 -- For each screen: is it a new screen or a modification to an
-existing one?
-
-Q5b.3 -- For each new or modified screen: what is its purpose in one
-sentence?
-
-Q5b.4 -- What triggers navigation to this screen?
-(A menu item, a button on another screen, a URL, etc.)
-
-Q5b.5 -- For each new or modified UI component on each affected screen:
-  a) What is the component name and type?
-     (e.g., "ProcessSelector -- multi-select dropdown")
-  b) What does it do? (functional description, not visual description)
-  c) What data does it display or capture?
-     (Name the specific field -- Adjusted_GL, ProcessID, SP, etc.)
-
-Q5b.6 -- For each component: what are all the states it can be in?
-(e.g., default, loading, selected, error, disabled, empty)
-What causes each transition?
-
-Q5b.7 -- What does the empty state look like for each data-displaying
-component? (What message or visual is shown when there is no data?)
-
-Q5b.8 -- What happens when an operation fails?
-(Describe the error state for each component that can fail.)
-
-Q5b.9 -- What happens while data is loading?
-(Describe the loading state for each component that fetches data.)
-
-Q5b.10 -- Are there any user interactions beyond the standard ones?
-(e.g., drag-and-drop, inline editing, bulk selection, keyboard shortcuts)
-
-Q5b.11 -- Do you have any existing sketches, mockups, or visual references
-for how this should look? If yes, describe what each one shows in words.
-Do not share files or links -- describe it verbally.
-
-Note: After this interview completes, you can invoke **prd-demo-generator**
-to produce an interactive HTML demo from the PRD before running the
-completeness check. The plan-preview-generator agent will also produce
-visual confirmation artifacts from the implementation plan during S4.
+Full operating-principles taxonomy (Families A–N including
+Family N N1–N8 handoff-chat read discipline) and L11 5-category
+failure mode rows live in
+[`references/interview-conduct/shared-protocols.md`](./references/interview-conduct/shared-protocols.md).
 
 ---
 
-## Main interview conclusion gate (after Sections 1-5b, before Section 6)
+## Reference pointers
 
-Before proceeding to the edge-case phase, execute this 6-step protocol.
-Emit telemetry between P6 completion and P7 start.
-
-1. **Present structured summary** -- present everything captured during
-   Sections 1-5b, organised by section. Summarise each section in 2-3
-   sentences highlighting the key decisions and requirements captured.
-
-2. **Flag vague answers** -- list every answer that was short, unclear, or
-   accepted without a specific example. Ask the PM if they can elaborate
-   on any of these now.
-
-3. **Open-ended coverage check** -- ask: "Is there anything about this
-   feature's core requirements that concerns you -- anything you are
-   worried we have not covered before we move to edge cases?"
-
-4. **Confirm question count** -- state the complexity tier, the main
-   interview minimum threshold, and the actual count. If below threshold,
-   identify under-covered categories and ask additional questions before
-   concluding.
-
-5. **Review Deferred Items List** -- present all deferred items from
-   Sections 1-5b. For each, ask: resolve now / accept deferral / mark
-   out of scope.
-
-6. **Explicit confirmation** -- only after steps 1-5: "I am satisfied we
-   have comprehensive coverage of the core requirements. Shall I proceed
-   to the edge-case phase?"
-
-The PM must explicitly confirm before Section 6 (P7) starts.
+| Reference | Purpose | Load point |
+|---|---|---|
+| [`references/interview-conduct/index.md`](./references/interview-conduct/index.md) | Phase module index | At Step 0 (coordinator preamble) |
+| [`references/interview-conduct/shared-protocols.md`](./references/interview-conduct/shared-protocols.md) | L5 / L6 / L11 / ABORT / re-entry rules | Once at interview start |
+| `references/interview-conduct/phase-P[1..9].md` | Per-phase modules | At each phase transition |
+| [`references/interview-conduct/phase-P6-to-P7-gate.md`](./references/interview-conduct/phase-P6-to-P7-gate.md) | Single conclusion gate | At P6 exit |
+| [`references/component-matching.md`](./references/component-matching.md) | Component Pattern Block protocol | At P5 (delta-style ask) |
+| [`references/complexity-classifier.md`](./references/complexity-classifier.md) | Tier 1 / Tier 2 classification | At Step 0 if breakdown `complexity_tier` is missing |
+| [`references/prd-section-schema.md`](./references/prd-section-schema.md) | Locked 8-section schema | At P8 Step 1 |
+| [`references/prd-template.md`](./references/prd-template.md) | PRD scaffold against the schema | At P8 Step 1 |
+| [`references/acceptance-criteria-template.md`](./references/acceptance-criteria-template.md) | Sibling AC scaffold | At P8 Step 1 |
+| [`references/traceability-template.md`](./references/traceability-template.md) | Bidirectional AC ↔ §4 trace | At P9 Step 5 |
+| [`references/component-spec-template.md`](./references/component-spec-template.md) | Six-element entry scaffold | At P9 (handed to component-spec handoff via brief) |
+| [`references/production-grade-quality-bar.md`](./references/production-grade-quality-bar.md) | Per-artifact Pass Conditions (L6 G3) | At every pre-write artifact-bar walk |
+| [`references/sub-agent-delegation.md`](./references/sub-agent-delegation.md) | Brief format, summary contract, Family N N1–N8 | At P9 Step 1 |
+| [`references/handoff-prompt-templates.md`](./references/handoff-prompt-templates.md) | Three paste-ready handoff prompts | At P9 Step 3 |
+| [`references/downstream-agent-contract.md`](./references/downstream-agent-contract.md) | Per-consumer contract table | Reference for ID conventions used in artifacts |
+| [`references/telemetry-schema.md`](./references/telemetry-schema.md) | Authoritative event catalogue | At every emit-site edit |
+| [`references/question-sets/index.md`](./references/question-sets/index.md) and per-section files | Question catalogue per phase | Pulled by each phase module on first question |
 
 ---
 
-## Section 6 -- Edge-case phase (always ask)
+## Output artifacts
 
-This is a dedicated interview phase, not a single section. It systematically
-covers seven edge-case categories. The minimum number of questions is set
-by the feature's complexity tier (see references/complexity-classifier.md).
+Interviewer-chat-authored (light, in-context):
 
-Ask questions grounded in the codebase reconnaissance findings. For each
-category, reference specific components, stored procedures, or data
-structures found during recon.
+- `prd.md` — 8-section PRD against `prd-section-schema.md`; YAML
+  frontmatter with `prdHash` SHA-256 of body content.
+- `acceptance-criteria.md` — sibling AC file; sequential `AC-NNN`;
+  each AC carries `linked_requirement_ids` (one or more §4.NNN),
+  GWTX, `surface` (UI / calc / data / error), `demoable` flag.
+- `reuse-map-draft.md` — disk-first full reuse map; PM sees only
+  the grouped plain-English summary in chat.
+- `component-pattern-confirmation.md` — written at end of P5;
+  bulk Pattern Block validation across matched components.
+- `interview-answers.json` — verbatim PM answer record; written
+  at P7 Step 4.
+- `traceability.md` — auto-built at P9 from in-memory AC list +
+  three handoff summaries; table-only.
+- `demos/_brief.md`, `sample-data/_brief.md`,
+  `component-spec/_brief.md` — manual-handoff briefs with
+  Family N `{ path, read_mode, expected_anchors }` per cited
+  YAML in Section 3.
+- `bundle-manifest.json` — finalised at end of P9; declares every
+  file in the bundle with `prdHash`, `writtenAt`, `producer`,
+  `role`.
 
-### Telemetry
+Handoff-chat-authored (heavy artifacts, validated on return):
 
-Emit `prd_phase_started` with `phaseId: P7` (Edge-case phase start) before
-the first edge-case question. Emit `prd_phase_completed` with `phaseId: P7`
-after the conclusion gate completes.
+- `demos/demo-interactive.html`, optional
+  `demos/calculation-demo.html`, `demos/demo-behavior-manifest.md`,
+  `demos/demo-coverage.md`, `demos/_summary.md`.
+- `sample-data/*.json`, `sample-data/_summary.md`.
+- `component-spec.md`, `component-spec/_summary.md`.
 
-### EC Category 1 -- Interaction sequence
-
-What happens when a user performs action A then action B? What happens when
-actions overlap? What happens when the user navigates away during an
-operation? What happens on browser refresh?
-
-Ask about every pair of user actions identified in Sections 1-5b that could
-interact.
-
-### EC Category 2 -- Cascading behaviour
-
-For every entity that can be modified or deleted: what happens to other
-entities that reference it? Do downstream displays auto-update? What about
-derived names or calculated values?
-
-Ask about every entity identified in the codebase recon that this feature
-modifies.
-
-### EC Category 3 -- Concurrency
-
-What happens when two users perform the same action simultaneously? What
-happens when a background process (calculation, allocation) is running
-while a user modifies source data?
-
-Ask about every action that modifies shared state.
-
-### EC Category 4 -- State boundary
-
-What does every action button do when there are zero items? Is there a
-maximum number of items? What happens at state transitions? Are there
-invalid state combinations?
-
-Ask about every component's empty state, maximum capacity, and transition
-states.
-
-### EC Category 5 -- Cross-component dependency
-
-What happens to downstream components when this feature's data changes?
-What happens to this feature when upstream data is incomplete? Are there
-circular dependencies?
-
-Ask about every dependency relationship identified in the codebase recon.
-
-### EC Category 6 -- Data integrity
-
-What about records that exist before this feature? Is partial data entry
-allowed? What happens with bulk operations where some items succeed and
-others fail? Can actions be undone?
-
-Ask about every data entity this feature creates or modifies.
-
-### EC Category 7 -- Failure and recovery
-
-For every operation that can fail: what does the user see? Is their work
-preserved? Can they retry? What is the recovery path?
-
-Ask about every operation identified in the interview that involves a
-stored procedure call, API request, or data write.
-
-### Edge-case phase conclusion gate
-
-Before concluding the edge-case phase, execute this 6-step protocol:
-
-1. **Present structured summary** -- present all edge cases captured,
-   organised by the seven categories. Show question count per category.
-
-2. **Flag vague answers** -- list any edge-case answers that were short
-   or unclear. Ask the PM if they can elaborate now.
-
-3. **Open-ended coverage check** -- ask: "Is there anything about this
-   feature that keeps you up at night -- any scenario you are worried we
-   have not covered?"
-
-4. **Confirm coverage** -- verify all seven applicable categories have at
-   least one question asked and answered. State the edge-case minimum
-   threshold vs. actual count. If below threshold, expand coverage in the
-   thinnest categories.
-
-5. **Review Deferred Items List** -- present ALL deferred items (from both
-   main interview and edge-case phase). For each item still with status
-   "Open", the PM must choose one of: (a) resolve now (status → Resolved),
-   (b) accept deferral with documented reason (status → Accepted), or
-   (c) mark out of scope (status → Out of Scope). After this step, no
-   items may remain "Open" -- every item must have a terminal status
-   (Resolved, Accepted, or Out of Scope).
-
-6. **Explicit confirmation** -- only after steps 1-5: "I am satisfied we
-   have comprehensive edge-case coverage. Shall I proceed to the final
-   approval?"
-
-The PM must explicitly confirm before proceeding to P8.
+All artifacts are drafts until the PM runs
+`prd-completeness-check`. Post-completion PM edits to `prd.md`
+route to `prd-amend` (not the interviewer).
 
 ---
 
-## After the interview
+## Constraints (binding)
 
-Before **P8** telemetry: ensure **`prd_phase_completed`** has been written for **P7** (Section 6). Emit **`prd_phase_started`** with `phaseId: P8` before reviewing parked questions; **`prd_phase_completed`** for P8 after the PM responds to the APPROVE / REJECT / REDIRECT prompt (or when stopping).
-
-### Step 1 -- Final approval gate
-
-The main interview and edge-case conclusion gates have already surfaced
-vague answers, confirmed question counts, and resolved deferred items.
-This final gate is a lightweight confirmation before PRD generation.
-
-1. **Present interview statistics** -- total questions asked (main +
-   edge-case), tier classification, deferred items final status summary
-   (N resolved, N accepted, N out of scope).
-
-2. **Present Deferred Items final state** -- show the complete list with
-   final statuses. Confirm that no items remain "Open" (all should be
-   Resolved, Accepted, or Out of Scope after the edge-case gate).
-
-3. **Explicit confirmation** -- ask the PM to confirm with:
-   APPROVE -- to proceed to PRD draft generation
-   REJECT: [reason] -- to restart or revise specific answers
-   REDIRECT: [direction] -- to continue the interview in a different direction
-
-### Step 2 -- Write the answer record
-
-Write a structured JSON answer record to:
-`.sage/prds/[FEATURE_ID]/interview-answers.json`
-
-Create the `.sage/prds/[FEATURE_ID]/` directory if it does not exist.
-The record must use question IDs as keys (Q1.1, Q2.3, Q1.DYN-1, etc.)
-with verbatim answers as values. Deferred questions are recorded as null
-with a "deferred": true flag and "deferredId" reference (e.g. "DI-001").
-
-Include a top-level `deferredItems` array containing the full Unified
-Deferred Items List with all fields (ID, question, section, category,
-reason, status).
-
-Do not summarize or interpret answers -- record verbatim.
-
-### Step 3 -- Present for human review
-
-Tell the PM:
-"The interview is complete. Here is a summary of what was captured:"
-
-Print a plain-language summary (not the raw JSON) covering:
-- Feature title and primary change type
-- Measures/procedures in scope (if applicable)
-- Acceptance criteria captured (count and brief description)
-- UI screens and components in scope (if applicable)
-- Deferred items (list by DI-ID and topic, with status)
-- Anything flagged as a constraint or edge case
-
-Then say:
-"Please review this summary. When you are satisfied it accurately reflects
-your intent, respond with:
-  APPROVE -- to proceed to PRD draft generation
-  REJECT: [reason] -- to restart or revise specific answers
-  REDIRECT: [direction] -- to continue the interview in a different direction"
-
-Do not proceed to PRD generation without an explicit APPROVE.
-
-### Step 4 -- Generate the PRD draft (on APPROVE)
-
-Emit **`prd_phase_started`** with `phaseId: P9` before draft generation. After files are written, emit **`prd_phase_completed`** with `phaseId: P9`, then **`prd_interview_completed`** with summary fields (e.g. `parkedCount`, `linearIssueId`, `prdRunId`).
-
-Generate the PRD draft from the answer record using the PRD template
-in references/prd-template.md.
-
-Write the PRD to: `.sage/prds/[FEATURE_ID]/prd.md`
-
-For every UI component identified in Section 5b: create a Component
-Specification entry. Write the component specification to:
-`.sage/prds/[FEATURE_ID]/component-spec.md`
-
-Link the component spec from the PRD with a relative path reference.
-
-### Step 5 -- Confirm and hand off
-
-Tell the PM:
-"PRD and component specification have been written to:
-- `.sage/prds/[FEATURE_ID]/prd.md`
-- `.sage/prds/[FEATURE_ID]/component-spec.md`
-
-Review both documents. When you are satisfied, run prd-completeness-check
-against the PRD to assess readiness for the planning cycle."
-
----
-
-## Constraints
-
-- Always complete **Step 0 repo preflight** (or documented PM override) before **Section 1 / P1**
-- Append PRD telemetry for **`prd_preflight`**, phase boundaries (**`prd_phase_started` / `prd_phase_completed`** for P1–P9 as applicable), and **`prd_interview_completed`** when the interview ends (after summary or when stopping without draft)
-- Always start from a Linear or ADO work item -- do not begin without one (after preflight)
-- Always conduct codebase recon before the first question
-- Ask questions in batches of 2-4 -- never dump an entire section as a list
-- Record answers verbatim -- never summarize or interpret during interview
-- Never generate the PRD without an explicit APPROVE from the PM
-- Never accept file attachments or external links for visual references (Q5b.11)
-- Never skip Section 6 -- edge cases are always asked regardless of feature type
-- Deferred items with status "Open" or "Accepted" must appear as
-  structured entries in PRD Section 12 -- never silently omitted
-- All user-facing message text in the PRD draft (toast messages, error
-  messages, tooltip text, dialog text, validation messages) must follow the
-  three-tier message text sourcing protocol:
-  1. **Codebase-sourced** — quote verbatim with
-     `[Source: path/to/file.ext:lineN]`.
-  2. **Agent-proposed** — when no codebase text exists, propose text
-     grounded in existing codebase patterns and present it to the PM with
-     two options: (a) Approve proposed text, (b) PM provides their own
-     text. Mark approved proposals as `[Proposed — approved by PM]` and
-     PM-provided text as `[PM-provided]`. Present each proposal
-     individually during the interview — not as a batch.
-  3. **Undetermined** — when no reasonable proposal can be constructed,
-     mark as `[TEXT TBD — requires PM decision]` with a note explaining
-     what kind of text is needed.
-  Never silently invent user-facing message text. Every message text
-  instance in the PRD draft must carry one of the three markers.
-- Step 2 (codebase reconnaissance) must produce a structured investigation
-  manifest listing every file read, grouped by layer (frontend components,
-  services, models/interfaces, stored procedures, views, tests), with a
-  one-line summary per file. The manifest is emitted as a
-  `prd_investigation_manifest` telemetry event and presented to the PM at
-  Step 3.
-
----
-
-## Reference files
-
-Read references/question-sets.md for:
-- The complete question set with probing guidance and Profitability-specific
-  examples for each question
-
-Read references/prd-template.md for:
-- The PRD structure the output must follow
-- Section-by-section instructions for the PRD draft generation step
-
+- Always read `prd-breakdown.[sub-prd-id].md` before P1 — never
+  re-run codebase recon from scratch.
+- Always execute Step 0 readiness checks before P1 — never skip
+  the hard-stop matrix or the override-eligible matrix per
+  `shared-protocols.md` §L5.
+- Always start from a work item reference — never begin without
+  `linearIssueId` and `subPrdId`.
+- Ask questions in batches of 2–4 — never dump a section as a
+  list (Family A A2).
+- Record PM answers verbatim — never summarise or interpret
+  during the interview (Family B).
+- Never re-open a `.context/components/<component>.yaml`
+  mid-interview (Family E E1).
+- Never generate the PRD without an explicit APPROVE — gate
+  APPROVE at P6→P7, P7 APPROVE, P8 walkthrough pass.
+- Never skip P6 — edge cases are always asked.
+- All user-facing message text follows the Family F three-tier
+  sourcing protocol (Tier 1 verbatim YAML / Tier 2 PM-approved
+  outcome phrasing / Tier 3 interviewer-drafted PM-approved-
+  before-write).
+- Pre-write artifact-bar walk (L6 G3) gates every interviewer-
+  authored write; failure: do not write, surface failing Pass
+  Condition, resolve, retry.
+- Cannot set `validationConfirmed = true` in the session
+  manifest — that flag requires explicit developer action.
+- Cannot run codebase recon mid-interview — that is the
+  orchestrator's job, captured in `prd-breakdown`.

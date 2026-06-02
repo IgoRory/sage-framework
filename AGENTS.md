@@ -41,7 +41,12 @@ its agent definition explicitly overrides them.
 - [implementation-planner](#implementation-planner)
 - [traceability-reviewer](#traceability-reviewer)
 - [plan-preview-generator](#plan-preview-generator)
+- [prd-orchestrator](#prd-orchestrator)
+- [prd-interviewer](#prd-interviewer)
+- [prd-amend](#prd-amend)
 - [prd-demo-generator](#prd-demo-generator)
+- [prd-stale-check](#prd-stale-check)
+- [prd-walkthrough](#prd-walkthrough)
 - [code-simplifier](#code-simplifier)
 - [test-author](#test-author)
 - [tdd-builder](#tdd-builder)
@@ -247,24 +252,263 @@ confirm: set `validationConfirmed = true` in `phase-{N}/phase-manifest.json`.
 
 ---
 
-## prd-demo-generator
+## prd-orchestrator
 
 **Mode:** Foreground
-**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/demos/` only)
-**Active during:** Between prd-interviewer and prd-completeness-check (on PM request)
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/` only)
+**Active during:** Before the first prd-interviewer session for any feature
 
 ### Role
 
-Optional skill invoked by the PM to produce interactive HTML demos from a
-completed PRD draft. Reads the PRD's acceptance criteria (AC-REQ, AC-EC,
-AC-UI, AC-ERR) and component specification to generate self-contained HTML
-files that visualise every demoable scenario. Helps the PM visually validate
-requirements before the completeness check scores the PRD.
-
-Can be re-invoked on demand when the PRD is edited to regenerate demos from
-updated requirements. Embeds a PRD hash for drift detection.
+Receives a large feature (ADO work item or Linear issue), performs exhaustive
+silent codebase reconnaissance, classifies each sub-area by complexity tier,
+recommends a PRD breakdown that keeps every sub-PRD at Tier 1–2, and writes
+`prd-breakdown.md` with a machine-readable `investigation_context` block for
+prd-interviewer instances to consume. Always runs before the first
+prd-interviewer session for a feature.
 
 ### What it produces
+
+- `.sage/prds/[FEATURE_ID]/prd-breakdown.md` — machine-readable breakdown with
+  `investigation_context` block; consumed by all prd-interviewer instances for
+  this feature
+
+### Constraints
+
+- Always completes Step 0 repo preflight before any investigation
+- Always confirms context checklist with PM before silent recon
+- Never narrates the recon process to the PM
+- Never shows SP names, return codes, view column names, class names, or any
+  internal technical construct to the PM
+- Never recommends a split that leaves a sub-PRD at Tier 3+ complexity
+- Never writes component or SP data into PRD output files
+- The PM must explicitly confirm before `prd-breakdown.md` is written
+
+---
+
+## prd-interviewer
+
+**Mode:** Foreground
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/[sub-prd-id]/` only)
+**Active during:** Per sub-PRD, after prd-orchestrator confirms the breakdown
+
+### Role
+
+Conducts a structured interview with the Product Owner for one sub-PRD scope
+to produce a complete sub-PRD bundle against the L1–L12 architectural model.
+Reads `prd-breakdown.[sub-prd-id].md` and consumes Component Pattern
+Summaries directly — does not re-run codebase recon. Runs a 9-phase
+interview (Step 0 preflight, P1–P9 with P3/P4/P5 conditional on
+breakdown indicators), assigns §4 sub-section IDs (DM/CL/AL/WF/UI/VC/ER/
+NM/PA/IN/PF/AU/RX/CP-NNN) in-flow during the phase that captures the
+requirement, declares a §4 coverage map at P2 and reconciles it at the
+single conclusion gate, derives sequential acceptance criteria (AC-NNN
+with `surface` field) at P8, authors three manual handoff briefs at P9,
+verifies handoff returns via Family N anchor attestation, and finalises
+`bundle-manifest.json` at end of P9. Enforces Step 0 repo preflight with
+consolidated L5 readiness checks, appends telemetry to
+`.sage/prd-interview-telemetry.jsonl`, and routes a single conclusion
+gate with APPROVE / REJECT / REDIRECT semantics.
+
+### What it produces
+
+Interviewer-chat-authored (light artifacts):
+
+- `prd.md` — 8-section PRD against `prd-section-schema.md`; YAML frontmatter
+  with `prdHash` SHA-256 of body content
+- `acceptance-criteria.md` — sibling AC file; sequential `AC-NNN`; each AC
+  carries `linked_requirement_ids` (one or more §4.NNN), GWTX, `surface`
+  field (UI/calc/data/error), `demoable` flag
+- `reuse-map-draft.md` — disk-first full reuse map
+- `component-pattern-confirmation.md` — written at end of P5; bulk
+  Pattern Block validation
+- `interview-answers.json` — verbatim PM answer record
+- `traceability.md` — auto-built at P9 from in-memory AC list + three
+  handoff `_summary.md` files; bidirectional AC ↔ §4.NNN; table-only
+- `demos/_brief.md`, `sample-data/_brief.md`, `component-spec/_brief.md`
+  — manual-handoff briefs with Family N `{ path, read_mode,
+  expected_anchors }` per cited YAML in Section 3
+- `bundle-manifest.json` — finalised at end of P9; declares every file
+  in the bundle with `prdHash`, `writtenAt`, `producer`, `role`
+
+Handoff-chat-authored (heavy artifacts, validated on return):
+
+- `demos/demo-interactive.html`, optional `demos/calculation-demo.html`,
+  `demos/demo-behavior-manifest.md`, `demos/demo-coverage.md`,
+  `demos/_summary.md` (with `## YAML reads` anchor attestation H2)
+- `sample-data/*.json`, `sample-data/_summary.md`
+- `component-spec.md`, `component-spec/_summary.md`
+
+### Constraints
+
+- Always reads `prd-breakdown.[sub-prd-id].md` before P1 — no recon
+  from scratch; never re-opens cited YAMLs mid-interview (Family E)
+- Step 0 consolidates ALL L5 readiness checks (breakdown presence,
+  sub-PRD ID validity, Component Pattern Summaries populated, cited
+  YAMLs on disk, branch state, dirty tree). Hard-stop vs override-
+  eligible matrix per L5; override emits
+  `prd_interview_override_applied`
+- Asks questions in batches of 2–4; never dumps a section as a list
+- Records PM answers verbatim; interviewer interpretation lives in
+  PRD only, never in `interview-answers.json`
+- Single conclusion gate after P6 edge cases (legacy two-gate pattern
+  is collapsed); APPROVE / REJECT / REDIRECT; reconciles the §4
+  coverage map declared at P2 against what was captured P1–P6
+- §4 sub-section IDs assigned in-flow during the phase that captures
+  the requirement (not at PRD generation)
+- AC IDs are sequential `AC-NNN`, no buckets; category lives in
+  `surface` field; legacy `AC-{REQ|EC|UI|ERR}-NNN` retired (preserved
+  during dual-layout backfill-on-touch window only)
+- Every §4 sub-section in the P2 coverage map either has at least
+  one §4.NNN entry OR carries explicit `Not applicable — [reason]`
+  notice (no silent omissions)
+- Family N (handoff-chat read discipline, N1–N8): brief Section 3
+  declares per-YAML `expected_anchors`; handoff `_summary.md` carries
+  `## YAML reads` H2 with `anchors_extracted`; interviewer post-return
+  validation reads only YAML files (not heavy artifact) to verify each
+  anchor; N5 spot-check on random artifact rows
+- Family M (application-fidelity): when a production UI affordance
+  exists, brief MUST cite the relevant YAMLs; "no application
+  equivalent" flagged explicitly in brief
+- Family J (anti-hallucination): every UI / data assertion traceable
+  to YAML or PM answer; if unsure, ask PM
+- Pre-write artifact-bar walk (L6 G3) for every interviewer-authored
+  artifact — must pass `production-grade-quality-bar.md` Pass
+  Conditions before file write; failure: do not write, surface
+  failing Pass Condition, resolve gap, retry
+- All user-facing message text follows the three-tier sourcing
+  protocol (Tier 1 verbatim YAML; Tier 2 PRD outcome PM-approved;
+  Tier 3 interviewer-drafted, marked, PM-approved before write)
+- Cannot set `validationConfirmed = true` in the session manifest
+- Cannot run codebase recon mid-interview — that is the
+  orchestrator's job, captured in `prd-breakdown`
+
+---
+
+## Sub-agent delegation contract
+
+The three sub-agent-built surfaces of a sub-PRD — **demo**, **sample-data**,
+and **component-spec** — are produced via a manual chat handoff, not via
+programmatic sub-agent spawning. The pattern was proven in Phase 0 of the
+PRD Pipeline Production-Grade Lift and is the production contract for every
+sub-PRD that produces these surfaces.
+
+**The manual handoff is the production pattern.** Programmatic spawning via
+the `Task` tool is reserved as an optional optimisation only when a
+suitable `subagent_type` becomes locally available; until then, the manual
+pattern is canonical.
+
+**Three surfaces, one contract.** Each surface has a brief, a paste-ready
+handoff prompt, and a structured summary file:
+
+| Surface | Brief | Artifact | Summary |
+|---|---|---|---|
+| Demo | `demos/_brief.md` | `demos/demo-interactive.html` (and/or `demos/calculation-demo.html`) | `demos/_summary.md` |
+| Sample-data | `sample-data/_brief.md` | `sample-data/*.json` | `sample-data/_summary.md` |
+| Component-spec | `component-spec/_brief.md` | `component-spec.md` | `component-spec/_summary.md` |
+
+**The PM is the orchestrator.** The prd-interviewer chat authors the brief
+and presents a paste-ready handoff prompt. The PM opens a fresh Cursor chat
+per brief and pastes the corresponding prompt unchanged. The handoff chat
+reads the brief plus every cited YAML, produces the artifact plus the
+summary, and STOPS.
+
+**The interviewer chat reads only the summary file on return — never the
+full artifact.** Validation against the summary's claims preserves the
+context-saving intent of the manual pattern. If a claim looks unsupported,
+the interviewer spot-checks the artifact; otherwise the summary is the
+contract.
+
+**Application-fidelity hard rule.** When a UI affordance exists in the
+production application, the brief MUST cite the relevant component YAML
+file(s) under `.context/components/` (or equivalent), and the handoff chat
+has zero discretion to invent a different pattern. The brief author is
+responsible for naming every YAML a demo will need before the brief is
+finalised. Production-grade design freedom applies only where there is no
+application equivalent — those affordances must be flagged explicitly in
+the brief as "no application equivalent — generator's choice". No silent
+gaps. This rule is binding across all three surfaces.
+
+**Authoritative reference:**
+[`.cursor/skills/prd-interviewer/references/sub-agent-delegation.md`](.cursor/skills/prd-interviewer/references/sub-agent-delegation.md)
+defines the orchestration sequence, brief format, summary-file contract,
+the application-fidelity rule with its brief-author checklist, and the
+handoff-chat self-review obligations. Paste-ready prompts live at
+[`.cursor/skills/prd-interviewer/references/handoff-prompt-templates.md`](.cursor/skills/prd-interviewer/references/handoff-prompt-templates.md).
+
+---
+
+## prd-amend
+
+**Mode:** Foreground
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/[sub-prd-id]/` only — diff briefs and prdHash header updates)
+**Active during:** On PM request, after the PM edits a sub-PRD's `prd.md` and one or more derivatives are STALE
+
+### Role
+
+Orchestrates re-generation of derivative artefacts that have drifted from
+an amended `prd.md`. Runs or consumes a prd-stale-check report, generates
+a targeted diff brief for each STALE surface (demo, sample-data,
+component-spec), and guides the PM through re-running the corresponding
+manual handoff chat per the Phase C three-surface handoff discipline.
+FRESH surfaces are never re-run. Operates in two modes: `auto` (amend all
+STALE surfaces using stale-check output) and `targeted` (PM names the
+specific surface to regenerate).
+
+### What it produces
+
+- `.sage/prds/[FEATURE_ID]/[sub-prd-id]/demos/_brief.amend.md` — diff brief for the demo surface (when STALE)
+- `.sage/prds/[FEATURE_ID]/[sub-prd-id]/sample-data/_brief.amend.md` — diff brief for the sample-data surface (when STALE)
+- `.sage/prds/[FEATURE_ID]/[sub-prd-id]/component-spec-brief.amend.md` — diff brief for the component-spec surface (when STALE)
+- Updated `prdHash` header in each regenerated derivative after the handoff chat completes
+
+### Constraints
+
+- Never regenerates FRESH surfaces (in `auto` mode)
+- Never edits `prd.md` — the PM is the sole PRD author
+- Never edits `acceptance-criteria.md` or `traceability.md` directly
+- One handoff chat per surface — inherits the Phase C three-surface handoff discipline
+- Inherits the production-grade quality bar from `.cursor/skills/prd-interviewer/references/production-grade-quality-bar.md`
+
+---
+
+## prd-demo-generator
+
+**Status:** **DEPRECATED — permanently inert; preserved for archaeological reference.**
+
+**Mode:** Foreground (legacy — never invoked)
+**Access:** Read / Write (`.sage/prds/[FEATURE_ID]/demos/` only)
+**Active during:** Never. This skill is not invoked by any current pipeline. It is preserved as a historical artefact only.
+
+### Replacement
+
+The replacement is the **three-surface manual handoff** owned by
+`prd-interviewer`. Demo artifacts are produced by the demo handoff chat
+described in:
+
+- `.cursor/skills/prd-interviewer/references/handoff-prompt-templates.md` —
+  Template 1 (Demo handoff prompt) — paste-ready prompt the PM hands to a
+  fresh Cursor chat.
+- `.cursor/skills/prd-interviewer/references/sub-agent-delegation.md` —
+  orchestration sequence, brief format, summary-file contract, application-
+  fidelity hard rule, and Tier 1 inside-chat self-review protocol.
+
+### Preservation record
+
+The `.cursor/skills/prd-demo-generator/SKILL.md` file is **permanently
+preserved** by PM ruling at Phase E close (25-MAY-2026). The Phase A locked
+decision A5 ("deletion queued for Phase E") is overridden by this ruling.
+The file is retained as a historical artefact for reference purposes only.
+No pipeline reads from it; no pipeline invokes it.
+
+### Legacy role (historical record — not invoked)
+
+Optional skill that was previously invoked by the PM to produce interactive
+HTML demos from a completed PRD draft. Reads the PRD's acceptance criteria
+(AC-REQ, AC-EC, AC-UI, AC-ERR) and component specification to generate
+self-contained HTML files that visualise every demoable scenario.
+
+### What it produces (legacy — not produced by any current invocation)
 
 - `.sage/prds/[FEATURE_ID]/demos/demo-interactive.html` (UI features)
 - `.sage/prds/[FEATURE_ID]/demos/calculation-demo.html` (calculation features)
@@ -272,12 +516,66 @@ updated requirements. Embeds a PRD hash for drift detection.
 
 ### Constraints
 
+- **No downstream pipeline reads from this file.** Re-activation requires PM
+  approval and a fresh evaluation against the current pipeline.
 - Read-only access to codebase (SCSS variables, component templates, message text)
 - Write access only to `.sage/prds/[FEATURE_ID]/demos/`
 - Never modifies the PRD or component specification
-- Must read the PRD's Section 8 ACs as the authoritative scenario list
-- All user-facing text follows the 3-tier message text sourcing protocol
-- Demo is optional -- never required for completeness check to pass
+
+---
+
+## prd-stale-check
+
+**Mode:** Foreground
+**Access:** Read only (`.sage/prds/[FEATURE_ID]/[sub-prd-id]/` only; writes one report file)
+**Active during:** On PM request — before running prd-amend, or whenever the PM suspects a sub-PRD's derivatives may have drifted from an edited `prd.md`
+
+### Role
+
+Detects drift between a sub-PRD (`prd.md`) and its derivative artefacts
+by comparing the embedded `prdHash` header in each derivative against the
+current SHA-256 of `prd.md`. Produces a stale-check report listing every
+derivative as FRESH, STALE, or MISSING. Read-only — never regenerates
+artefacts. Diagnoses only; the PM decides whether to invoke prd-amend.
+
+### What it produces
+
+- `.sage/prds/[FEATURE_ID]/[sub-prd-id]/stale-check.md` — per-derivative status report with FRESH / STALE / MISSING classification and section delta notes where computable
+
+### Constraints
+
+- Read-only on all derivatives — never modifies any artefact
+- Never regenerates surfaces — diagnosis only
+- Must emit `prd_stale_check_started` at Step 1 and `prd_stale_check_completed` at Step 4
+
+---
+
+## prd-walkthrough
+
+**Mode:** Foreground
+**Access:** Read only (`.sage/prds/[FEATURE_ID]/[sub-prd-id]/` — all artefacts)
+**Active during:** On PM request — to review a completed sub-PRD bundle without opening multiple files
+
+### Role
+
+Presents a completed sub-PRD bundle to the PM in a structured, readable
+format via a seven-section in-chat walkthrough: PRD overview, functional
+surfaces, reuse posture, demo highlights, sample-data shape, open
+ambiguities, and traceability coverage statement. Uses `_summary.md` files
+by default to avoid reading full artefacts (T2/T6 context-reduction
+discipline). Deep-reads the full artefact only when the PM challenges a
+specific item. Emits one telemetry event per invocation.
+
+### What it produces
+
+- In-chat walkthrough only (no file written)
+- Telemetry: `prd_walkthrough_run`
+
+### Constraints
+
+- Read-only — never modifies any artefact, framework file, or application source file
+- Summary-first — never reads full HTML, JSON, or component-spec when a `_summary.md` exists and the PM has not challenged a specific item
+- One `prd_walkthrough_run` telemetry emit per invocation
 
 ---
 

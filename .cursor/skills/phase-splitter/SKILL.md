@@ -39,13 +39,53 @@ mid-execution, it must be re-split.
 
 | Input | Source | Required |
 |-------|--------|----------|
-| PRD | `.sage/prds/[FEATURE_ID]/prd.md` (must be at Linear status Ready) | Yes |
-| Component specification | `.sage/prds/[FEATURE_ID]/component-spec.md` | Yes (UI features) |
+| PRD | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/prd.md` (must be at Linear status Ready) — legacy `.sage/prds/[FEATURE_ID]/prd.md` accepted during the backfill-on-touch window | Yes |
+| Bundle manifest (file inventory + per-file `prdHash` + producer) | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/bundle-manifest.json` | Yes for new-format bundles; legacy disk-walk fallback during the backfill-on-touch window |
+| Acceptance criteria | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/acceptance-criteria.md` | Yes |
+| Component specification | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/component-spec.md` | Yes (UI features) |
+| Traceability | `.sage/prds/[FEATURE_ID]/[sub-prd-id]/traceability.md` | Yes |
 | Phase-splitter briefing | [SESSION_ROOT]/phase-splitter-briefing.md | Yes (Sprint/Mob) |
 | Codebase | Read access via Cursor file system | Yes |
 | Session manifest template | .cursor/templates/session-manifest-template.md | Yes |
 
 Do not run this skill against a PRD that has not passed prd-completeness-check.
+
+---
+
+## L1–L12 contract alignment (binding)
+
+This skill is a new downstream consumer in the L1–L12 contract (see
+[`prd-interviewer/references/downstream-agent-contract.md`](../prd-interviewer/references/downstream-agent-contract.md)
+§1). The binding alignment points specific to phase-splitting are:
+
+- **Bundle discovery via `bundle-manifest.json`.** The bundle's file
+  inventory is taken from `bundle-manifest.json` (finalised by the
+  interviewer at end of P9). The manifest enumerates every interviewer-
+  authored and handoff-authored derivative this skill needs to read.
+  Heuristic disk discovery is forbidden — iterate `files[]`.
+- **§4 sub-section coverage drives phase candidate scoring.** Each
+  candidate phase is scored on which §4 sub-section IDs (`{PREFIX}-NNN`
+  across the 14 prefixes `DM` / `CL` / `AL` / `WF` / `UI` / `VC` / `ER`
+  / `NM` / `PA` / `IN` / `PF` / `AU` / `RX` / `CP`) it covers. A phase
+  that spans more than ~6 §4 sub-sections is a candidate for re-split.
+  A phase that spans a single sub-section but only a fraction of that
+  sub-section's IDs flags as "shallow" and may merge with an adjacent
+  candidate.
+- **Cross-page impacts via §4.14 `CP-NNN`.** The `CP-NNN` register in
+  §4.14 of the PRD is the canonical list of inter-sub-PRD relationships;
+  phase candidates must respect these as dependency edges. A phase that
+  depends on an inbound `CP-NNN` cannot start until the producing
+  sub-PRD's phase has merged.
+- **Sequential `AC-NNN` with `surface` field.** Phase candidates are
+  scored partly on AC density per phase. AC IDs are sequential `AC-NNN`
+  for new-format bundles; the legacy bucketed `AC-{REQ|EC|UI|ERR}-NNN`
+  form is accepted for pre-lift bundles during the backfill-on-touch
+  window. The `surface` field on each AC (`UI` / `calc` / `data` /
+  `error`) groups ACs to phase candidates by build type.
+- **Component IDs from the sub-PRD component-spec.** Component IDs and
+  page assignments come from the sub-PRD's `component-spec.md`;
+  reused-component fidelity is the producing sub-PRD's responsibility
+  and does not bear on phase scoring here.
 
 ---
 
@@ -68,8 +108,10 @@ L3 — Execution   Generate manifest, Linear issues, worktrees
 
 ### Step 1 -- Load all inputs
 
-Read the PRD from `.sage/prds/[FEATURE_ID]/prd.md`.
-Read the component specification from `.sage/prds/[FEATURE_ID]/component-spec.md`.
+Read the bundle manifest from
+`.sage/prds/[FEATURE_ID]/[sub-prd-id]/bundle-manifest.json`.
+Iterate `files[]` from the manifest to read the PRD, acceptance criteria,
+component specification, traceability, and other listed PRD derivatives.
 Read the phase-splitter briefing from the session root.
 Read the session manifest template.
 
