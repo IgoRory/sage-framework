@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "preToolUse": [
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/telemetry_logger.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/plan_mode_enforcer.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/manifest_step_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/phase_approval_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/required_references_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/validation_confirmed_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/foundation_verified_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/batch_confirmation_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/test_write_guard.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/red_results_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/tdd_results_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/code_review_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/security_review_gate.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/protected_manifest_fields_gate.py\"" }
+    ],
+    "afterFileEdit": [
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/telemetry_logger.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/manifest_step_writer.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/sage_state_sync.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/linear_status_sync.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/skill_update_trigger_watcher.py\"" }
+    ],
+    "beforeShellExecution": [
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/telemetry_logger.py\"" }
+    ],
+    "afterShellExecution": [
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/telemetry_logger.py\"" }
+    ],
+    "afterMCPExecution": [
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/telemetry_logger.py\"" }
+    ],
+    "stop": [
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/telemetry_logger.py\"" },
+      { "command": "python \"${CURSOR_PLUGIN_ROOT}/hooks/scripts/completion_report_stop_gate.py\"" }
+    ]
+  }
+}

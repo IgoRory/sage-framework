@@ -1,0 +1,10 @@
+{
+  "name": "sage",
+  "description": "SAGE (Semi-Autonomous Guided Execution) framework",
+  "version": "0.1.0-spike",
+  "author": { "name": "Empyrean Solutions" },
+  "agents": ".cursor/agents",
+  "rules": ".cursor/rules",
+  "skills": ".cursor/skills",
+  "mcpServers": ".cursor/mcp.json"
+}
