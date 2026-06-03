@@ -21,14 +21,9 @@ from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, get_phase_dir, block, permit,
-    write_telemetry_event,
+    write_telemetry_event, is_write_tool, is_shell_tool,
     NoSessionError, SessionIntegrityError
 )
-
-BUILD_INITIATING_TOOLS = {
-    "write_file", "create_file", "edit_file", "str_replace",
-    "str_replace_editor", "apply_edit", "run_build"
-}
 
 
 def get_read_files_from_telemetry(session_root: Path, phase_id: str | None = None) -> set:
@@ -95,8 +90,7 @@ def main():
         permit()
         return
 
-    tool_name = event_input.get("tool_name", "").lower().replace("-", "_")
-    if tool_name not in BUILD_INITIATING_TOOLS:
+    if not (is_write_tool(event_input) or is_shell_tool(event_input)):
         permit()
         return
 

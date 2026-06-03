@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, block, permit, write_telemetry_event,
+    is_write_tool, is_shell_tool,
     NoSessionError, SessionIntegrityError
 )
 
@@ -42,11 +43,6 @@ try:
 except ImportError:
     FileLock = None
     LockTimeout = None
-
-BUILD_TOOLS = {
-    "write_file", "create_file", "edit_file", "str_replace",
-    "str_replace_editor", "apply_edit", "run_build", "execute_command"
-}
 
 BATCH_STATE_FILENAME = ".telemetry-batch-state.json"
 
@@ -193,8 +189,7 @@ def main():
         permit()
         return
 
-    tool_name = event_input.get("tool_name", "").lower().replace("-", "_")
-    if tool_name not in BUILD_TOOLS:
+    if not (is_write_tool(event_input) or is_shell_tool(event_input)):
         permit()
         return
 

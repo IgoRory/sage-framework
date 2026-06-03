@@ -19,14 +19,9 @@ import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_phase_runtime, block, permit,
-    write_telemetry_event,
+    write_telemetry_event, is_write_tool, get_target_path,
     NoSessionError, SessionIntegrityError
 )
-
-WRITE_TOOLS = {
-    "write_file", "create_file", "edit_file", "str_replace",
-    "str_replace_editor", "apply_edit"
-}
 
 FILENAME_INDICATORS = (".spec.", ".test.", ".Tests.")
 
@@ -69,8 +64,7 @@ def main():
         permit()
         return
 
-    tool_name = event_input.get("tool_name", "").lower().replace("-", "_")
-    if tool_name not in WRITE_TOOLS:
+    if not is_write_tool(event_input):
         permit()
         return
 
@@ -90,8 +84,7 @@ def main():
         permit()
         return
 
-    tool_input = event_input.get("tool_input", {})
-    target_path = tool_input.get("path") or tool_input.get("file_path") or tool_input.get("file") or ""
+    target_path = get_target_path(event_input)
 
     if not _is_test_file(target_path):
         permit()

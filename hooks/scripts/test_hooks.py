@@ -124,7 +124,7 @@ def test_plan_mode_enforcer_blocks_arbitrary_write():
             phase_runtime=_base_phase_runtime("dev-interview"),
         )
         result = _run_hook("plan_mode_enforcer.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "some-file.ts")}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
@@ -140,7 +140,7 @@ def test_plan_mode_enforcer_allows_summary_write():
         )
         summary_path = session_root / "phase-1" / "phase-1-dev-interview-summary.md"
         result = _run_hook("plan_mode_enforcer.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(summary_path)}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
@@ -163,7 +163,7 @@ def test_manifest_step_gate_blocks_plan_validation_with_blockers():
             "# Review\n\nBlocker findings: 2\nMajor findings: 0\n", encoding="utf-8"
         )
         result = _run_hook("manifest_step_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -181,7 +181,7 @@ def test_manifest_step_gate_permits_plan_validation_zero_blockers():
             "# Review\n\nBlocker findings: 0\nMajor findings: 1\n", encoding="utf-8"
         )
         result = _run_hook("manifest_step_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -199,7 +199,7 @@ def test_phase_approval_gate_blocks_pending():
             phase_runtime=_base_phase_runtime("dev-interview", linearIssueStatus="Pending Approval"),
         )
         result = _run_hook("phase_approval_gate.py", {
-            "tool_name": "read_file", "tool_input": {}
+            "tool_name": "Read", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -213,7 +213,7 @@ def test_phase_approval_gate_permits_approved():
             phase_runtime=_base_phase_runtime("dev-interview", linearIssueStatus="Approved"),
         )
         result = _run_hook("phase_approval_gate.py", {
-            "tool_name": "read_file", "tool_input": {}
+            "tool_name": "Read", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -231,7 +231,7 @@ def test_validation_confirmed_gate_blocks_unconfirmed():
             phase_runtime=_base_phase_runtime("build", validationConfirmed=False),
         )
         result = _run_hook("validation_confirmed_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -245,7 +245,7 @@ def test_validation_confirmed_gate_permits_confirmed():
             phase_runtime=_base_phase_runtime("build", validationConfirmed=True),
         )
         result = _run_hook("validation_confirmed_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -264,7 +264,7 @@ def test_foundation_verified_gate_blocks_dependent():
             phase_runtime=_base_phase_runtime("build"),
         )
         result = _run_hook("foundation_verified_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -280,7 +280,7 @@ def test_foundation_verified_gate_permits_verified():
             phase_runtime=_base_phase_runtime("build"),
         )
         result = _run_hook("foundation_verified_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -294,7 +294,7 @@ def test_foundation_verified_gate_permits_foundation_phase():
             phase_runtime=_base_phase_runtime("build"),
         )
         result = _run_hook("foundation_verified_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -312,7 +312,7 @@ def test_red_results_gate_blocks_without_red_confirmed():
             phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
         )
         result = _run_hook("red_results_gate.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "src" / "app.ts")}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
@@ -331,7 +331,7 @@ def test_red_results_gate_permits_with_red_confirmed():
             "# Red Results\n\nSTATUS: RED CONFIRMED\n", encoding="utf-8"
         )
         result = _run_hook("red_results_gate.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "src" / "app.ts")}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
@@ -346,7 +346,7 @@ def test_red_results_gate_permits_test_file_writes():
             phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
         )
         result = _run_hook("red_results_gate.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "src" / "app.spec.ts")}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
@@ -370,7 +370,7 @@ def test_tdd_results_gate_rejects_narrative_status_pass():
             encoding="utf-8",
         )
         result = _run_hook("tdd_results_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -388,7 +388,7 @@ def test_tdd_results_gate_permits_anchored_status_pass():
             "# Results\n\nSTATUS: PASS\n", encoding="utf-8"
         )
         result = _run_hook("tdd_results_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -406,7 +406,7 @@ def test_code_review_gate_blocks_missing_review():
             phase_runtime=_base_phase_runtime("security-review"),
         )
         result = _run_hook("code_review_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -423,7 +423,7 @@ def test_code_review_gate_blocks_critical_findings():
             "# Code Review\n\nCritical findings: 3\nMajor findings: 1\n", encoding="utf-8"
         )
         result = _run_hook("code_review_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -440,7 +440,7 @@ def test_code_review_gate_permits_zero_critical():
             "# Code Review\n\nCritical findings: 0\nMajor findings: 2\n", encoding="utf-8"
         )
         result = _run_hook("code_review_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -458,7 +458,7 @@ def test_security_review_gate_blocks_missing_review():
             phase_runtime=_base_phase_runtime("agent-testing"),
         )
         result = _run_hook("security_review_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -475,7 +475,7 @@ def test_security_review_gate_permits_zero_critical():
             "# Security Review\n\nCritical findings: 0\n", encoding="utf-8"
         )
         result = _run_hook("security_review_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -498,7 +498,7 @@ def test_batch_confirmation_gate_blocks_unconfirmed():
             ),
         )
         result = _run_hook("batch_confirmation_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -517,7 +517,7 @@ def test_batch_confirmation_gate_permits_confirmed():
             ),
         )
         result = _run_hook("batch_confirmation_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -531,7 +531,7 @@ def test_batch_confirmation_gate_permits_autonomous():
             phase_runtime=_base_phase_runtime("build", buildMode="autonomous"),
         )
         result = _run_hook("batch_confirmation_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -587,7 +587,7 @@ def test_protected_fields_gate_blocks_foundation_verified_change():
         proposed = f"# Manifest\n\n```json\n{json.dumps(modified, indent=2)}\n```\n"
 
         result = _run_hook("protected_manifest_fields_gate.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {
                 "path": str(session_root / "session-manifest.md"),
                 "content": proposed,
@@ -608,7 +608,7 @@ def test_protected_fields_gate_blocks_runtime_in_root_manifest():
         proposed = f"# Manifest\n\n```json\n{json.dumps(modified, indent=2)}\n```\n"
 
         result = _run_hook("protected_manifest_fields_gate.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {
                 "path": str(session_root / "session-manifest.md"),
                 "content": proposed,
@@ -629,7 +629,7 @@ def test_protected_fields_gate_permits_non_protected_change():
         proposed = f"# Manifest\n\n```json\n{json.dumps(modified, indent=2)}\n```\n"
 
         result = _run_hook("protected_manifest_fields_gate.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {
                 "path": str(session_root / "session-manifest.md"),
                 "content": proposed,
@@ -651,7 +651,7 @@ def test_required_references_gate_permits_no_refs():
             phase_runtime=_base_phase_runtime("build"),
         )
         result = _run_hook("required_references_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
@@ -667,7 +667,7 @@ def test_no_session_permits():
         (tmp_path / ".git").mkdir()
         (tmp_path / ".sage" / "sessions").mkdir(parents=True)
         result = _run_hook("manifest_step_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}"
 
@@ -681,7 +681,7 @@ def test_session_integrity_error_blocks():
         sessions_dir.mkdir(parents=True)
         (sessions_dir / "active-session.txt").write_text("NONEXISTENT", encoding="utf-8")
         result = _run_hook("manifest_step_gate.py", {
-            "tool_name": "write_file", "tool_input": {}
+            "tool_name": "Write", "tool_input": {}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
 
@@ -699,7 +699,7 @@ def test_test_write_guard_blocks_test_during_green():
             phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
         )
         result = _run_hook("test_write_guard.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "src" / "app.spec.ts")}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
@@ -714,7 +714,7 @@ def test_test_write_guard_permits_production_during_green():
             phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
         )
         result = _run_hook("test_write_guard.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "src" / "app.ts")}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
@@ -729,7 +729,7 @@ def test_test_write_guard_permits_test_during_red():
             phase_runtime=_base_phase_runtime("build", buildSubStep="red"),
         )
         result = _run_hook("test_write_guard.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "src" / "app.spec.ts")}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
@@ -744,7 +744,7 @@ def test_test_write_guard_permits_contest_file():
             phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
         )
         result = _run_hook("test_write_guard.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "src" / "contest_form.ts")}
         }, tmp_path)
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
@@ -759,7 +759,7 @@ def test_test_write_guard_blocks_csharp_tests():
             phase_runtime=_base_phase_runtime("build", buildSubStep="green-refactor"),
         )
         result = _run_hook("test_write_guard.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": str(tmp_path / "tests" / "FTPCalculationTests.cs")}
         }, tmp_path)
         assert result.returncode == 1, f"Expected block (exit 1), got {result.returncode}"
@@ -827,7 +827,7 @@ def test_telemetry_logger_writes_phase_telemetry():
             phase_runtime=_base_phase_runtime("build"),
         )
         result = _run_hook("telemetry_logger.py", {
-            "tool_name": "write_file",
+            "tool_name": "Write",
             "tool_input": {"path": "/some/file.ts"}
         }, tmp_path, env_overrides={"CURSOR_HOOK_EVENT": "preToolUse"})
         assert result.returncode == 0, f"Expected exit 0, got {result.returncode}. stderr: {result.stderr}"
@@ -853,7 +853,7 @@ def test_telemetry_logger_writes_session_telemetry_no_phase():
         script_path = SCRIPTS_DIR / "telemetry_logger.py"
         result = subprocess.run(
             ["python", str(script_path)],
-            input=json.dumps({"tool_name": "read_file"}),
+            input=json.dumps({"tool_name": "Read"}),
             capture_output=True, text=True,
             cwd=str(tmp_path), env=env, timeout=10,
         )

@@ -21,15 +21,9 @@ from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, get_phase_dir, block, permit,
-    write_telemetry_event, NoSessionError, SessionIntegrityError
+    write_telemetry_event, is_write_tool, normalize_tool, get_target_path,
+    NoSessionError, SessionIntegrityError
 )
-
-# Tool names that constitute file-write operations
-WRITE_TOOLS = {
-    "write_file", "create_file", "edit_file", "str_replace",
-    "str_replace_editor", "apply_edit", "overwrite_file",
-    "insert_content", "delete_content", "patch_file"
-}
 
 
 def main():
@@ -57,10 +51,10 @@ def main():
         return
 
     # Only check file-write tool calls
-    tool_name = event_input.get("tool_name", "").lower().replace("-", "_")
-    if tool_name not in WRITE_TOOLS:
+    if not is_write_tool(event_input):
         permit()
         return
+    tool_name = normalize_tool(event_input)
 
     # Check current step in manifest
     runtime = read_phase_runtime(session_root, phase_id)
@@ -71,8 +65,7 @@ def main():
         return
 
     # Allow the dev-interview agent to write its declared output artifact
-    tool_input = event_input.get("tool_input", {})
-    target_path = tool_input.get("path") or tool_input.get("file_path") or tool_input.get("file") or ""
+    target_path = get_target_path(event_input)
     if target_path:
         target = Path(target_path)
         allowed_artifact = get_phase_dir(session_root, phase_id) / f"phase-{phase_id}-dev-interview-summary.md"

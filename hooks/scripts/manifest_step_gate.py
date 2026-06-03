@@ -28,7 +28,7 @@ from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, get_phase_dir, block, permit,
-    write_telemetry_event, find_marker_value,
+    write_telemetry_event, find_marker_value, is_write_tool, is_shell_tool,
     NoSessionError, SessionIntegrityError
 )
 
@@ -40,11 +40,6 @@ PRIOR_ARTIFACT = {
     "build":               "phase-{N}-implementation-plan.md",  # broad check; validationConfirmed gate handles S4
 }
 
-# Tool calls that signal a step is being initiated
-STEP_INITIATING_TOOLS = {
-    "write_file", "create_file", "edit_file", "str_replace",
-    "str_replace_editor", "apply_edit", "run_build", "execute_command"
-}
 
 
 def resolve_artifact_name(template: str, phase_id: str) -> str:
@@ -74,8 +69,7 @@ def main():
         permit()
         return
 
-    tool_name = event_input.get("tool_name", "").lower().replace("-", "_")
-    if tool_name not in STEP_INITIATING_TOOLS:
+    if not (is_write_tool(event_input) or is_shell_tool(event_input)):
         permit()
         return
 

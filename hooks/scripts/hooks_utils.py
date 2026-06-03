@@ -17,6 +17,107 @@ from datetime import datetime, timezone
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Cursor payload compatibility layer
+#
+# Single source of truth for Cursor tool-name classification and payload
+# field access. Cursor sends hook-facing tool names (Read, Write, Shell, ...)
+# and the event name in the stdin payload as `hook_event_name`. Centralising
+# here means a Cursor API change is a one-line edit, not a sweep across gates.
+#
+# Tool names verified against Cursor as of 2026-06-03. When Cursor renames or
+# adds tools, update the sets below — run check_tool_drift.py to detect drift.
+#
+# Names are stored normalised: lower-cased with every non-alphanumeric separator
+# stripped, so PascalCase ("StrReplace"), snake_case ("str_replace") and
+# kebab-case ("str-replace") all collapse to the same key ("strreplace").
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Tools that create or mutate file content. (Write, StrReplace, EditNotebook, Delete)
+WRITE_TOOLS = frozenset({
+    "write",
+    "strreplace",
+    "editnotebook",
+    "delete",
+})
+
+# Tools that execute shell commands. (Shell)
+SHELL_TOOLS = frozenset({
+    "shell",
+})
+
+# Write tools that replace an entire file (as opposed to a partial edit).
+# Used where a gate must parse the complete proposed document rather than a diff.
+FULL_WRITE_TOOLS = frozenset({
+    "write",            # Write — full file contents
+})
+
+
+def normalize_tool(event_input: dict) -> str:
+    """
+    Normalised tool-name key: lower-cased with all non-alphanumeric separators
+    removed. Maps Cursor's PascalCase tool names ("StrReplace") and any
+    snake/kebab variants onto a single comparison key ("strreplace").
+    """
+    raw = event_input.get("tool_name") or ""
+    return "".join(ch for ch in raw.lower() if ch.isalnum())
+
+
+def is_write_tool(event_input: dict) -> bool:
+    """True when the payload's tool creates or mutates file content."""
+    return normalize_tool(event_input) in WRITE_TOOLS
+
+
+def is_shell_tool(event_input: dict) -> bool:
+    """True when the payload's tool executes a shell command."""
+    return normalize_tool(event_input) in SHELL_TOOLS
+
+
+def is_full_write_tool(event_input: dict) -> bool:
+    """
+    True when the payload's tool replaces an entire file (full contents),
+    as opposed to a partial edit. Callers that parse the complete proposed
+    document depend on this distinction.
+    """
+    return normalize_tool(event_input) in FULL_WRITE_TOOLS
+
+
+def get_hook_event(event_input: dict) -> str:
+    """
+    Resolve the hook event name. Cursor provides it as `hook_event_name` in the
+    stdin payload; fall back to the CURSOR_HOOK_EVENT env var, then 'unknown'.
+    """
+    return (
+        event_input.get("hook_event_name")
+        or os.environ.get("CURSOR_HOOK_EVENT")
+        or "unknown"
+    )
+
+
+def get_target_path(event_input: dict) -> str:
+    """Extract the target file path from a tool payload, across key variants."""
+    ti = event_input.get("tool_input") or {}
+    return (
+        ti.get("path")
+        or ti.get("file_path")
+        or ti.get("file")
+        or ti.get("target_file")
+        or ""
+    )
+
+
+def get_proposed_content(event_input: dict) -> str:
+    """Extract proposed file content from a write payload, across key variants."""
+    ti = event_input.get("tool_input") or {}
+    return (
+        ti.get("contents")
+        or ti.get("content")
+        or ti.get("new_string")
+        or ti.get("code_edit")
+        or ""
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Exceptions
 # ─────────────────────────────────────────────────────────────────────────────
 

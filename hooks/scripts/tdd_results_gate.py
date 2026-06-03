@@ -17,14 +17,9 @@ import json
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, get_phase_dir, block, permit,
-    write_telemetry_event,
+    write_telemetry_event, is_write_tool,
     has_status_marker, NoSessionError, SessionIntegrityError
 )
-
-CODE_REVIEW_INITIATING_TOOLS = {
-    "write_file", "create_file", "edit_file", "str_replace",
-    "str_replace_editor"
-}
 
 def tdd_results_filename(phase_id: str) -> str:
     return f"phase-{phase_id}-tdd-results.md"
@@ -53,8 +48,7 @@ def main():
         permit()
         return
 
-    tool_name = event_input.get("tool_name", "").lower().replace("-", "_")
-    if tool_name not in CODE_REVIEW_INITIATING_TOOLS:
+    if not is_write_tool(event_input):
         permit()
         return
 

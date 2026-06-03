@@ -33,6 +33,7 @@ from hooks_utils import (
     get_session_root,
     get_phase_id,
     get_phase_dir,
+    get_hook_event,
     NoSessionError,
     SessionIntegrityError,
 )
@@ -113,7 +114,7 @@ def main():
             sys.exit(0)
 
         session_id = session_root.name
-        hook_event = os.environ.get("CURSOR_HOOK_EVENT", "unknown")
+        hook_event = get_hook_event(event_input)
         phase_id = get_phase_id()
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()

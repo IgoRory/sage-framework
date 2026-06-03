@@ -26,23 +26,14 @@ from pathlib import Path
 from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, block, permit,
-    write_telemetry_event,
+    write_telemetry_event, is_write_tool, is_full_write_tool,
+    get_target_path, get_proposed_content,
     NoSessionError, SessionIntegrityError
 )
 
 PROTECTED_PHASE_FIELDS_PATTERN = re.compile(
     r'"(validationConfirmed|confirmed)"\s*:\s*(true|false)', re.IGNORECASE
 )
-
-FULL_WRITE_TOOLS = {
-    "write_file", "create_file", "overwrite_file"
-}
-
-WRITE_TOOLS = {
-    "write_file", "create_file", "edit_file", "str_replace",
-    "str_replace_editor", "apply_edit", "overwrite_file",
-    "insert_content", "patch_file"
-}
 
 
 def extract_json_block(content: str) -> dict | None:
@@ -93,7 +84,7 @@ def _extract_phase_id_from_path(target_path: str) -> str | None:
 
 
 def _guard_phase_manifest(
-    session_root: Path, target_path: str, proposed_content: str, tool_name: str
+    session_root: Path, target_path: str, proposed_content: str, is_full_write: bool
 ):
     """Guard validationConfirmed and batches[*].confirmed in phase-manifest.json.
 
@@ -103,8 +94,6 @@ def _guard_phase_manifest(
     document state from a partial diff.
     """
     phase_id = _extract_phase_id_from_path(target_path)
-
-    is_full_write = tool_name in FULL_WRITE_TOOLS
 
     if not is_full_write:
         if PROTECTED_PHASE_FIELDS_PATTERN.search(proposed_content):
@@ -213,13 +202,11 @@ def main():
         permit()
         return
 
-    tool_name = event_input.get("tool_name", "").lower().replace("-", "_")
-    if tool_name not in WRITE_TOOLS:
+    if not is_write_tool(event_input):
         permit()
         return
 
-    tool_input = event_input.get("tool_input", {})
-    target_path = tool_input.get("path") or tool_input.get("file_path") or tool_input.get("file") or ""
+    target_path = get_target_path(event_input)
 
     is_session_manifest = "session-manifest.md" in target_path
     is_phase_manifest = "phase-manifest.json" in target_path
@@ -228,13 +215,16 @@ def main():
         permit()
         return
 
-    proposed_content = tool_input.get("content") or tool_input.get("new_string") or ""
+    proposed_content = get_proposed_content(event_input)
     if not proposed_content:
         permit()
         return
 
     if is_phase_manifest:
-        _guard_phase_manifest(session_root, target_path, proposed_content, tool_name)
+        _guard_phase_manifest(
+            session_root, target_path, proposed_content,
+            is_full_write_tool(event_input)
+        )
         return
 
     proposed_manifest = extract_json_block(proposed_content)

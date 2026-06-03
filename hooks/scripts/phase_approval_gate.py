@@ -22,12 +22,6 @@ from hooks_utils import (
 
 APPROVED_STATUSES = {"Approved", "Foundation Verified", "In Progress", "Build Complete", "Done"}
 
-# Only gate on tools that would initiate S1 work
-INTERVIEW_INITIATING_TOOLS = {
-    "read_file", "list_directory", "search_files",
-    "write_file", "create_file", "edit_file"
-}
-
 
 def main():
     try:
