@@ -6,5 +6,6 @@
   "agents": ".cursor/agents",
   "rules": ".cursor/rules",
   "skills": ".cursor/skills",
+  "hooks": "hooks/hooks.json",
   "mcpServers": ".cursor/mcp.json"
 }

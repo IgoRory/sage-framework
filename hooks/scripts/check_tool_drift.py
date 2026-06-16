@@ -4,8 +4,7 @@ check_tool_drift.py
 SAGE Framework — On-demand Cursor tool-name drift checker
 
 Reads workflow telemetry, collects every distinct tool name Cursor has actually
-invoked, and diffs it against the gate allowlist in hooks_utils plus a set of
-known-benign read/search tools. Reports:
+invoked, and diffs it against the shared allowlist in hooks_utils. Reports:
 
   - DRIFT: observed tool names that no gate or known set recognises. These are
     candidates for a Cursor rename/addition — a gate may now silently fail-open.
@@ -33,35 +32,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 from hooks_utils import (  # noqa: E402
     WRITE_TOOLS,
     SHELL_TOOLS,
+    SUPPORTED_CURSOR_TOOLS,
     normalize_tool,
 )
-
-# Read/search/orchestration tools that legitimately appear in telemetry but are
-# not write/shell gate triggers. Stored in the same normalised form as the
-# hooks_utils allowlist (lower-cased, separators stripped).
-KNOWN_READONLY_TOOLS = frozenset({
-    "read",
-    "grep",
-    "glob",
-    "codebasesearch",
-    "semanticsearch",
-    "search",
-    "listmcpresources",
-    "fetchmcpresource",
-    "callmcptool",
-    "websearch",
-    "webfetch",
-    "task",
-    "todowrite",
-    "askquestion",
-    "switchmode",
-    "readlints",
-    "generateimage",
-    "editnotebook",
-})
-
-# The full set of tool-name keys that the current code base "knows about".
-KNOWN_TOOLS = WRITE_TOOLS | SHELL_TOOLS | KNOWN_READONLY_TOOLS
 
 
 def _normalize(raw: str) -> str:
@@ -124,11 +97,11 @@ def collect_observed_tools(files: list[Path]) -> dict[str, str]:
                 rec = json.loads(line)
             except (json.JSONDecodeError, ValueError):
                 continue
-            # telemetry_logger writes the event under "event" and the tool under
-            # "toolName" for preToolUse records.
+            # telemetry_logger writes current records with "toolName"; tolerate
+            # older "tool_name" records so drift checks cover legacy telemetry.
             if rec.get("event") != "preToolUse":
                 continue
-            raw = rec.get("toolName")
+            raw = rec.get("toolName") or rec.get("tool_name")
             if not raw:
                 continue
             key = _normalize(raw)
@@ -139,7 +112,7 @@ def collect_observed_tools(files: list[Path]) -> dict[str, str]:
 def build_report(observed: dict[str, str]) -> tuple[list[str], list[str]]:
     """Return (drift, unused) — drift raw names, unused normalised keys."""
     drift = sorted(
-        raw for key, raw in observed.items() if key not in KNOWN_TOOLS
+        raw for key, raw in observed.items() if key not in SUPPORTED_CURSOR_TOOLS
     )
     gate_keys = WRITE_TOOLS | SHELL_TOOLS
     unused = sorted(key for key in gate_keys if key not in observed)
@@ -184,12 +157,12 @@ def main(argv: list[str] | None = None) -> int:
 
     print("")
     if drift:
-        print("DRIFT - observed tool names not in the allowlist or known sets:")
+        print("DRIFT - observed tool names not in the shared allowlist:")
         for raw in drift:
             print(f"    ! {raw}")
         print("  Action: if these are real write/shell tools, add their "
               "normalised key to WRITE_TOOLS/SHELL_TOOLS in hooks_utils.py;")
-        print("          if read-only, add to KNOWN_READONLY_TOOLS here.")
+        print("          otherwise add their key to SUPPORTED_CURSOR_TOOLS there.")
     else:
         print("DRIFT - none. All observed tools are recognised.")
 

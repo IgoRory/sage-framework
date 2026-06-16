@@ -32,6 +32,14 @@ from datetime import datetime, timezone
 # kebab-case ("str-replace") all collapse to the same key ("strreplace").
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Tools that read file content without mutating it. Includes current Cursor
+# names plus legacy hook/telemetry aliases observed before plugin migration.
+READ_TOOLS = frozenset({
+    "read",
+    "readfile",
+    "viewfile",
+})
+
 # Tools that create or mutate file content. (Write, StrReplace, EditNotebook, Delete)
 WRITE_TOOLS = frozenset({
     "write",
@@ -51,6 +59,34 @@ FULL_WRITE_TOOLS = frozenset({
     "write",            # Write — full file contents
 })
 
+# Full set of Cursor tool-name keys understood by runtime hook telemetry and
+# drift reporting. Stored normalised using normalize_tool's rules.
+SUPPORTED_CURSOR_TOOLS = (
+    READ_TOOLS
+    | WRITE_TOOLS
+    | SHELL_TOOLS
+    | frozenset({
+        "grep",
+        "glob",
+        "codebasesearch",
+        "semanticsearch",
+        "search",
+        "listmcpresources",
+        "fetchmcpresource",
+        "callmcptool",
+        "websearch",
+        "webfetch",
+        "task",
+        "todowrite",
+        "askquestion",
+        "switchmode",
+        "readlints",
+        "generateimage",
+        "subagent",
+        "applypatch",
+    })
+)
+
 
 def normalize_tool(event_input: dict) -> str:
     """
@@ -58,8 +94,25 @@ def normalize_tool(event_input: dict) -> str:
     removed. Maps Cursor's PascalCase tool names ("StrReplace") and any
     snake/kebab variants onto a single comparison key ("strreplace").
     """
-    raw = event_input.get("tool_name") or ""
+    raw = event_input.get("tool_name") or event_input.get("toolName") or ""
     return "".join(ch for ch in raw.lower() if ch.isalnum())
+
+
+def is_read_tool(event_input: dict) -> bool:
+    """True when the payload's tool reads file content without mutating it."""
+    return normalize_tool(event_input) in READ_TOOLS
+
+
+def telemetry_record_is_read(record: dict) -> bool:
+    """
+    True when a telemetry record represents a read-tool invocation.
+    Accepts current `toolName` records and legacy `tool_name` variants.
+    """
+    if record.get("event") != "preToolUse":
+        return False
+    return is_read_tool({
+        "tool_name": record.get("toolName") or record.get("tool_name") or ""
+    })
 
 
 def is_write_tool(event_input: dict) -> bool:

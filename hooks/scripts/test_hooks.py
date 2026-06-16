@@ -15,11 +15,16 @@ Coverage:
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from datetime import datetime, timezone
 
 SCRIPTS_DIR = Path(__file__).parent
+sys.path.insert(0, str(SCRIPTS_DIR))
+
+from check_tool_drift import build_report  # noqa: E402
+from hooks_utils import is_read_tool, normalize_tool  # noqa: E402
 
 
 def _create_session_structure(
@@ -656,6 +661,82 @@ def test_required_references_gate_permits_no_refs():
         assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
 
 
+def test_required_references_gate_accepts_current_read_tool_name():
+    """Required reference is satisfied by telemetry with toolName: Read."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        ref_path = tmp_path / "docs" / "prd.md"
+        manifest = _base_manifest()
+        manifest["phases"]["1"]["definition"]["requiredReferences"] = [str(ref_path)]
+        session_root = _create_session_structure(
+            tmp_path,
+            manifest,
+            phase_runtime=_base_phase_runtime("build"),
+        )
+        telemetry_path = session_root / "phase-1" / "workflow-telemetry.jsonl"
+        telemetry_path.write_text(json.dumps({
+            "event": "preToolUse",
+            "toolName": "Read",
+            "toolInput": json.dumps({"path": str(ref_path)}),
+        }) + "\n", encoding="utf-8")
+
+        result = _run_hook("required_references_gate.py", {
+            "tool_name": "Write", "tool_input": {}
+        }, tmp_path)
+        assert result.returncode == 0, f"Expected permit (exit 0), got {result.returncode}. stderr: {result.stderr}"
+
+
+def test_required_references_gate_accepts_legacy_read_tool_names():
+    """Legacy read_file/view_file telemetry still satisfies required references."""
+    for legacy_tool in ("read_file", "view_file"):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            ref_path = tmp_path / "docs" / f"{legacy_tool}.md"
+            manifest = _base_manifest()
+            manifest["phases"]["1"]["definition"]["requiredReferences"] = [str(ref_path)]
+            session_root = _create_session_structure(
+                tmp_path,
+                manifest,
+                phase_runtime=_base_phase_runtime("build"),
+            )
+            telemetry_path = session_root / "phase-1" / "workflow-telemetry.jsonl"
+            telemetry_path.write_text(json.dumps({
+                "event": "preToolUse",
+                "tool_name": legacy_tool,
+                "tool_input": {"file_path": str(ref_path)},
+            }) + "\n", encoding="utf-8")
+
+            result = _run_hook("required_references_gate.py", {
+                "tool_name": "Write", "tool_input": {}
+            }, tmp_path)
+            assert result.returncode == 0, (
+                f"Expected permit for {legacy_tool} (exit 0), "
+                f"got {result.returncode}. stderr: {result.stderr}"
+            )
+
+
+def test_read_tool_normalization_accepts_alias_styles():
+    """Read-tool matching normalizes PascalCase, snake_case, and kebab-case."""
+    assert normalize_tool({"tool_name": "ReadFile"}) == "readfile"
+    assert normalize_tool({"tool_name": "read_file"}) == "readfile"
+    assert normalize_tool({"tool_name": "read-file"}) == "readfile"
+    assert is_read_tool({"tool_name": "Read"})
+    assert is_read_tool({"tool_name": "read_file"})
+    assert is_read_tool({"tool_name": "view-file"})
+
+
+def test_tool_drift_uses_shared_allowlist_for_read_tools():
+    """Drift checker recognises read tools through hooks_utils allowlist."""
+    drift, _unused = build_report({
+        "read": "Read",
+        "readfile": "read_file",
+        "unexpected": "UnexpectedTool",
+    })
+    assert "Read" not in drift
+    assert "read_file" not in drift
+    assert drift == ["UnexpectedTool"]
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Typed exceptions: NoSessionError → permit, SessionIntegrityError → block
 # ─────────────────────────────────────────────────────────────────────────────
@@ -936,6 +1017,10 @@ if __name__ == "__main__":
         test_protected_fields_gate_permits_non_protected_change,
         # required_references_gate
         test_required_references_gate_permits_no_refs,
+        test_required_references_gate_accepts_current_read_tool_name,
+        test_required_references_gate_accepts_legacy_read_tool_names,
+        test_read_tool_normalization_accepts_alias_styles,
+        test_tool_drift_uses_shared_allowlist_for_read_tools,
         # test_write_guard
         test_test_write_guard_blocks_test_during_green,
         test_test_write_guard_permits_production_during_green,

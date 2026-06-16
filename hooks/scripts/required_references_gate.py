@@ -9,7 +9,7 @@ requiredReferences array in the session manifest have been read in the
 current session.
 
 "Read" is confirmed by the presence of a telemetry record with:
-  event: "preToolUse", toolName: "read_file", filePath: <path>
+  event: "preToolUse", toolName/tool_name: <shared read tool>, path in toolInput
 
 This ensures the agent has loaded and processed all PRD and domain
 reference files before writing implementation code.
@@ -22,14 +22,45 @@ from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, get_phase_dir, block, permit,
     write_telemetry_event, is_write_tool, is_shell_tool,
+    telemetry_record_is_read,
     NoSessionError, SessionIntegrityError
 )
+
+
+def _extract_read_path(record: dict) -> str:
+    """Extract a read target path from current and legacy telemetry shapes."""
+    for key in ("filePath", "file_path", "path"):
+        value = record.get(key)
+        if value:
+            return str(value)
+
+    tool_input = record.get("toolInput")
+    if tool_input is None:
+        tool_input = record.get("tool_input")
+
+    if isinstance(tool_input, str):
+        try:
+            parsed = json.loads(tool_input)
+        except (json.JSONDecodeError, ValueError):
+            return tool_input
+        tool_input = parsed
+
+    if isinstance(tool_input, dict):
+        return str(
+            tool_input.get("path")
+            or tool_input.get("file_path")
+            or tool_input.get("file")
+            or tool_input.get("target_file")
+            or ""
+        )
+
+    return str(tool_input or "")
 
 
 def get_read_files_from_telemetry(session_root: Path, phase_id: str | None = None) -> set:
     """
     Parse workflow-telemetry.jsonl and return the set of file paths
-    that have been read (confirmed by read_file preToolUse events).
+    that have been read (confirmed by shared read-tool telemetry events).
     Reads both session-root and per-phase telemetry files.
     """
     read_files: set[str] = set()
@@ -49,15 +80,8 @@ def get_read_files_from_telemetry(session_root: Path, phase_id: str | None = Non
                     continue
                 try:
                     record = json.loads(line)
-                    if (
-                        record.get("event") == "preToolUse"
-                        and record.get("toolName") in {"read_file", "view_file"}
-                    ):
-                        fp = record.get("toolInput", {})
-                        if isinstance(fp, dict):
-                            path = fp.get("path") or fp.get("file_path")
-                        else:
-                            path = str(fp)
+                    if telemetry_record_is_read(record):
+                        path = _extract_read_path(record)
                         if path:
                             read_files.add(Path(path).name)
                             read_files.add(path)
