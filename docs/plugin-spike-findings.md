@@ -51,6 +51,29 @@ The `stop` wiring of `completion-report-stop-gate` was the gap in the 8-hook ver
 - **`linear-status-sync`** needs `LINEAR_API_KEY`; degrades to no-op without it.
 - **`plan-mode-enforcer`** only permits `phase-{N}-dev-interview-summary.md` during S1. If the `dev-plan` skill is in scope, it will over-block dev-plan artifacts. Known gap — deferred.
 
+### Tool-name centralization + drift checker
+
+All tool-name-gating scripts classify tools through one allowlist in
+`hooks_utils.py` (`WRITE_TOOLS` / `SHELL_TOOLS` / `FULL_WRITE_TOOLS`) via the
+`is_write_tool` / `is_shell_tool` / `is_full_write_tool` accessors.
+`normalize_tool` collapses PascalCase/snake/kebab to one key, so Cursor's real
+names (`Write`, `StrReplace`, `EditNotebook`, `Delete`, `Shell`) match. The
+legacy SAGE names (`write_file`, `execute_command`, ...) are gone. When Cursor
+renames or adds a tool, update only the sets in `hooks_utils.py`.
+
+`hooks/scripts/check_tool_drift.py` is an on-demand, report-only drift checker.
+It reads `workflow-telemetry.jsonl` under `.sage/sessions/**`, lists every tool
+Cursor actually invoked, and flags any name not in the allowlist (candidate
+drift) plus allowlist entries never observed. It never blocks, edits, or hits
+the network; exit code is always 0. Run it after a Cursor update, or whenever a
+gate seems not to fire:
+
+```
+python hooks/scripts/check_tool_drift.py [workspace_or_telemetry_path]
+```
+
+With no argument it uses `$CURSOR_PROJECT_DIR`, then the current directory.
+
 Plus install-side (workspace-scoped, not user-global):
 - `sage-sessions/.cursor/hooks.json` — `workspaceOpen` hook at the actual Cursor workspace root (the parent folder containing Profitability, Empyrean%20Dataverse, sage-framework).
 - `sage-sessions/.cursor/scripts/load-sage-plugin.py` — outputs `{"pluginPaths": ["C:\\Users\\ChrisBuckley\\source\\sage-framework"]}` so Cursor loads sage when `sage-sessions/` is the open workspace.
