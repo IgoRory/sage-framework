@@ -28,7 +28,7 @@ from hooks_utils import (
     read_manifest, read_phase_runtime, block, permit,
     write_telemetry_event, is_write_tool, is_full_write_tool,
     get_target_path, get_proposed_content,
-    NoSessionError, SessionIntegrityError
+    NoSessionError, SessionIntegrityError, run_gate
 )
 
 PROTECTED_PHASE_FIELDS_PATTERN = re.compile(
@@ -274,4 +274,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_gate(main)

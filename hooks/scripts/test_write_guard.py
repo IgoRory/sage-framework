@@ -20,7 +20,7 @@ from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_phase_runtime, block, permit,
     write_telemetry_event, is_write_tool, get_target_path,
-    NoSessionError, SessionIntegrityError
+    NoSessionError, SessionIntegrityError, run_gate
 )
 
 FILENAME_INDICATORS = (".spec.", ".test.", ".Tests.")
@@ -109,4 +109,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_gate(main)

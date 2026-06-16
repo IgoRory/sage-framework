@@ -7,7 +7,7 @@ per-phase phase-manifest.json, and artifact files. Sets env vars, invokes
 hook scripts as subprocess with JSON on stdin, and asserts exit code.
 
 Coverage:
-- All 13 blocking gates
+- All blocking gates
 - 3 non-blocking hooks (manifest-step-writer, telemetry-logger, linear-status-sync)
 - Typed exception behavior (NoSessionError → permit, SessionIntegrityError → block)
 """
@@ -969,6 +969,60 @@ def test_linear_status_sync_noop_without_api_key():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# run_gate: unexpected crash fail-open behavior
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_run_gate_unexpected_exception_permits_and_logs():
+    """Unexpected gate crashes should permit and write a structured debug log."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        (tmp_path / ".git").mkdir()
+        fixture = tmp_path / "injected_crash_gate.py"
+        fixture.write_text(
+            "\n".join([
+                "import sys",
+                "from hooks_utils import run_gate",
+                "",
+                "def main():",
+                "    sys.stdin.read()",
+                "    raise RuntimeError('injected crash')",
+                "",
+                "if __name__ == '__main__':",
+                "    run_gate(main)",
+            ]),
+            encoding="utf-8",
+        )
+
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(SCRIPTS_DIR)
+        payload = {"tool_name": "Write", "tool_input": {"path": "example.txt"}}
+        result = subprocess.run(
+            ["python", str(fixture)],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            cwd=str(tmp_path),
+            env=env,
+            timeout=10,
+        )
+
+        assert result.returncode == 0, (
+            f"Expected fail-open permit (exit 0), got {result.returncode}. "
+            f"stderr: {result.stderr}"
+        )
+        assert "crashed unexpectedly; permitting tool call" in result.stderr
+
+        debug_log = tmp_path / ".sage" / ".hook-debug.log"
+        assert debug_log.exists(), "Expected .sage/.hook-debug.log to be created"
+        entry = json.loads(debug_log.read_text(encoding="utf-8").splitlines()[0])
+        assert entry["hookScript"] == "injected_crash_gate.py"
+        assert entry["exceptionType"] == "RuntimeError"
+        assert entry["exceptionMessage"] == "injected crash"
+        assert '"tool_name": "Write"' in entry["stdinPayloadHead"]
+        assert entry["stdinPayloadTruncated"] is False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Test runner
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1030,6 +1084,7 @@ if __name__ == "__main__":
         # exception behavior
         test_no_session_permits,
         test_session_integrity_error_blocks,
+        test_run_gate_unexpected_exception_permits_and_logs,
         # manifest_step_writer (non-blocking)
         test_manifest_step_writer_updates_phase_manifest,
         test_manifest_step_writer_updates_telemetry_state,

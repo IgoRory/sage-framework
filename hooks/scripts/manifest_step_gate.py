@@ -29,7 +29,7 @@ from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, get_phase_dir, block, permit,
     write_telemetry_event, find_marker_value, is_write_tool, is_shell_tool,
-    NoSessionError, SessionIntegrityError
+    NoSessionError, SessionIntegrityError, run_gate
 )
 
 # Map: the step being initiated → artifact that must exist from the prior step
@@ -157,4 +157,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_gate(main)

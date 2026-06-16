@@ -492,6 +492,104 @@ def permit() -> None:
     sys.exit(0)
 
 
+class _StdinCapture:
+    """Proxy stdin so hook mains consume it normally while we retain a small head."""
+
+    def __init__(self, stream, limit: int = 500):
+        self._stream = stream
+        self._limit = limit
+        self._head = ""
+        self._total_length = 0
+
+    def _record(self, data: str) -> None:
+        if not isinstance(data, str):
+            return
+        self._total_length += len(data)
+        remaining = self._limit - len(self._head)
+        if remaining > 0:
+            self._head += data[:remaining]
+
+    def read(self, *args, **kwargs):
+        data = self._stream.read(*args, **kwargs)
+        self._record(data)
+        return data
+
+    def readline(self, *args, **kwargs):
+        data = self._stream.readline(*args, **kwargs)
+        self._record(data)
+        return data
+
+    def readlines(self, *args, **kwargs):
+        lines = self._stream.readlines(*args, **kwargs)
+        for line in lines:
+            self._record(line)
+        return lines
+
+    @property
+    def payload_head(self) -> str:
+        return self._head
+
+    @property
+    def payload_truncated(self) -> bool:
+        return self._total_length > self._limit
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+def _write_hook_debug_log(stdin_capture: _StdinCapture, exc: Exception) -> Path | None:
+    """
+    Best-effort structured debug logging for unexpected hook crashes.
+    Returns the debug path when the log write succeeds.
+    """
+    try:
+        repo_root = find_repo_root()
+        debug_dir = repo_root / ".sage"
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        debug_path = debug_dir / ".hook-debug.log"
+        event = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "hookScript": Path(sys.argv[0]).name,
+            "exceptionType": type(exc).__name__,
+            "exceptionMessage": str(exc),
+            "stdinPayloadHead": stdin_capture.payload_head,
+            "stdinPayloadTruncated": stdin_capture.payload_truncated,
+        }
+        with open(debug_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        return debug_path
+    except Exception:
+        return None
+
+
+def run_gate(main_fn) -> None:
+    """
+    Execute a blocking gate fail-open for unexpected internal errors.
+
+    Deliberate gate outcomes call block()/permit(), which raise SystemExit and
+    must pass through unchanged. Only unexpected exceptions are logged and
+    converted to permit.
+    """
+    original_stdin = sys.stdin
+    stdin_capture = _StdinCapture(original_stdin)
+    sys.stdin = stdin_capture
+    try:
+        main_fn()
+    except SystemExit:
+        raise
+    except Exception as exc:
+        debug_path = _write_hook_debug_log(stdin_capture, exc)
+        suffix = f" Details logged to {debug_path}." if debug_path else ""
+        print(
+            f"HOOK INTERNAL ERROR — {Path(sys.argv[0]).name} crashed unexpectedly; "
+            f"permitting tool call.{suffix}",
+            file=sys.stderr,
+        )
+        permit()
+    finally:
+        sys.stdin = original_stdin
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Root manifest writing (locked read-modify-write)
 # ─────────────────────────────────────────────────────────────────────────────

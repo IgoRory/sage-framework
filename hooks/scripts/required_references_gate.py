@@ -23,7 +23,7 @@ from hooks_utils import (
     read_manifest, read_phase_runtime, get_phase_dir, block, permit,
     write_telemetry_event, is_write_tool, is_shell_tool,
     telemetry_record_is_read,
-    NoSessionError, SessionIntegrityError
+    NoSessionError, SessionIntegrityError, run_gate
 )
 
 
@@ -166,4 +166,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_gate(main)

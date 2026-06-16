@@ -17,7 +17,7 @@ from hooks_utils import (
     find_repo_root, get_session_root, get_phase_id,
     read_manifest, read_phase_runtime, block, permit,
     write_telemetry_event,
-    NoSessionError, SessionIntegrityError
+    NoSessionError, SessionIntegrityError, run_gate
 )
 
 APPROVED_STATUSES = {"Approved", "Foundation Verified", "In Progress", "Build Complete", "Done"}
@@ -82,4 +82,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_gate(main)
