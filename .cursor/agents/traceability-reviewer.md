@@ -29,9 +29,10 @@ When invoked:
      `phase-{N}-dev-interview-summary.md`."
 6. Read `.cursor/skills/reasoning/layered-confidence-protocol.md`
    for the pre-raise check rules before writing any finding.
-7. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
-8. Execute all four review steps in sequence
-9. Write the review document
+7. Read `.cursor/agents/references/tdd-test-quality-bar.md`
+8. Read the SAGE phase definition from the manifest (`scopedFiles`, `layer`, `phaseType`, `requiredReferences`)
+9. Execute all four review steps in sequence
+10. Write the review document
 
 ## Step 0 — Codebase context scan
 
@@ -85,32 +86,41 @@ For every acceptance criterion in the PRD:
 - Does it map to at least one TDD scenario in the TDD spec?
 - Does that scenario map to at least one task in the implementation plan?
 - Does that task have a specific, non-placeholder test method name?
+- Does that task include a Test quality contract with behavior proof, fault model, assertion type, fixture-overfit risk, anti-overfit design, and required variants or negative cases?
+- Does the mapped test prove meaningful behavior rather than merely replaying fixtures or asserting literal outcomes?
 
 | Condition | Severity |
 |-----------|----------|
 | Criterion with no scenario | Blocker |
 | Scenario with no task | Blocker |
 | Task with no test method name | Blocker |
+| Task with no Test quality contract | Blocker |
+| Criterion mapped only to fixture replay or no behavioral assertion | Blocker |
 | Test method name is a placeholder (e.g. `TestMethod1`, `TODO`, `Test_TBD`) | Major |
+| High fixture-overfit risk with no anti-overfit design | Major |
+| Expected output co-authored with seed data and no independent invariant or relationship assertion | Major |
+| Naming or layer mismatch that does not undermine behavior proof | Minor |
 
 ### Backward pass — Implementation to PRD
 
 For every task in the implementation plan:
 - Does it trace back to a TDD scenario?
 - Does that scenario trace back to a PRD acceptance criterion?
+- Is the Test quality contract aligned with the PRD criterion and TDD Given/When/Then?
 
 | Condition | Severity |
 |-----------|----------|
 | Task with no TDD scenario | Major |
 | Task with scenario but no PRD criterion | Major |
+| Test quality contract proves a different behavior than the PRD/TDD scenario | Major |
 
 ## Finding classification
 
 | Class | Definition |
 |-------|-----------|
-| Blocker | PRD criterion not covered by a scenario; scenario not mapped to a task; task has no test method; Coverage Gap not resolved by Step 0 context; direct contradiction between criterion and task |
-| Major | Task with no PRD traceability; placeholder test method; Detail Discrepancy significant enough to cause build misalignment; Undocumented Scope; Ambiguous Mapping |
-| Minor | PRD quality issue (Step 1); naming inconsistency; non-critical gap |
+| Blocker | PRD criterion not covered by a scenario; scenario not mapped to a task; task has no test method; task has no Test quality contract; criterion has only fixture replay or no behavioral assertion; Coverage Gap not resolved by Step 0 context; direct contradiction between criterion and task |
+| Major | Task with no PRD traceability; placeholder test method; high fixture-overfit risk without anti-overfit design; expected output co-authored with seed data and no independent oracle; Detail Discrepancy significant enough to cause build misalignment; Undocumented Scope; Ambiguous Mapping |
+| Minor | PRD quality issue (Step 1); naming inconsistency; layer mismatch that does not undermine behavior proof; non-critical gap |
 
 **The line `Blocker findings: N` must appear exactly as written - the `manifest-step-gate` hook reads this exact format.**
 
@@ -133,9 +143,9 @@ Minor findings: [N]
 
 ## Forward traceability
 
-| AC | Scenario | Task | Test method | Status |
-|---|---|---|---|---|
-| prd.md#ac-X | tdd-spec.md#scenario-N.X | impl-plan.md#task-N.X | [method] | OK / BLOCKER / MAJOR |
+| AC | Scenario | Task | Test method | Test quality | Status |
+|---|---|---|---|---|---|
+| prd.md#ac-X | tdd-spec.md#scenario-N.X | impl-plan.md#task-N.X | [method] | behavior proof / fixture-risk issue / missing contract | OK / BLOCKER / MAJOR |
 
 ## Backward traceability
 

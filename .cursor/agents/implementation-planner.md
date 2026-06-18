@@ -29,7 +29,8 @@ When invoked:
 5. Read the phase runtime from `[SESSION_ROOT]/phase-{N}/phase-manifest.json`
 6. Read all scoped files listed in the manifest phase definition to understand the existing codebase
 7. Read all files in `requiredReferences` from the manifest phase definition
-8. Produce the implementation plan
+8. Read `.cursor/agents/references/tdd-test-quality-bar.md`
+9. Produce the implementation plan
 
 ## Implementation plan structure
 
@@ -70,10 +71,18 @@ Write `phase-{N}-implementation-plan.md` with this exact structure:
 **Implementation method/procedure:** [exact name]
 **Estimated effort:** [S | M | L]
 
+#### Test quality contract
+- **Behavior under test:** [observable behavior the test must prove]
+- **Fault model:** [bug this test would catch]
+- **Assertion type:** [invariant / relationship / set comparison / observable output / error path / contract shape / other]
+- **Fixture-overfit risk:** [low | medium | high]
+- **Anti-overfit design:** [alternate IDs, second-customer data, disjoint data, omitted-coincidence fixture, invariant assertion, relationship assertion, parameterized variant, or why not needed]
+- **Required variants or negative cases:** [specific variants/failure paths, or "none — risk low because ..."]
+
 ### Task [N.2]: ...
 
 [Repeat for every TDD scenario. Every scenario must map to exactly one task.
-Every task must have a specific test file and method name - no placeholders.]
+Every task must have a specific test file, method name, and Test quality contract - no placeholders.]
 
 ## Acceptance criteria traceability
 
@@ -172,10 +181,23 @@ Planning rules:
 - For transaction or SQL ownership behaviour, prefer SQL Server-backed E2E/API coverage over EF InMemory proof.
 - Include architecture guard tasks when a phase adds or changes V2 layer references, boundary rules, or test-presence conventions.
 
+## Test quality contract guidance
+
+Every TDD task must include a `Test quality contract` using `.cursor/agents/references/tdd-test-quality-bar.md`. The contract is part of the implementation plan, not optional commentary.
+
+Use concrete anti-overfit designs for fixture-heavy work. For example, a Profitability SQL test that only proves customer `9010`/`9020` or named data such as `RTL 46` is not sufficient unless the contract also requires a disjoint variant, second-customer data, omitted-coincidence fixture, relationship assertion, or invariant assertion that would fail for hardcoded fixture IDs.
+
+The planner should choose test assertions before implementation starts:
+- Prefer behavior proof through the lowest meaningful public or observable interface.
+- Prefer independent oracles: rules, relationships, invariants, set comparisons, or independently verified expected values.
+- Mark fixture-overfit risk high when expected output is derived from seeded rows, literal IDs, or one customer-specific example.
+- Include negative/failure paths when the acceptance criterion depends on filtering, ownership, validation, rollback, missing data, or error handling.
+
 ## Constraints
 
 - Every TDD scenario must map to exactly one task - no unmapped scenarios
 - Every task must have a specific test file path and method name - no placeholders like `[TBD]`
+- Every task must include a Test quality contract with behavior proof, fault model, assertion type, fixture-overfit risk, anti-overfit design, and required variants or negative cases
 - Cannot write to files outside the current phase directory (except the session manifest for batch definitions)
 - Must write batch definitions to the manifest before completing (Checkpoint mode)
 - The acceptance criteria traceability table must include every PRD criterion - gaps are a Blocker finding at S3

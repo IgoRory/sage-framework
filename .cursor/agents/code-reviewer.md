@@ -25,7 +25,8 @@ When invoked:
 4. Read the traceability review: `[SESSION_ROOT]/phase-{N}/phase-{N}-traceability-review.md`
 5. Read the PRD from manifest `header.featurePrdPath`
 6. Confirm `phase-{N}-tdd-results.md` exists in the phase directory and contains `STATUS: PASS`
-7. If `phase-{N}-dev-plan.md` exists, read its `## Open deferrals` and
+7. Read `.cursor/agents/references/tdd-test-quality-bar.md`
+8. If `phase-{N}-dev-plan.md` exists, read its `## Open deferrals` and
    `## Work groupings and approach decisions` sections — acknowledged
    deferrals are not findings; documented approach decisions inform plan
    conformance.
@@ -85,8 +86,9 @@ Run the following review passes. You may use available subagents to parallelise 
 2. **Silent failure scan** — swallowed exceptions, empty catch blocks, fallback values that hide failures, SQL `CATCH` blocks that do not surface errors, and unhandled promise/observable failures.
 3. **Clarity and maintainability scan** — simplifications that are clearly beneficial and low-risk. Report suggestions only; do not edit files.
 4. **Test coverage scan** — only if `hasAngular` or `hasCSharp`; verify changed behaviour has corresponding tests mapped from the TDD spec.
-5. **Standards scan** — if `hasSQL`, apply SQL standards from the repo; if `hasAngular`, apply Angular standards from the repo. Only flag issues covered by an actual standards document or an explicit SAGE/Profitability rule.
-6. **Type/comment scan** — if `hasNewTypes` or `hasDocComments`; check type design, stale TODOs, misleading comments, and SQL revision history where applicable.
+5. **Test quality scan** — review mapped tests and production code against `.cursor/agents/references/tdd-test-quality-bar.md`. Passing tests are not enough if they are false-green, fixture-coupled, implementation-mirroring, vacuous, or mechanism-reimplemented.
+6. **Standards scan** — if `hasSQL`, apply SQL standards from the repo; if `hasAngular`, apply Angular standards from the repo. Only flag issues covered by an actual standards document or an explicit SAGE/Profitability rule.
+7. **Type/comment scan** — if `hasNewTypes` or `hasDocComments`; check type design, stale TODOs, misleading comments, and SQL revision history where applicable.
 
 ---
 
@@ -103,6 +105,16 @@ After the review passes, perform these checks yourself — they require SAGE art
 - Does every test method named in the implementation plan exist in the test files?
 - Does every TDD scenario have a corresponding test covering its Given/When/Then?
 - Are there untested code paths in the scoped files?
+- Does each test satisfy its Test quality contract with behavior proof, fault model, assertion type, fixture-overfit risk, and anti-overfit mechanism?
+- Could the production code pass the tests while failing real customer data?
+
+### TDD test quality
+- Flag **false-green tests** where the implementation can pass while failing the PRD behavior for non-fixture data.
+- Flag **fixture-coupled tests** that assert hardcoded fixture IDs, customer-specific values, literal row snapshots, or names such as `RTL 46` without an independent oracle or anti-overfit mechanism.
+- Flag **implementation-mirroring tests** that copy the production algorithm, SQL, or selection predicates instead of checking observable behavior.
+- Flag **vacuous tests** such as row count only, file exists, non-null only, `0 == 0`, or literal snapshots where data correctness matters.
+- Flag **mechanism-reimplemented tests** where the test rebuilds the same procedure/query/algorithm and compares the implementation to itself.
+- For parent/child, ownership, or pointer logic, prefer relationship assertions and invariant assertions over raw pointer equality unless the raw value is itself the public contract.
 
 ### Profitability domain correctness
 - Are measure names, source views, result tables, and persisted outputs correct according to the PRD, manifest references, and scoped schema/code?
@@ -127,8 +139,8 @@ pre-raise check from `.cursor/skills/reasoning/layered-confidence-protocol.md`, 
    - Below 50 — weak evidence, style-only preference, or pre-existing issue not touched by the phase
 3. Filter out assumption-confidence findings and findings scoring below 50.
 4. Map to SAGE severity using confidence and impact:
-   - 75–100 → **Critical** only when the issue can cause incorrect results, security risk, broken required behaviour, plan non-conformance that changes output, or missing required return/status handling
-   - 50–74 → **Major** for missing required test coverage, standards violations, unhandled edge cases from the TDD spec, or maintainability issues that affect implementation confidence
+   - 75–100 → **Critical** only when the issue can cause incorrect results, security risk, broken required behaviour, plan non-conformance that changes output, missing required return/status handling, or a false-green suite that could pass while failing real customer data
+   - 50–74 → **Major** for missing required test coverage, weak test-quality contract enforcement, fixture-coupled tests, implementation-mirroring tests, vacuous assertions, standards violations, unhandled edge cases from the TDD spec, or maintainability issues that affect implementation confidence
    - Otherwise → **Minor** at reviewer discretion; do not count Minor findings in gate decisions
 5. Deduplicate across passes — same underlying issue raised by multiple
    passes merges into one entry at the highest confidence

@@ -24,16 +24,20 @@ When invoked:
    - Else, if `phase-{N}-dev-interview-summary.md` exists, read it.
    - Else stop and report: "RED phase cannot proceed — no S1 artifact found.
      Expected `phase-{N}-dev-plan.md` or `phase-{N}-dev-interview-summary.md`."
-5. Work through tasks in plan order, writing the RED test for each
+5. Read `.cursor/agents/references/tdd-test-quality-bar.md`
+6. Work through tasks in plan order, writing the RED test for each
 
 ## RED phase workflow
 
 For each task in the implementation plan:
 
 1. Write the failing test — exactly the test method named in the implementation plan
-2. Run the test and confirm it fails with the expected assertion failure
-3. If the test passes without implementation: stop and report — the test is not correctly targeting unimplemented behaviour. Revise the test to fail before implementation exists
-4. Record the result in `phase-{N}-red-results.md`
+2. Confirm the test implements the task's Test quality contract: behavior proof, fault model, assertion type, fixture-overfit risk, anti-overfit design, and required variants or negative cases
+3. Run the test and confirm it fails with the expected assertion failure
+4. Confirm the actual RED failure proves the intended missing behavior. Compile, import, auth, fixture setup, Docker, or unrelated infrastructure failures are not meaningful RED evidence
+5. Record anti-overfit evidence for medium/high fixture-overfit risk, such as alternate IDs, second-customer data, disjoint data, omitted-coincidence fixtures, relationship assertions, invariant assertions, set comparisons, or negative/failure paths
+6. If the test passes without implementation: stop and report — the test is not correctly targeting unimplemented behaviour. Revise the test to fail before implementation exists
+7. Record the result in `phase-{N}-red-results.md`
 
 ## Test pattern guidance
 
@@ -49,6 +53,12 @@ Follow the test type and layer chosen in the implementation plan. When scoped fi
 
 Prefer the lowest layer that proves the requirement, then add integration or E2E coverage only when the requirement crosses a boundary. A RED test must fail because the behaviour is missing, not because imports, fixtures, Docker, auth, or unrelated setup are broken.
 
+## Test quality guidance
+
+Follow each task's Test quality contract from the implementation plan. Do not simplify or omit the anti-overfit mechanism during RED authoring. If the contract is missing, vague, or impossible to test, stop and report that S5a is blocked until S2 is corrected.
+
+For fixture-heavy SQL or profitability work, avoid tests that only assert hardcoded fixture outcomes such as customer `9010`/`9020` or named data like `RTL 46`. Pair fixture assertions with an independent oracle, relationship assertion, invariant assertion, disjoint data, omitted-coincidence fixture, or second-customer variant that would fail if production code hardcoded the known fixture.
+
 ## phase-{N}-red-results.md format
 
 Keep this file updated after every task's RED phase. The `red-results-gate` hook reads this file.
@@ -62,9 +72,13 @@ STATUS: [RED CONFIRMED | IN PROGRESS | BLOCKED]
 
 ## Task RED results
 
-| Task | Test method | Test file | RED result | Failure message |
-|------|-------------|-----------|------------|-----------------|
-| [N.1] | [method name] | [file path] | CONFIRMED / BLOCKED | [assertion error] |
+| Task | Test method | Test file | Expected RED reason | RED result | Failure message | Behavior proof | Anti-overfit evidence |
+|------|-------------|-----------|---------------------|------------|-----------------|----------------|-----------------------|
+| [N.1] | [method name] | [file path] | [missing behavior] | CONFIRMED / BLOCKED | [assertion error] | [why failure proves missing behavior] | [mechanism or "not required — low risk"] |
+
+## Deferred quality gaps
+
+[List any intentionally deferred test-quality gaps. High fixture-overfit risk without anti-overfit evidence cannot be deferred while setting STATUS: RED CONFIRMED.]
 
 ## Blocked tests
 
@@ -75,7 +89,7 @@ STATUS: [RED CONFIRMED | IN PROGRESS | BLOCKED]
 [Any observations about test structure, missing fixtures, or preconditions]
 ```
 
-Set `STATUS: RED CONFIRMED` only when ALL tasks have confirmed RED results. Set `STATUS: IN PROGRESS` while work is ongoing. Set `STATUS: BLOCKED` if any test cannot achieve RED status.
+Set `STATUS: RED CONFIRMED` only when ALL tasks have confirmed RED results, each failure is behavioral, and no high-risk test-quality gap remains unresolved. Set `STATUS: IN PROGRESS` while work is ongoing. Set `STATUS: BLOCKED` if any test cannot achieve RED status or cannot satisfy the Test quality contract.
 
 ## After completing all RED tests
 
@@ -91,3 +105,4 @@ Tell the developer:
 - `phase-{N}-red-results.md` must contain `STATUS: RED CONFIRMED` on its own line when all REDs confirmed
 - Cannot skip tasks or reorder from the implementation plan
 - Each test must fail with a meaningful assertion error, not a compilation or import error
+- Must preserve the Test quality contract for each task; do not mark RED confirmed for fixture-coupled, vacuous, implementation-mirroring, or mechanism-reimplemented tests

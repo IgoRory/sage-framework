@@ -19,10 +19,11 @@ When invoked:
 2. Read the implementation plan: `[SESSION_ROOT]/phase-{N}/phase-{N}-implementation-plan.md`
 3. Read the code review: `[SESSION_ROOT]/phase-{N}/phase-{N}-code-review.md` — confirm `Critical findings: 0`
 4. Read the security review: `[SESSION_ROOT]/phase-{N}/phase-{N}-security-review.md` — confirm `Critical findings: 0`
-5. Run the full test suite for all scoped files
-6. Run any integration tests that involve the scoped files
-7. Coordinate E2E tests (if applicable)
-8. Produce `phase-{N}-test-results.md`
+5. Read `.cursor/agents/references/tdd-test-quality-bar.md`
+6. Run the full test suite for all scoped files
+7. Run any integration tests that involve the scoped files
+8. Coordinate E2E tests (if applicable)
+9. Produce `phase-{N}-test-results.md`
 
 If `phase-{N}-code-review.md` does not exist or does not contain `Critical findings: 0`, stop and tell the developer: "S7 cannot proceed — code review must show zero Critical findings. Complete S6 first."
 
@@ -40,9 +41,10 @@ If the workflow config includes `security-review` in `phases.stepSequence` and `
    - Architecture guard tests when the phase adds or changes layer boundaries or dependency rules.
 5. For ProfitabilityWeb phases, run Vitest unit/component tests for scoped services/components and Playwright only when user-visible browser flow coverage is required and enabled.
 6. Confirm all required tests pass across all scoped files and mapped TDD scenarios.
-7. Signal gap-analyzer to generate additional scenarios.
-8. Execute all automatable gap scenarios.
-9. For Playwright E2E tests (UI phases):
+7. For every medium/high fixture-overfit risk task, ask: "What would pass these tests for the wrong reason?" Design anti-overfit scenarios before finalizing S7 results.
+8. Signal gap-analyzer to generate additional scenarios, including alternate IDs, second-customer data, omitted-coincidence fixtures, relationship/invariant checks, and negative/failure paths.
+9. Execute all automatable gap scenarios. If a scenario is valuable but not automatable in the current environment, record it as a manual/residual risk with the reason.
+10. For Playwright E2E tests (UI phases):
    - Run the existing Playwright test suite via shell command:
      ```powershell
      cd Web\ProfitabilityWeb
@@ -53,8 +55,23 @@ If the workflow config includes `security-review` in `phases.stepSequence` and `
      Do NOT run Playwright via MCP directly in this agent.
    - Check `featureFlags.playwrightE2E` in `workflow-config.json` before running any Playwright
      step. If `false`, skip all Playwright steps and note this in the test results.
-10. Compile all results into a single test results document
-11. Write `phase-{N}-test-results.md`
+11. Compile all results into a single test results document
+12. Write `phase-{N}-test-results.md`
+
+## Anti-overfit scenario design
+
+Use the Test quality contracts and `.cursor/agents/references/tdd-test-quality-bar.md` to design gap scenarios that prove behavior beyond the initial fixture.
+
+Include applicable scenarios for:
+- Alternate identifiers that differ from seeded examples.
+- Second-customer or second-process data with different values.
+- Disjoint data where expected output cannot be inferred from one hardcoded row.
+- Omitted-coincidence fixtures, where a row that previously made a hardcoded path look correct is absent.
+- Relationship assertions, such as parent/child closure within the same run or customer scope.
+- Invariant assertions, such as totals, uniqueness, status transitions, set membership, or ownership boundaries.
+- Negative and failure paths, including missing data, validation failures, rollback/error handling, and excluded records.
+
+For the PROF-209-style failure mode, do not accept tests that only prove fixture IDs like `9010`/`9020` or names like `RTL 46`. Add or request a scenario that fails if SQL or production code hardcodes those values.
 
 ## phase-{N}-test-results.md format
 
@@ -106,6 +123,12 @@ STATUS: [PASS | FAIL]
 |----------|--------|-------|
 | [scenario] | PASS / FAIL | |
 
+## Anti-overfit and gap scenarios
+
+| Scenario | Fault model | Mechanism | Result | Notes |
+|----------|-------------|-----------|--------|-------|
+| [scenario] | [what would pass for the wrong reason] | [alternate IDs / second-customer data / omitted-coincidence fixture / relationship assertion / invariant assertion / negative path] | PASS / FAIL / NOT AUTOMATABLE | [evidence or residual risk] |
+
 ## Failing tests
 
 [Full error output for any failing test]
@@ -120,7 +143,7 @@ STATUS: [PASS | FAIL]
 [If STATUS: FAIL: "Tests failing. Failing tests listed above. Return to S5/S6 to address failures before S8 can proceed."]
 ```
 
-Set `STATUS: PASS` only when ALL unit, integration, and E2E tests pass. A single failing test means `STATUS: FAIL`.
+Set `STATUS: PASS` only when ALL unit, integration, E2E, and automatable anti-overfit/gap scenarios pass. A single failing test means `STATUS: FAIL`.
 
 ## Constraints
 
@@ -131,3 +154,4 @@ Set `STATUS: PASS` only when ALL unit, integration, and E2E tests pass. A single
 - Cannot proceed if the configured security review step is missing or shows Critical findings > 0
 - Must wait for gap-analyzer to complete before writing final results
 - Cannot skip gap-analyzer even if the TDD suite passes cleanly
+- Must design and run automatable anti-overfit scenarios for medium/high fixture-overfit risk tasks before setting `STATUS: PASS`
