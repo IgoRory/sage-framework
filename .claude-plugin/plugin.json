@@ -1,0 +1,6 @@
+{
+  "name": "sage",
+  "version": "0.1.0",
+  "description": "SAGE (Semi-Autonomous Guided Execution) — a structured, gated software-delivery framework of coordinated agents and skills covering PRD authoring, sprint kick-off, TDD build, review, and continuous improvement.",
+  "author": { "name": "Empyrean Solutions" }
+}

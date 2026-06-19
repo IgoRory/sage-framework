@@ -1,0 +1,46 @@
+---
+description: Enforce dual-repo sync — changes to sage-framework must also be applied to the Profitability repo, and vice versa
+alwaysApply: true
+---
+
+# Dual-Repo Sync Rule
+
+The **Profitability** repo (`c:\Users\RoryIgo\repos\cursor\Profitability`) is the
+deployed source of truth. The **sage-framework** repo
+(`c:\Users\RoryIgo\repos\sage-framework`) is the framework specification mirror.
+
+## Mirrored file mappings
+
+| sage-framework path | Profitability path |
+|---|---|
+| `AGENTS.md` | `AGENTS.md` |
+| `agents/*.md` | `agents/*.md` |
+| `rules/*.mdc` | `rules/*.mdc` |
+| `skills/**` | `skills/**` |
+| `templates/*` | `templates/*` |
+| `.mcp.json` | `.mcp.json` |
+| `hooks-spec/hooks.json` | `hooks/hooks.json` |
+| `hooks-spec/scripts/*.py` | `hooks/scripts/*.py` |
+| `hooks-spec/workflow-config.json` | `.sage/workflow-config.json` |
+
+## Required behaviour
+
+When you modify any file listed in the mapping table above:
+
+1. **Apply the same change to both repos.** Do not modify one copy without
+   updating the other.
+2. **State which files in each repo were updated** in your response so the
+   user can verify sync.
+3. If you are unsure whether a file is mirrored, check the mapping table.
+   Files not listed (e.g. `agent-definitions.md`, `cursor-directory-spec/`,
+   `docs/`, `reference-docs/`) exist only in sage-framework and do not
+   require a Profitability counterpart.
+
+## Spec documents
+
+When a mirrored file changes, check whether any sage-framework spec document
+references the changed content and update the spec if needed:
+
+- `cursor-directory-spec/cursor-directory-spec.md`
+- `hooks-spec/hook-scripts-spec.md`
+- `hooks-spec/session-manifest-schema.md`

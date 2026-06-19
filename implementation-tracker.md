@@ -5,7 +5,7 @@
 **Last verified:** 2026-05-11  
 **Source plan:** [`reference-docs/implementation-plan.md`](reference-docs/implementation-plan.md)
 
-**Framework counts (handoff parity):** `.cursor/hooks/scripts/` **13** Python modules · **16** agent files · **7** top-level skill directories (including `sage-intel/`). Root **`AGENTS.md`** = SAGE agent catalogue; product context = [`docs/agents-profitability.md`](docs/agents-profitability.md).
+**Framework counts (handoff parity):** `hooks/scripts/` **13** Python modules · **16** agent files · **7** top-level skill directories (including `sage-intel/`). Root **`AGENTS.md`** = SAGE agent catalogue; product context = [`docs/agents-profitability.md`](docs/agents-profitability.md).
 
 ---
 
@@ -46,8 +46,8 @@
 |---|---|---|---|---|
 | 1.1 | Create `.sage/` directory structure (`sessions/`, `active-session.txt`, `skill-update-history.jsonl`, `current-phase.txt`, `workflow-config.json`) | `[x]` | PASS | `.sage/` present with `workflow-config.json`, `sessions/`, `sessions/active-session.txt` |
 | 1.1b | Create `.skill-update-triggers/` and `.skill-update-staging/` directories | `[x]` | PASS | Both directories exist |
-| 1.2 | Copy `.cursor/hooks/hooks.json` and all Python hook scripts to `.cursor/hooks/scripts/` | `[x]` | PASS | **13** `.py` modules present (parity copy also in [`hooks-spec/scripts/`](hooks-spec/scripts/)) |
-| 1.2b | Copy `.cursor/skills/`, `.cursor/agents/`, `.cursor/rules/` (SAGE rules), `.cursor/templates/`, `.cursor/mcp.json` | `[x]` | PASS | **7** skill roots including `sage-intel/`; **16** agents; `sage-session.mdc`, `phase-context.mdc`, `rules.mdc`; template + `mcp.json` |
+| 1.2 | Copy `hooks/hooks.json` and all Python hook scripts to `hooks/scripts/` | `[x]` | PASS | **13** `.py` modules present (parity copy also in [`hooks-spec/scripts/`](hooks-spec/scripts/)) |
+| 1.2b | Copy `skills/`, `agents/`, `rules/` (SAGE rules), `templates/`, `.mcp.json` | `[x]` | PASS | **7** skill roots including `sage-intel/`; **16** agents; `sage-session.mdc`, `phase-context.mdc`, `rules.mdc`; template + `mcp.json` |
 | 1.3 | Root `AGENTS.md` = SAGE catalogue; product context in `docs/` / rules | `[x]` | PASS | Catalogue at repo root; product guide documented as [`docs/agents-profitability.md`](docs/agents-profitability.md) in **this** handoff repo |
 | 1.4 | Add SAGE entries to `.gitignore` | `[x]` | PASS | `.sage/sessions/active-session.txt`, `.sage/current-phase.txt`, `.skill-update-triggers/`, etc. |
 | 1.5 | Commit framework files (`init: SAGE framework structure` or equivalent) | `[x]` | PASS | Commit `1be3350d` present on clone |
@@ -155,8 +155,8 @@ The steps that are blocking everything else — in order:
 ```
 1.1  Create .sage/ directory structure                    [DONE on verified clone]
 1.1b Create .skill-update-triggers/ and staging         [DONE]
-1.2  Copy .cursor/hooks/ (hooks.json + 13 scripts)       [DONE — see hooks-spec/scripts mirror]
-1.2b Copy .cursor/skills/, agents/, rules/, templates/   [DONE]
+1.2  Copy hooks/ (hooks.json + 13 scripts)       [DONE — see hooks-spec/scripts mirror]
+1.2b Copy skills/, agents/, rules/, templates/   [DONE]
 1.3  Root AGENTS.md catalogue + product context pattern   [DONE — see docs/agents-profitability.md in handoff]
 1.4  Update .gitignore                                   [DONE]
 1.5  Commit and push                                   [DONE — init commit present]

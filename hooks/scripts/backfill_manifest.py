@@ -8,10 +8,10 @@ actual progress. Seeds workflow-telemetry.jsonl with synthetic events
 marked "source": "backfill".
 
 Usage:
-    python .cursor/hooks/scripts/backfill_manifest.py --dry-run
-    python .cursor/hooks/scripts/backfill_manifest.py
-    python .cursor/hooks/scripts/backfill_manifest.py --mark-s1-complete
-    python .cursor/hooks/scripts/backfill_manifest.py --mark-s1-complete 1,2,3
+    python hooks/scripts/backfill_manifest.py --dry-run
+    python hooks/scripts/backfill_manifest.py
+    python hooks/scripts/backfill_manifest.py --mark-s1-complete
+    python hooks/scripts/backfill_manifest.py --mark-s1-complete 1,2,3
 """
 
 import argparse

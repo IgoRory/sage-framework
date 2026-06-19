@@ -5,7 +5,7 @@
 **Version:** 1.0.0
 
 All agent definitions for the SAGE framework. Each agent has a corresponding
-`.cursor/agents/[agent-name].md` file with its full system prompt and constraints.
+`agents/[agent-name].md` file with its full system prompt and constraints.
 
 Agents operate within the constraints defined here. The hook layer enforces
 these constraints at the execution layer — an agent cannot exceed its defined
@@ -116,7 +116,7 @@ and per-lane telemetry to surface lane status, bottlenecks, and merge sequencing
 on demand. Never takes action — observes and reports only.
 
 When asked for session status, reads and follows the `session-status` skill
-(`.cursor/skills/session-status/SKILL.md`) to produce a structured progress
+(`skills/session-status/SKILL.md`) to produce a structured progress
 report with step-level checkmarks, blocked-step indicators, and next-action
 guidance.
 
@@ -430,11 +430,11 @@ the brief as "no application equivalent — generator's choice". No silent
 gaps. This rule is binding across all three surfaces.
 
 **Authoritative reference:**
-[`.cursor/skills/prd-interviewer/references/sub-agent-delegation.md`](.cursor/skills/prd-interviewer/references/sub-agent-delegation.md)
+[`skills/prd-interviewer/references/sub-agent-delegation.md`](skills/prd-interviewer/references/sub-agent-delegation.md)
 defines the orchestration sequence, brief format, summary-file contract,
 the application-fidelity rule with its brief-author checklist, and the
 handoff-chat self-review obligations. Paste-ready prompts live at
-[`.cursor/skills/prd-interviewer/references/handoff-prompt-templates.md`](.cursor/skills/prd-interviewer/references/handoff-prompt-templates.md).
+[`skills/prd-interviewer/references/handoff-prompt-templates.md`](skills/prd-interviewer/references/handoff-prompt-templates.md).
 
 ---
 
@@ -468,7 +468,7 @@ specific surface to regenerate).
 - Never edits `prd.md` — the PM is the sole PRD author
 - Never edits `acceptance-criteria.md` or `traceability.md` directly
 - One handoff chat per surface — inherits the Phase C three-surface handoff discipline
-- Inherits the production-grade quality bar from `.cursor/skills/prd-interviewer/references/production-grade-quality-bar.md`
+- Inherits the production-grade quality bar from `skills/prd-interviewer/references/production-grade-quality-bar.md`
 
 ---
 
@@ -486,16 +486,16 @@ The replacement is the **three-surface manual handoff** owned by
 `prd-interviewer`. Demo artifacts are produced by the demo handoff chat
 described in:
 
-- `.cursor/skills/prd-interviewer/references/handoff-prompt-templates.md` —
+- `skills/prd-interviewer/references/handoff-prompt-templates.md` —
   Template 1 (Demo handoff prompt) — paste-ready prompt the PM hands to a
   fresh Cursor chat.
-- `.cursor/skills/prd-interviewer/references/sub-agent-delegation.md` —
+- `skills/prd-interviewer/references/sub-agent-delegation.md` —
   orchestration sequence, brief format, summary-file contract, application-
   fidelity hard rule, and Tier 1 inside-chat self-review protocol.
 
 ### Preservation record
 
-The `.cursor/skills/prd-demo-generator/SKILL.md` file is **permanently
+The `skills/prd-demo-generator/SKILL.md` file is **permanently
 preserved** by PM ruling at Phase E close (25-MAY-2026). The Phase A locked
 decision A5 ("deletion queued for Phase E") is overridden by this ruling.
 The file is retained as a historical artefact for reference purposes only.
@@ -900,7 +900,7 @@ workflow mode.
 
 ## Skills
 
-Skills are invocable workflow packages stored in `.cursor/skills/`. Unlike agents,
+Skills are invocable workflow packages stored in `skills/`. Unlike agents,
 skills are not bound to a single phase — they are invoked by agents or developers
 when the workflow requires a specific capability.
 
@@ -908,7 +908,7 @@ when the workflow requires a specific capability.
 
 ## dev-plan
 
-**Skill file:** `.cursor/skills/dev-plan/SKILL.md`
+**Skill file:** `skills/dev-plan/SKILL.md`
 **Active during:** S1 (opt-in replacement for dev-interview)
 
 ### Role
@@ -956,7 +956,7 @@ recognition of `phase-{N}-dev-plan.md` as a valid S1 artifact, and a
 
 ## phase-splitter
 
-**Skill file:** `.cursor/skills/phase-splitter/SKILL.md`
+**Skill file:** `skills/phase-splitter/SKILL.md`
 **Active during:** Kick-off — Phase Breakdown step (Sprint and Pair modes)
 
 ### Role
@@ -996,7 +996,7 @@ uncertainty.
 
 ## tdd-orchestrator
 
-**Skill file:** `.cursor/skills/tdd-orchestrator/SKILL.md`
+**Skill file:** `skills/tdd-orchestrator/SKILL.md`
 **Active during:** On demand — bug batches, phase gates, spikes, and finding remediation
 
 ### Role

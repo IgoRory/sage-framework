@@ -309,11 +309,11 @@ This repository uses an AI-assisted Sprint development
 workflow. The workflow is governed by two directories:
 
 **`.cursor/`** — Cursor agent definitions, skills, hooks, and rules.
-All AI agents operating in this repo are defined in `.cursor/agents/`.
-All hook scripts that enforce build gates live in `.cursor/hooks/`.
+All AI agents operating in this repo are defined in `agents/`.
+All hook scripts that enforce build gates live in `hooks/`.
 All skills (prd-completeness-check, prd-interviewer, kickoff-dev-review,
 phase-splitter, dev-plan, session-performance-evaluator, skill-effectiveness-evaluator)
-live in `.cursor/skills/`.
+live in `skills/`.
 
 **`.sage/`** — Workflow runtime. Session manifests live in
 `.sage/sessions/[LIN-feature-id]/`. Workflow policy lives in
@@ -416,9 +416,9 @@ read both files now.
 | Session artifacts | `.sage/sessions/[LIN-id]/` |
 | Active session pointer | `.sage/sessions/active-session.txt` |
 | Workflow policy | `.sage/workflow-config.json` |
-| Agent definitions | `.cursor/agents/` |
-| Hook scripts | `.cursor/hooks/scripts/` |
-| Skills | `.cursor/skills/` |
+| Agent definitions | `agents/` |
+| Hook scripts | `hooks/scripts/` |
+| Skills | `skills/` |
 | Angular standards | `docs/cursor/angularStandards.md` |
 | SQL standards | `docs/cursor/sqlStandards.md` |
 | Tech stack doc | `docs/techStack.md` |

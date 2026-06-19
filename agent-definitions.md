@@ -1,6 +1,6 @@
 # SAGE Framework — Agent Definitions
 
-> **Source of truth:** The actual agent prompts live in `.cursor/agents/[agent-name].md`
+> **Source of truth:** The actual agent prompts live in `agents/[agent-name].md`
 > (mirrored from the Profitability repo). This file is a **supplementary reference**
 > that provides extended descriptions, model recommendations, and additional
 > behavioural detail beyond what the agent prompt files contain.
@@ -8,7 +8,7 @@
 > Model IDs listed here (e.g. `claude-4.6-opus-max`) are **recommended tiers**.
 > The Profitability agent prompts may use simpler model references (e.g. `claude-opus`).
 
-Each agent definition is placed in `.cursor/agents/[agent-name].md` in the codebase repository. Agents are loaded by Cursor when invoked and operate within the constraints defined here. The hook layer enforces these constraints at the execution layer — an agent cannot exceed its defined scope through instruction alone.
+Each agent definition is placed in `agents/[agent-name].md` in the codebase repository. Agents are loaded by Cursor when invoked and operate within the constraints defined here. The hook layer enforces these constraints at the execution layer — an agent cannot exceed its defined scope through instruction alone.
 
 ---
 
@@ -625,5 +625,5 @@ Defines how **SAGE S7** (per-phase agent testing, `phase-{N}-test-results.md`) r
 ### Constraints
 
 - Does **not** substitute an ADO test plan for S7 `STATUS: PASS` or vice versa — both must be satisfied for full closure where the process requires them.
-- ADO updates follow the handoff checklist in `.cursor/agents/sage-s7-ado-handoff.md` after `phase-{N}-test-results.md` reaches `STATUS: PASS`.
+- ADO updates follow the handoff checklist in `agents/sage-s7-ado-handoff.md` after `phase-{N}-test-results.md` reaches `STATUS: PASS`.
 - Read only — the markdown file is normative reference for developers; it does not execute hooks or write ADO state itself.

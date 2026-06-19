@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "empyrean-sage",
+  "description": "Standalone marketplace for the SAGE framework plugin (until merged into the Empyrean-Plugins monorepo as the 'sage' plugin).",
+  "owner": {
+    "name": "Empyrean Solutions",
+    "email": "devtools@empyreansolutions.com"
+  },
+  "plugins": [
+    {
+      "name": "sage",
+      "description": "SAGE (Semi-Autonomous Guided Execution) framework — agents, skills, rules, and hooks.",
+      "category": "development",
+      "source": "."
+    }
+  ]
+}

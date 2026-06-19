@@ -27,10 +27,10 @@ sage-framework/
 │       └── support: skill_update_poller.py · prd_telemetry_append.py
 │                    backfill_manifest.py · test_hooks.py
 │       (prd_telemetry_append.py and skill_update_poller.py also PATCHED for CURSOR_PROJECT_DIR)
-├── .cursor/agents/                EXISTING — exposed via manifest
-├── .cursor/rules/                 EXISTING — exposed via manifest
-├── .cursor/skills/                EXISTING — exposed via manifest
-└── .cursor/mcp.json               EXISTING — exposed via manifest
+├── agents/                EXISTING — exposed via manifest
+├── rules/                 EXISTING — exposed via manifest
+├── skills/                EXISTING — exposed via manifest
+└── .mcp.json               EXISTING — exposed via manifest
 ```
 
 ### Hook registry (19 hooks, native schema)

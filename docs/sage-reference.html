@@ -1278,7 +1278,7 @@ td.td-from, td.td-to { color: var(--text); font-weight: 500; }
     <!-- 6 -->
     <section class="ti-section" id="agents">
       <div class="ti-section-header"><div class="ti-section-num">6</div><h2>AI Agents</h2></div>
-      <p>SAGE ships with 15 purpose-built AI agents installed as <code>.cursor/agents/*.md</code> files — Cursor loads them automatically when invoked.</p>
+      <p>SAGE ships with 15 purpose-built AI agents installed as <code>agents/*.md</code> files — Cursor loads them automatically when invoked.</p>
       <div class="agents-grid">
         <div class="agent-pill"><div class="agent-name">orchestrator</div><div class="agent-desc">Primary coordinator. Manages kick-offs, session manifests, phase transitions, and Review &amp; Merge.</div></div>
         <div class="agent-pill"><div class="agent-name">sprint-coordinator</div><div class="agent-desc">Read-only Sprint observer. Surfaces per-lane status and merge sequencing on demand.</div></div>
@@ -2594,7 +2594,7 @@ Approval required in Linear before changes apply.</div>
 
     <section class="ti-section" id="prd-start">
       <div class="ti-section-header"><div class="ti-section-num">★</div><h2>Tools and outcome</h2></div>
-      <p style="font-size:13px;color:var(--ti-muted);line-height:1.75;margin-bottom:12px;">You will use the items below together. The <strong>skills</strong> are invoked by name in Cursor chat (the agent loads <code>.cursor/skills/…/SKILL.md</code>).</p>
+      <p style="font-size:13px;color:var(--ti-muted);line-height:1.75;margin-bottom:12px;">You will use the items below together. The <strong>skills</strong> are invoked by name in Cursor chat (the agent loads <code>skills/…/SKILL.md</code>).</p>
       <div style="overflow-x:auto;border:1px solid var(--ti-border);border-radius:8px;background:var(--ti-surface);margin-bottom:14px;">
         <table style="width:100%;border-collapse:collapse;font-size:12px;font-family:var(--ti-mono);">
           <thead><tr style="border-bottom:1px solid var(--ti-border);text-align:left;color:var(--ti-muted);"><th style="padding:10px 12px;">Tool</th><th style="padding:10px 12px;">Purpose</th></tr></thead>
@@ -2667,7 +2667,7 @@ Run Step 0 repo preflight, then conduct the full interview (one question at a ti
 
 PRD Notion URL: [paste full URL]
 Score against the rubric and list findings with locations.</div>
-      <p style="font-size:13px;color:var(--ti-muted);line-height:1.75;"><strong>Pass threshold:</strong> total score <strong>≥ 80 / 100</strong> across dimensions D1–D6 (see <code>.cursor/skills/prd-completeness-check/references/scoring-rubric.md</code> in the product repo).</p>
+      <p style="font-size:13px;color:var(--ti-muted);line-height:1.75;"><strong>Pass threshold:</strong> total score <strong>≥ 80 / 100</strong> across dimensions D1–D6 (see <code>skills/prd-completeness-check/references/scoring-rubric.md</code> in the product repo).</p>
       <p style="font-size:13px;color:var(--ti-muted);line-height:1.75;"><strong>Action:</strong> Fix Notion content based on findings; re-run the same prompt until you meet the threshold.</p>
       <div class="layers-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 14px;">
         <div class="layer-card blue"><div class="layer-sub">D1–D3</div><div class="layer-title">Requirements, ACs, edge cases</div><p>15 pts each dimension.</p></div>
@@ -2692,7 +2692,7 @@ Score against the rubric and list findings with locations.</div>
 
     <section class="ti-section" id="prd-phases">
       <div class="ti-section-header"><div class="ti-section-num">§</div><h2>Reference — interview phases (P1–P9)</h2></div>
-      <p style="font-size:13px;color:var(--ti-muted);margin-bottom:14px;">Maps to <code>prd-interviewer</code> and PRD telemetry <code>phaseId</code>. Full question text: <code>.cursor/skills/prd-interviewer/references/question-sets.md</code>.</p>
+      <p style="font-size:13px;color:var(--ti-muted);margin-bottom:14px;">Maps to <code>prd-interviewer</code> and PRD telemetry <code>phaseId</code>. Full question text: <code>skills/prd-interviewer/references/question-sets.md</code>.</p>
       <div class="layers-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 8px;">
         <div class="layer-card blue"><div class="layer-sub">P1</div><div class="layer-title">Section 1</div><p>Feature definition, users, change type, area, roles.</p></div>
         <div class="layer-card blue"><div class="layer-sub">P2</div><div class="layer-title">Section 2</div><p>Calculation logic (if applicable).</p></div>

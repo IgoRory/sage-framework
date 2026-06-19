@@ -1,11 +1,11 @@
 {
   "name": "sage",
-  "description": "SAGE (Semi-Autonomous Guided Execution) framework",
-  "version": "0.1.0-spike",
+  "displayName": "SAGE",
+  "version": "0.1.0",
+  "description": "SAGE (Semi-Autonomous Guided Execution) framework — agents, skills, rules, and hooks for structured, gated software delivery.",
   "author": { "name": "Empyrean Solutions" },
-  "agents": ".cursor/agents",
-  "rules": ".cursor/rules",
-  "skills": ".cursor/skills",
+  "keywords": ["sage", "workflow", "tdd", "code-review", "prd", "orchestration"],
+  "license": "UNLICENSED",
   "hooks": "hooks/hooks.json",
-  "mcpServers": ".cursor/mcp.json"
+  "mcpServers": ".mcp.json"
 }

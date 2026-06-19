@@ -1,0 +1,15 @@
+# Keep the Claude Desktop upload zip (git archive) lean: exclude framework docs and
+# specs that the IDE plugin loaders ignore anyway. Plugin payload = agents/ skills/
+# rules/ hooks/ templates/ .mcp.json + the manifest dirs.
+docs/                       export-ignore
+wiki/                       export-ignore
+cursor-directory-spec/      export-ignore
+hooks-spec/                 export-ignore
+playwright-spec/            export-ignore
+reference-docs/             export-ignore
+profitability-repo-files/   export-ignore
+scripts/                    export-ignore
+team-intro.html             export-ignore
+implementation-tracker.md   export-ignore
+agent-definitions.md        export-ignore
+.gitattributes              export-ignore

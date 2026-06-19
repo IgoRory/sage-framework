@@ -1,7 +1,7 @@
 """
 hooks_utils.py
 SAGE Framework — Shared hook utilities
-Used by all hook scripts in .cursor/hooks/scripts/
+Used by all hook scripts in hooks/scripts/
 
 Per-phase architecture: phase runtime (currentStep, stepStatus, batches,
 etc.) lives in phase-{N}/phase-manifest.json. The root session-manifest.md
